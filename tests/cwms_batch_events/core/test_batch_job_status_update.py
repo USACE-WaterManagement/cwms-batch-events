@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from unittest import mock
 from unittest.mock import MagicMock
 
 import pytest
@@ -86,3 +87,26 @@ def test_update_invalid_status():
             time_iso=datetime.now(timezone.utc),
             db=mock_db,
         )
+
+
+def test_notification_failure_does_not_undo_failed_job_status():
+    mock_db = MagicMock()
+    queue = MagicMock()
+    job = MagicMock()
+    job.id = 123
+    job.job_status = JobStatus.RUNNING
+    mock_db.get_job_by_external_id.return_value = job
+
+    with mock.patch(
+        "cwms_batch_events.core.processing.enqueue_failed_job_notifications",
+        side_effect=RuntimeError("queue unavailable"),
+    ):
+        update_batch_job_status(
+            batch_job_id="abc",
+            status=JobStatus.FAILED,
+            time_iso=datetime.now(timezone.utc),
+            db=mock_db,
+            notification_queue=queue,
+        )
+
+    mock_db.update_job_status.assert_called_once_with(123, JobStatus.FAILED)

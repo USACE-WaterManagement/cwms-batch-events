@@ -27,7 +27,7 @@ def update_batch_job_status_endpoint(
     payload: BatchJobStatusUpdateRequest,
     _=Depends(require_internal_auth),
     job_db: JobDatabase = Depends(get_job_database),
-    notification_queue: NotificationQueue = Depends(get_notification_queue),
+    notification_queue: NotificationQueue | None = Depends(get_notification_queue),
 ):
     try:
         update_batch_job_status(

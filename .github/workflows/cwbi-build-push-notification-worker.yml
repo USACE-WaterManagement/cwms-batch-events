@@ -1,0 +1,72 @@
+name: Build/Push Notification Worker Lambda to Dev, Test, or Prod
+
+on:
+  push:
+    branches: [cwbi-dev, cwbi-test, cwbi-prod]
+    paths:
+      - "cwms_batch_events/core/models.py"
+      - "cwms_batch_events/core/notification_queue.py"
+      - "cwms_batch_events/core/notification_sender.py"
+      - "cwms_batch_events/core/settings.py"
+      - "cwms_batch_events/lambdas/send_notification/**"
+      - ".github/workflows/cwbi-build-push-notification-worker.yml"
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-gov-west-1
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  Build-Push-to-Env:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Git clone the repository
+        uses: actions/checkout@v4
+
+      - name: Set Branch attributes
+        run: |
+          case "${GITHUB_REF##*/}" in
+            "cwbi-dev")
+              echo "ROLE_TO_ASSUME=arn:aws-us-gov:iam::718787032875:role/github-actions-lambda-cwms-batch-events" >> $GITHUB_ENV
+              ;;
+            "cwbi-test")
+              echo "ROLE_TO_ASSUME=arn:aws-us-gov:iam::276847049069:role/github-actions-lambda-cwms-batch-events" >> $GITHUB_ENV
+              ;;
+            "cwbi-prod")
+              echo "ROLE_TO_ASSUME=arn:aws-us-gov:iam::648157167324:role/github-actions-lambda-cwms-batch-events" >> $GITHUB_ENV
+              ;;
+          esac
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Build Notification Worker Lambda
+        run: |
+          python -m pip install \
+            -r cwms_batch_events/lambdas/send_notification/requirements.txt \
+            -t package
+          cp -r cwms_batch_events package/
+          cp cwms_batch_events/lambdas/send_notification/handler.py package/notification_worker.py
+          cd package
+          zip -r ../notification-worker-lambda.zip .
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ env.ROLE_TO_ASSUME }}
+          output-credentials: false
+
+      - name: Sts GetCallerIdentity
+        run: aws sts get-caller-identity
+
+      - name: Deploy Notification Worker
+        run: |
+          aws lambda update-function-code \
+            --function-name CWMS-Batch-Events-Notification-Worker \
+            --zip-file fileb://notification-worker-lambda.zip

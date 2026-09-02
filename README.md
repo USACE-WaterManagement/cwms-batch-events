@@ -76,3 +76,9 @@ delivery worker does not query Batch Events, CDA, or a template store. This
 contract can support future authorized producers and non-job email categories.
 The worker temporarily accepts version 1.0 messages during rollout. See
 [ADR 0001](docs/adr/0001-render-email-before-queueing.md).
+
+AWS deployments use the SQS-triggered handler in
+`cwms_batch_events/lambdas/send_notification/handler.py`. The local Compose
+notifier remains a long-polling ElasticMQ worker with log-only delivery. The
+notification queue's event source mapping must enable partial batch responses
+(`ReportBatchItemFailures`) so only failed deliveries are retried.
