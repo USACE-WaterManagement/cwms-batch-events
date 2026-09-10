@@ -100,3 +100,18 @@ def test_get_logs_for_job_returns_404_when_logs_missing(client, job_logger):
 
     assert response.status_code == 404
     assert response.json() == {"detail": f"No logs found for job {job_id}"}
+
+
+def test_get_logs_for_job_returns_409_when_logs_not_ready(client, job_logger):
+    job_id = str(uuid4())
+    job_logger.get_logs_for_job.side_effect = ValueError("No Batch job attempts found")
+
+    response = client.get(f"/jobs/{job_id}/logs")
+
+    assert response.status_code == 409
+    assert response.json() == {
+        "detail": (
+            f"Logs are not available for job '{job_id}': "
+            "No Batch job attempts found"
+        )
+    }

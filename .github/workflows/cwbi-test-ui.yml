@@ -1,0 +1,56 @@
+name: UI Browser Smoke Test on PR
+
+on:
+  pull_request:
+    branches:
+      - cwbi-dev
+      - cwbi-test
+      - cwbi-prod
+    paths:
+      - "ui/**"
+      - ".github/workflows/cwbi-test-ui.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  browser-smoke:
+    name: Test production UI in Chromium
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ui
+        run: npm ci
+
+      - name: Install Chromium
+        working-directory: ui
+        run: npx playwright install --with-deps chromium
+
+      - name: Build production UI
+        working-directory: ui
+        run: npm run build
+
+      - name: Run browser smoke test
+        working-directory: ui
+        run: npm run test:smoke
+
+      - name: Upload browser test diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-browser-smoke-diagnostics
+          path: |
+            ui/playwright-report/
+            ui/test-results/
+          if-no-files-found: ignore

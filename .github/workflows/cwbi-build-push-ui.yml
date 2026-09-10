@@ -61,14 +61,14 @@ jobs:
         run: |
           cd ui
           echo "Installing dependencies..."
-          npm install
+          npm ci
 
       # Step 3.5: Audit packages for vulnerabilities
       - name: Audit packages for vulnerabilities (fail on high/critical)
         run: |
           cd ui
           echo "Running npm audit..."
-          npm audit --audit-level=critical  # Fail if high or critical vulnerabilities are found
+          npm audit --audit-level=high
 
       # Step 4: Build the React app for production
       - name: Build React App with Vite

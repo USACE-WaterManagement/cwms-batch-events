@@ -6,6 +6,7 @@ from cwms_batch_events.api.routers import (
     about,
     health,
     internal,
+    job_runners,
     jobs,
     notifications,
     scripts,
@@ -35,6 +36,7 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(about.router)
 app.include_router(internal.router)
+app.include_router(job_runners.router)
 app.include_router(jobs.router)
 app.include_router(notifications.router)
 app.include_router(scripts.router)

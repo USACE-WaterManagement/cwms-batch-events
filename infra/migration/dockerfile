@@ -1,5 +1,5 @@
 ARG BUILDER=ghcr.io/cwbi-apps/flyway
-ARG BUILDER_TAG=13.3.0
+ARG BUILDER_TAG=13.5.0
 ARG HTTP_CORE_VERSION=5.4.3
 ARG HTTP_CORE_SHA256=18bfbbabb478dfb67f31aeaf428c387f3c3df654582e1309f708ee1f3086830a
 ARG HTTP_CORE_H2_SHA256=c7db7026b8e2dea39132b04a6069f6671e2858309b20a146ec5c7dd6ed73a0b6
@@ -47,8 +47,7 @@ COPY --from=httpcore /tmp/httpcore5-h2.jar /tmp/httpcore5-h2.jar
 COPY --from=httpcore /tmp/httpclient5.jar /tmp/httpclient5.jar
 COPY --from=httpcore /tmp/netty-codec-http.jar /tmp/netty-codec-http.jar
 
-RUN apk add --no-cache --upgrade busybox=1.38.0-r1 libcrypto3 libssl3 \
- && rm -f /flyway/drivers/cassandra/httpcore5-*.jar \
+RUN rm -f /flyway/drivers/cassandra/httpcore5-*.jar \
  && rm -f /flyway/drivers/cassandra/httpclient5-*.jar \
  && rm -f /flyway/lib/netty/netty-codec-http-[0-9]*.jar \
  && mv /tmp/httpcore5.jar "/flyway/drivers/cassandra/httpcore5-${HTTP_CORE_VERSION}.jar" \

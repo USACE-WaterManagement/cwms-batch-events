@@ -15,7 +15,7 @@ PUBLIC_KEY = {
 }
 
 ISSUER = {
-    "PROD": "https://identity.sec.usace.army.mil/auth/realms/cwbi",
+    "PROD": "https://identity.cwbi.mil/auth/realms/cwbi",
     "TEST": "https://identity-test.cwbi.mil/auth/realms/cwbi",
 }
 

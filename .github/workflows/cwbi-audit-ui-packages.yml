@@ -1,0 +1,35 @@
+name: UI Package Audit on PR
+
+on:
+  pull_request:
+    branches:
+      - cwbi-dev
+      - cwbi-test
+      - cwbi-prod
+
+permissions:
+  contents: read
+
+jobs:
+  npm-audit:
+    name: Audit UI packages for high or critical vulnerabilities
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Install locked dependencies
+        working-directory: ui
+        run: npm ci
+
+      - name: Audit packages
+        working-directory: ui
+        run: npm audit --audit-level=high

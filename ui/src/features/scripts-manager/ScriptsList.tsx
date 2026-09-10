@@ -49,10 +49,11 @@ export const ScriptsList = ({
             <TableRow
               key={script.id}
               tabIndex={0}
+              aria-selected={script.id === selectedScriptId}
               onClick={() => selectScript(script.id)}
-              onKeyDown={(e: React.KeyboardEvent<HTMLTableRowElement>) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
+              onKeyDown={(event: React.KeyboardEvent<HTMLTableRowElement>) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
                   selectScript(script.id);
                 }
               }}

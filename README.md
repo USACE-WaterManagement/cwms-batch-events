@@ -6,6 +6,46 @@ CWMS Batch Events provides users an API and user interface to execute water mana
 
 To get your local environment setup and/or make contributions please see the contributions documentation: [CONTRIBUTING.md](https://github.com/USACE-WaterManagement/cwms-batch-events/blob/cwbi-dev/CONTRIBUTING.md)
 
+### GitHub Codespaces
+
+The repository's development container prepares a complete environment for GitHub Codespaces, including Python 3.12 and all test dependencies, Node.js 22 and the UI dependencies, Docker Compose with an isolated Docker daemon, the external `cwms` Docker network required by the local stack, and editor support for Python, TypeScript, ESLint, and Docker.
+
+Create a Codespace for this repository and wait for its setup to finish. The mounted checkout is used directly for Python imports, and `ui/node_modules` is installed from the committed lockfile. No credentials or repository secrets are required for the default mock-user development flow.
+
+Verify the environment with:
+
+```bash
+python -m pytest -q
+npm --prefix ui run lint
+npm --prefix ui run build
+docker compose config --quiet
+```
+
+Start the local service stack and UI in separate terminals:
+
+```bash
+docker compose up --build
+npm --prefix ui run dev -- --host 0.0.0.0
+```
+
+Codespaces forwards the UI, API, MinIO console, and ElasticMQ UI ports automatically. Use the forwarded URLs shown in the **Ports** panel rather than assuming `localhost` from outside the Codespace.
+
+#### Run the Dev Container locally on Windows
+
+Install and start Docker Desktop in Linux container mode, and ensure Node.js and npm are available. From a PowerShell prompt at the repository root, build and start the development container on the local Docker host with:
+
+```powershell
+npx -y @devcontainers/cli up --workspace-folder .
+```
+
+Open a shell in the running development container with:
+
+```powershell
+npx -y @devcontainers/cli exec --workspace-folder . bash
+```
+
+Docker Desktop runs the development container itself. The development container's Docker-in-Docker feature provides the isolated Docker daemon used by the project's Compose stack.
+
 
 ### Local Development Setup
 

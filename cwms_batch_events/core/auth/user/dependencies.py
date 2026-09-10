@@ -5,6 +5,7 @@ from cachetools import TTLCache
 from cwms_batch_events.core.auth.user.jwt import verify_jwt
 from cwms_batch_events.core.auth.user.models import User
 from cwms_batch_events.core.auth.user.roles import (
+    CdaUserProfileError,
     get_user_admin_offices,
     get_user_allowed_offices,
     get_user_profile_apikey,
@@ -66,10 +67,22 @@ async def get_current_user_cwms(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=f"Invalid token: {str(e)}",
             )
-        cda_user = get_user_profile_jwt(token)
+        try:
+            cda_user = get_user_profile_jwt(token)
+        except CdaUserProfileError as exc:
+            raise HTTPException(
+                status_code=exc.status_code,
+                detail=exc.detail,
+            ) from exc
     elif credentials.scheme.lower() == "apikey":
         apikey = credentials.credentials
-        cda_user = get_user_profile_apikey(apikey)
+        try:
+            cda_user = get_user_profile_apikey(apikey)
+        except CdaUserProfileError as exc:
+            raise HTTPException(
+                status_code=exc.status_code,
+                detail=exc.detail,
+            ) from exc
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

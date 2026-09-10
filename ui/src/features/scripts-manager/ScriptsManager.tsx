@@ -8,6 +8,7 @@ import LoginPrompt from "../auth/LoginPrompt";
 export const ScriptsManager = () => {
   const auth = useAuth();
   const { data, isLoading, isError } = useAdminOffices();
+
   const [office, setOffice] = useRememberedOffice(data ?? []);
 
   if (!auth.isAuth) {

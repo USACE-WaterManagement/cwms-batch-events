@@ -95,6 +95,7 @@ export const NotificationsManager = () => {
     preview.error;
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Reset the draft when its office changes.
     setSelectedTemplateId("");
     setTemplateForm(emptyTemplate(selectedOffice));
     setDeleteConfirm(false);
@@ -113,6 +114,7 @@ export const NotificationsManager = () => {
 
   useEffect(() => {
     if (!search.template || search.template === NEW_TEMPLATE_ROUTE_VALUE) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Synchronize the editable draft with template navigation.
       setSelectedTemplateId("");
       setTemplateForm(emptyTemplate(selectedOffice));
       setDeleteConfirm(false);

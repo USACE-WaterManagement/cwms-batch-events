@@ -34,6 +34,7 @@ services:
       CDA_TOKEN_URL: ${CDA_TOKEN_URL:-http://traefik/auth/realms/cwms/protocol/openid-connect/token}
       CDA_TOKEN_HOST_HEADER: ${CDA_TOKEN_HOST_HEADER:-localhost:8081}
       DEFAULT_JOB_RUNNER: docker-local
+      DATABASE_SCHEMA: wm_events_schema
       PGUSER: *application_user
       PGPASSWORD: *application_password
       PGDATABASE: postgres

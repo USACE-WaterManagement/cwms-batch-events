@@ -3,12 +3,17 @@ from unittest import mock
 import pytest
 
 from cwms_batch_events.core.auth.user.jwt import (
+    ISSUER,
     get_public_pem,
     raw_key_to_pem,
     verify_jwt,
     verify_jwt_by_api,
     verify_jwt_by_saved_key,
 )
+
+
+def test_production_issuer_uses_cwbi_keycloak():
+    assert ISSUER["PROD"] == "https://identity.cwbi.mil/auth/realms/cwbi"
 
 
 def test_raw_key_to_pem_wraps_public_key():

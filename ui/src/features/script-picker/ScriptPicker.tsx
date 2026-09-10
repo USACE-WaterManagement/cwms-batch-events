@@ -12,7 +12,7 @@ const ScriptPicker = () => {
 
   const auth = useAuth();
   const { data, isLoading, isError } = useScriptsCatalog();
-  const offices = Array.from(new Set(data?.map((s) => s.office) ?? []));
+  const offices = Array.from(new Set(data?.map((script) => script.office) ?? []));
   const [office, setOffice] = useRememberedOffice(offices);
 
   if (!auth.isAuth) {

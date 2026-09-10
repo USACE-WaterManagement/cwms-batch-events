@@ -14,6 +14,10 @@ def get_runner_id() -> uuid.UUID:
     )
 
 
+def get_runner_slug() -> str:
+    return "docker-local" if settings.default_job_runner == "docker-local" else "batch"
+
+
 ALL_OFFICES = [
     "MVS",
     "LRDO",

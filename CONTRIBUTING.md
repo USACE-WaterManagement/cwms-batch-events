@@ -1,5 +1,27 @@
 # Contributions
 
+## Codespaces
+
+GitHub Codespaces is the quickest supported setup path. The repository development container installs the Python and UI dependencies and prepares the Docker network used by `docker-compose.yml`. After creation, run `docker compose up --build` for the API and backing services, and run `npm --prefix ui run dev -- --host 0.0.0.0` in another terminal for the UI.
+
+The default local stack uses mock authentication and local-only service credentials. Do not add production credentials to the development container configuration or tracked files.
+
+### Local Dev Container on Windows
+
+Install and start Docker Desktop in Linux container mode, and ensure Node.js and npm are available. From a PowerShell prompt at the repository root, build and start the development container on the local Docker host with:
+
+```powershell
+npx -y @devcontainers/cli up --workspace-folder .
+```
+
+Open a shell in the running development container with:
+
+```powershell
+npx -y @devcontainers/cli exec --workspace-folder . bash
+```
+
+Docker Desktop runs the development container itself. The development container's Docker-in-Docker feature provides the isolated Docker daemon used by the project's Compose stack.
+
 ## Pre-reqs
 * VM 
 * Python 3.12+ (Pref with `pyenv`)

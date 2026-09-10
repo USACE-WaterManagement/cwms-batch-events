@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 const REMEMBERED_OFFICE_KEY = "cwms-batch-events:selected-office";
 
@@ -8,18 +8,16 @@ const loadRememberedOffice = () => {
 };
 
 export const useRememberedOffice = (offices: string[]) => {
-  const [office, setOfficeState] = useState<string | undefined>(
+  const [storedOffice, setStoredOffice] = useState<string | undefined>(
     loadRememberedOffice,
   );
-
-  useEffect(() => {
-    if (office && offices.length > 0 && !offices.includes(office)) {
-      setOfficeState(undefined);
-    }
-  }, [office, offices]);
+  const office =
+    storedOffice && (offices.length === 0 || offices.includes(storedOffice))
+      ? storedOffice
+      : undefined;
 
   const setOffice = (nextOffice: string) => {
-    setOfficeState(nextOffice || undefined);
+    setStoredOffice(nextOffice || undefined);
     if (typeof window === "undefined") return;
 
     if (nextOffice) {

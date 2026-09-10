@@ -74,6 +74,7 @@ export const ScriptNotificationEditor = ({
   const [manualRecipients, setManualRecipients] = useState<string[]>([]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Hydrate the editable draft after rule queries or script changes.
     setEnabled(rule?.active ?? false);
     setTemplateId(rule?.templateId ?? defaultTemplateId);
     setCdaUserListId(rule?.cdaUserListId ?? "");

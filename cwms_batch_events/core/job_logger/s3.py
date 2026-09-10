@@ -20,9 +20,9 @@ class S3JobLogger:
         key = f"logs/{job_id}.log"
         try:
             response = self.s3.get_object(Bucket=S3_BUCKET, Key=key)
-        except ClientError as e:
-            if e.response.get("Error", {}).get("Code") in {"NoSuchKey", "404"}:
-                raise FileNotFoundError(f"No logs found for job {job_id}") from e
+        except ClientError as exc:
+            if exc.response.get("Error", {}).get("Code") in {"NoSuchKey", "404"}:
+                raise FileNotFoundError(f"No logs found for job {job_id}") from exc
             raise
         body: str = response["Body"].read().decode("utf-8")
         return body

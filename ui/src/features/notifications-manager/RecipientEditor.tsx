@@ -63,6 +63,7 @@ export const RecipientEditor = ({
 
   useEffect(() => {
     if (addMode === "user-list") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Reset the picker when its recipient context changes.
       setUserListOffice(cdaUserListOffice || office);
     }
   }, [addMode, cdaUserListOffice, office]);

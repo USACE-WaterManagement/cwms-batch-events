@@ -11,7 +11,7 @@ import { ScriptNotificationEditor } from "../notifications-manager/ScriptNotific
 import { useScriptNotificationRules } from "../notifications-manager/api";
 import { FaEnvelope, FaFileLines } from "react-icons/fa6";
 
-const BATCH_RUNNER_UUID = "58600a09-f18e-42c5-9d3c-df52ebe409f9";
+import { useDefaultJobRunner } from "./useDefaultJobRunner";
 
 interface ScriptsWorkspaceProps {
   office: string;
@@ -22,6 +22,7 @@ export const ScriptsWorkspace = ({ office }: ScriptsWorkspaceProps) => {
   const createScriptMutation = useCreateScript(office);
   const deleteScriptMutation = useDeleteScript(office);
   const updateScriptMutation = useUpdateScript(office);
+  const defaultJobRunner = useDefaultJobRunner();
 
   const [selectedScriptId, setSelectedScriptId] = useState<
     string | undefined
@@ -31,8 +32,11 @@ export const ScriptsWorkspace = ({ office }: ScriptsWorkspaceProps) => {
   const notificationRules = useScriptNotificationRules(selectedScriptId);
 
   if (scripts.isLoading) return <span>Loading scripts...</span>;
+  if (defaultJobRunner.isLoading) return <span>Loading job runner...</span>;
   if (scripts.isError)
     return <span>Error occurred while loading scripts.</span>;
+  if (defaultJobRunner.isError || !defaultJobRunner.data)
+    return <span>Error occurred while loading the default job runner.</span>;
   if (!scripts.data) return <span>No scripts found!</span>;
 
   const selectedScript = scripts.data.find(
@@ -62,11 +66,16 @@ export const ScriptsWorkspace = ({ office }: ScriptsWorkspaceProps) => {
     setPanelMode("view");
   };
   const onSave = async (data: ScriptFormData) => {
+    const jobRunners =
+      selectedScript?.jobRunners && selectedScript.jobRunners.length > 0
+        ? selectedScript.jobRunners
+        : [defaultJobRunner.data.id];
+
     if (selectedScriptId) {
       const payload: ScriptUpdate = {
         ...data,
         executionType: "python",
-        jobRunners: [BATCH_RUNNER_UUID],
+        jobRunners,
       };
       await updateScriptMutation.mutateAsync({
         scriptId: selectedScriptId,
@@ -77,7 +86,7 @@ export const ScriptsWorkspace = ({ office }: ScriptsWorkspaceProps) => {
         ...data,
         office: office,
         executionType: "python",
-        jobRunners: [BATCH_RUNNER_UUID],
+        jobRunners,
       };
       const script = await createScriptMutation.mutateAsync({
         payload: payload,

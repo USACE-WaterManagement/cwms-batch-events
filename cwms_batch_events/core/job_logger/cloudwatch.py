@@ -32,7 +32,19 @@ class CloudWatchJobLogger:
                 f"Multiple jobs found for external_job_id {external_job_id}"
             )
 
-        return jobs[0]["attempts"][-1]["container"]["logStreamName"]
+        attempts = jobs[0].get("attempts", [])
+        if not attempts:
+            raise ValueError(
+                f"No Batch job attempts found for external_job_id {external_job_id}"
+            )
+
+        log_stream_name = attempts[-1].get("container", {}).get("logStreamName")
+        if not log_stream_name:
+            raise ValueError(
+                f"No log stream found for external_job_id {external_job_id}"
+            )
+
+        return log_stream_name
 
     def get_logs_for_job(self, job_id: UUID) -> str:
         job = self.get_job_details(job_id)
