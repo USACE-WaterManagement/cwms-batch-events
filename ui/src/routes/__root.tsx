@@ -9,7 +9,9 @@ import { Button, Card, Container, H1, Modal, SiteWrapper, Text } from "@usace/gr
 import { useAuth } from "@usace-watermanagement/groundwork-water";
 import AuthButton from "../features/auth/AuthButton";
 import { useRememberedOffice } from "../shared/hooks/useRememberedOffice";
-import { useRepositoryFiles } from "../features/scripts-manager/useRepositoryFiles";
+import { useRepositoryFiles, useRepositoryStatus } from "../features/scripts-manager/useRepositoryFiles";
+import { WarningIndicator } from "../components/WarningIndicator";
+import useAdminOffices from "../features/scripts-manager/useAdminOffices";
 
 const primaryLinks = [
   { id: "jobs", text: "Jobs List", href: "/jobs" },
@@ -44,7 +46,12 @@ function RootShell({ children }: { children: ReactNode }) {
   const auth = useAuth();
   const [githubOpen, setGithubOpen] = useState(false);
   const [office] = useRememberedOffice([]);
-  const catalog = useRepositoryFiles(office ?? "", auth.isAuth);
+  const adminOffices = useAdminOffices();
+  const canBrowse = Boolean(office && adminOffices.data?.includes(office));
+  const catalog = useRepositoryFiles(office ?? "", canBrowse);
+  const repositoryStatus = useRepositoryStatus();
+  const warnings = [...(repositoryStatus.data?.warnings ?? []), ...(catalog.data?.warnings ?? [])];
+  if (repositoryStatus.isError || catalog.isError) warnings.push({ code: "repository_request_failed", message: "Repository information could not be loaded. Manual path entry is available." });
   const repository = catalog.data?.repository;
   const repositoryUrl = repository && /^[\w.-]+\/[\w.-]+$/.test(repository)
     ? `https://github.com/${repository}` : undefined;
@@ -66,6 +73,8 @@ function RootShell({ children }: { children: ReactNode }) {
 
   return (
     <SiteWrapper links={navLinks} navRight={<div className="flex flex-wrap items-center gap-3 [&_button]:inline-flex [&_button]:items-center [&_button]:gap-2">
+      {auth.isAuth && <WarningIndicator warnings={warnings} refreshing={repositoryStatus.isFetching || catalog.isFetching}
+        onRefresh={() => { void repositoryStatus.refetch(); if (canBrowse) void catalog.refetch(); }} />}
       <Button type="button" disabled={!auth.isAuth || !repositoryUrl} title={!office ? "Select an office to open its repository" : !repositoryUrl ? `Repository unavailable for ${office}` : `Open ${repository}`}
         onClick={() => setGithubOpen(true)}><FaGithub aria-hidden /> {office ? `${office} GitHub` : "GitHub"}</Button>
       <AuthButton />

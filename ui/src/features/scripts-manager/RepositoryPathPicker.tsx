@@ -33,6 +33,7 @@ export function RepositoryPathPicker({ office, runtime, value, onChange }: {
   const [selected, setSelected] = useState("");
   const catalog = useRepositoryFiles(office);
   const paths = catalog.data?.paths ?? [];
+  const unavailable = catalog.isError || Boolean(catalog.data?.warnings?.length);
   const typedDirectory = value.slice(0, value.lastIndexOf("/") + 1);
   const prefix = value.slice(typedDirectory.length).toLowerCase();
   const suggestions = contents(paths, typedDirectory, extension).filter(entry => entry.name.toLowerCase().startsWith(prefix));
@@ -61,7 +62,7 @@ export function RepositoryPathPicker({ office, runtime, value, onChange }: {
         placeholder={runtime === "java" ? "java-artifacts/BuildWSmetadataViaCDA.jar" : `Directory or ${extension} file path`} aria-describedby="repository-path-help"
         title={value || `Directory or ${extension} file path`}
         className="min-w-0 flex-1 truncate rounded border border-gray-300 bg-white px-3 py-2 focus:text-clip" />
-      <Button type="button" aria-haspopup="dialog" onClick={() => {
+      <Button type="button" disabled={unavailable} aria-haspopup="dialog" onClick={() => {
         navigate(paths.some(path => path.startsWith(typedDirectory)) ? typedDirectory : "");
         setFilter(extension); setSuggest(false); setOpen(true);
       }} className="inline-flex shrink-0 items-center gap-2 [&_svg]:size-5"><MdFolderOpen aria-hidden />Browse</Button>
@@ -77,6 +78,8 @@ export function RepositoryPathPicker({ office, runtime, value, onChange }: {
         {!suggestions.length && <p className="p-2 text-sm text-gray-600">{catalog.isPending ? "Loading files…" : "No matching files or folders. You can keep this manual path."}</p>}
       </div>}
     </div>
+    {unavailable && <p role="status" className="rounded border border-amber-200 bg-amber-50 p-2 text-sm text-amber-950">Repository browsing is unavailable. Enter the path manually. Open the warning icon in the header for details.</p>}
+    {catalog.data?.mock && <p className="text-xs font-semibold text-amber-800">Local demo catalog — these are sample paths, not live GitHub files.</p>}
     <p id="repository-path-help" className={runtime === "java" ? "text-xs text-gray-600" : "sr-only"}>{runtime === "java" ? <>Path relative to <code>/jobs</code>. Enabled release JARs are downloaded from <code>java/artifacts.json</code> pins before execution. Enter their paths manually; Browse lists GitHub files only.</> : "Type a directory to see its contents, or browse for a file. Manual paths are accepted. Use the question mark beside the path for help adding files."}</p>
     {catalog.data && <p title={`${catalog.data.repository} · ${catalog.data.ref}`} className="truncate text-xs text-gray-600">{catalog.data.repository} · {catalog.data.ref}</p>}
     <Modal opened={open} onClose={() => setOpen(false)} dialogTitle={`Choose a file · ${office}`} size="3xl"
@@ -109,7 +112,7 @@ export function RepositoryPathPicker({ office, runtime, value, onChange }: {
         </div>
         <div className="h-72 overflow-y-auto overscroll-contain rounded-md border border-gray-300 bg-white" role="region" aria-label="Files and folders" tabIndex={0}>
           <div className="sticky top-0 z-10 flex justify-between border-b border-gray-300 bg-gray-100 py-2 pr-12 pl-4 text-xs font-semibold text-gray-600"><span>Name</span><span>Type</span></div>
-          {catalog.isPending ? <p className="p-4 text-sm">Loading repository files…</p> : catalog.isError ? <p className="p-4 text-sm">Repository files are unavailable. Close this window to type a path manually.</p> : <>
+          {catalog.isPending ? <p className="p-4 text-sm">Loading repository files…</p> : unavailable ? <p className="p-4 text-sm">Repository files are unavailable. Close this window to type a path manually.</p> : <>
             {entries.map(entry => <button key={entry.path} type="button" aria-label={`${entry.folder ? "Open folder" : "Select file"} ${entry.name}`}
               aria-pressed={entry.folder ? undefined : selected === entry.path}
               onClick={() => entry.folder ? navigate(entry.path) : setSelected(entry.path)}
