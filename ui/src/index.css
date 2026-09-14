@@ -1,2 +1,9 @@
 @import "tailwindcss";
 @import "@usace/groundwork/dist/groundwork.css" layer(components);
+
+/* Groundwork gives navRight a full-width slot. Size our compact actions to
+   their contents so the navigation links retain room at tablet widths. */
+header span:has(> .batch-header-actions) {
+  width: auto;
+  flex-shrink: 0;
+}

@@ -49,9 +49,7 @@ function RootShell({ children }: { children: ReactNode }) {
   const adminOffices = useAdminOffices();
   const canBrowse = Boolean(office && adminOffices.data?.includes(office));
   const catalog = useRepositoryFiles(office ?? "", canBrowse);
-  const repositoryStatus = useRepositoryStatus();
-  const warnings = [...(repositoryStatus.data?.warnings ?? []), ...(catalog.data?.warnings ?? [])];
-  if (repositoryStatus.isError || catalog.isError) warnings.push({ code: "repository_request_failed", message: "Repository information could not be loaded. Manual path entry is available." });
+  useRepositoryStatus();
   const repository = catalog.data?.repository;
   const repositoryUrl = repository && /^[\w.-]+\/[\w.-]+$/.test(repository)
     ? `https://github.com/${repository}` : undefined;
@@ -72,11 +70,10 @@ function RootShell({ children }: { children: ReactNode }) {
   const navLinks = [...primaryLinks, aboutLink, helpLink];
 
   return (
-    <SiteWrapper links={navLinks} navRight={<div className="flex flex-wrap items-center gap-3 [&_button]:inline-flex [&_button]:items-center [&_button]:gap-2">
-      {auth.isAuth && <WarningIndicator warnings={warnings} refreshing={repositoryStatus.isFetching || catalog.isFetching}
-        onRefresh={() => { void repositoryStatus.refetch(); if (canBrowse) void catalog.refetch(); }} />}
-      <Button type="button" disabled={!auth.isAuth || !repositoryUrl} title={!office ? "Select an office to open its repository" : !repositoryUrl ? `Repository unavailable for ${office}` : `Open ${repository}`}
-        onClick={() => setGithubOpen(true)}><FaGithub aria-hidden /> {office ? `${office} GitHub` : "GitHub"}</Button>
+    <SiteWrapper links={navLinks} navRight={<div className="batch-header-actions flex shrink-0 items-center gap-1 whitespace-nowrap py-1" aria-label="Account and notifications">
+      {auth.isAuth && <WarningIndicator />}
+      <Button type="button" className="gw-px-2 gw-shrink-0" aria-label={office ? `${office} GitHub` : "GitHub"} disabled={!auth.isAuth || !repositoryUrl} title={!office ? "Select an office to open its repository" : !repositoryUrl ? `Repository unavailable for ${office}` : `Open ${repository}`}
+        onClick={() => setGithubOpen(true)}><FaGithub aria-hidden /> <span className="hidden min-[1100px]:inline">{office ? `${office} GitHub` : "GitHub"}</span></Button>
       <AuthButton />
     </div>}>
       <Modal opened={githubOpen} onClose={() => setGithubOpen(false)} dialogTitle="Open GitHub repository?"
