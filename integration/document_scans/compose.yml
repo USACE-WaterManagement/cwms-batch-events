@@ -1,0 +1,94 @@
+name: document-scan-pilot
+services:
+  reports:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: scan
+      POSTGRES_PASSWORD: local-scan-only
+      POSTGRES_DB: scans
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U scan -d scans"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+  migration:
+    image: ghcr.io/cwbi-apps/flyway:13.5.0
+    depends_on:
+      reports: { condition: service_healthy }
+    environment:
+      FLYWAY_URL: jdbc:postgresql://reports:5432/scans
+      FLYWAY_USER: scan
+      FLYWAY_PASSWORD: local-scan-only
+      FLYWAY_SCHEMAS: events
+      FLYWAY_PLACEHOLDERS_APP_USER: scanapp
+      FLYWAY_PLACEHOLDERS_APP_PASSWORD: local-app-only
+      FLYWAY_LOCATIONS: filesystem:/flyway/sql
+    volumes:
+      - ../../infra/migration/main:/flyway/sql:ro
+    command: migrate
+  auth:
+    image: quay.io/keycloak/keycloak:26.5
+    command: [start-dev, --import-realm]
+    environment:
+      KC_HTTP_PORT: 18080
+      KC_HTTP_RELATIVE_PATH: /auth
+      KC_HOSTNAME: http://localhost:18080/auth
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+    ports: ["127.0.0.1:18080:18080"]
+    volumes:
+      - ./realm.json:/opt/keycloak/data/import/realm.json:ro
+  oracle:
+    image: ghcr.io/hydrologicengineeringcenter/cwms-database/cwms/database-ready-ora-23.5:latest-dev
+    environment:
+      ORACLE_PASSWORD: badSYSpassword
+      CWMS_PASSWORD: simplecwmspasswD1
+      OFFICE_ID: HQ
+      OFFICE_EROC: q0
+    healthcheck:
+      test: [CMD-SHELL, "echo 'exit;' | sqlplus -s -L sys/badSYSpassword@localhost:1521/FREEPDB1 as sysdba"]
+      interval: 10s
+      timeout: 10s
+      retries: 60
+  cda:
+    image: ${CDA_IMAGE:-cwms-rest-api:local-dev}
+    depends_on:
+      oracle: { condition: service_healthy }
+      auth: { condition: service_started }
+    ports: ["127.0.0.1:18081:7000"]
+    environment:
+      CDA_JDBC_DRIVER: oracle.jdbc.driver.OracleDriver
+      CDA_JDBC_URL: jdbc:oracle:thin:@oracle/FREEPDB1
+      CDA_JDBC_USERNAME: q0webtest
+      CDA_JDBC_PASSWORD: simplecwmspasswD1
+      cwms.dataapi.access.provider: MultipleAccessManager
+      cwms.dataapi.access.providers: KeyAccessManager,OpenID
+      cwms.dataapi.access.openid.create_users: "true"
+      cwms.dataapi.access.openid.wellKnownUrl: http://auth:18080/auth/realms/cwms/.well-known/openid-configuration
+      cwms.dataapi.access.openid.altAuthUrl: http://auth:18080
+      cwms.dataapi.access.openid.useAltWellKnown: "true"
+      cwms.dataapi.access.openid.issuer: http://localhost:18080/auth/realms/cwms
+  api:
+    image: document-scan-api:local
+    depends_on:
+      migration: { condition: service_completed_successfully }
+    cpus: 0.5
+    mem_limit: 1g
+    memswap_limit: 1g
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    environment:
+      DOCUMENT_SCAN_ENABLED: "true"
+      DOCUMENT_SCAN_URL_HOSTS: '["www.w3.org"]'
+      PGHOST: reports
+      PGDATABASE: scans
+      PGUSER: scanapp
+      PGPASSWORD: local-app-only
+      AUTH_ENVIRONMENT: LOCAL
+      AUTH_HOST: http://auth:18080/auth
+      AUTH_REALM: cwms
+      CDA_API_ROOT: http://cda:7000/cwms-data/
+      PYTHONDONTWRITEBYTECODE: "1"
+    ports: ["127.0.0.1:18082:8000"]
+    volumes:
+      - ../../cwms_batch_events:/code/cwms_batch_events:ro

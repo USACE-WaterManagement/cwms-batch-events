@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     pgport: int = 5432
     mock_user: bool = False
     root_path: str = ""
+    document_scan_enabled: bool = False
+    document_scan_classpath: str = "/opt/scanner/classes"
+    document_scan_url_hosts: list[str] = []
+    document_scan_origins: list[str] = []
     # CWBI deployments use "events"; local Docker overrides this setting.
     database_schema: str = "events"
     s3_bucket: str = ""

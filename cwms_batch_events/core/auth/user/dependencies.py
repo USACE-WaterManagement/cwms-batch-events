@@ -52,7 +52,7 @@ async def get_current_user_cwms(
     credentials: HTTPAuthorizationCredentials = Depends(get_auth_credentials),
 ) -> User:
     cache_key = f"{credentials.scheme}:{credentials.credentials}"
-    if cache_key in user_cache:
+    if credentials.scheme.lower() != "bearer" and cache_key in user_cache:
         return user_cache[cache_key]
 
     if credentials.scheme.lower() == "bearer":
@@ -67,6 +67,9 @@ async def get_current_user_cwms(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=f"Invalid token: {str(e)}",
             )
+        # Cached CDA profiles must never extend a bearer token's lifetime.
+        if cache_key in user_cache:
+            return user_cache[cache_key]
         try:
             cda_user = get_user_profile_jwt(token)
         except CdaUserProfileError as exc:
