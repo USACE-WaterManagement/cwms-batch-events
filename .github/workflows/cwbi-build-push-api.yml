@@ -9,6 +9,8 @@ on:
       - "cwms_batch_events/api/**"
       - "cwms_batch_events/core/**"
       - "Dockerfile"
+      - "requirements.txt"
+      - "integration/document_scans/**"
       - ".github/workflows/cwbi-build-push-api.yml"
   schedule:
     - cron: "0 6 * * 1"

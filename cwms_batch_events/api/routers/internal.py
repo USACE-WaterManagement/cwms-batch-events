@@ -16,6 +16,22 @@ from cwms_batch_events.core.processing import update_batch_job_status
 router = APIRouter(prefix="/internal", include_in_schema=False)
 
 
+@router.post("/document/scan/{scan_id}/external-job-id", status_code=204)
+def bind_scan_job(
+    scan_id: UUID, payload: BindExternalJobIdRequest, _=Depends(require_internal_auth)
+):
+    from cwms_batch_events.api.routers.document_scan import query
+
+    rows = query(
+        """UPDATE document_scans SET external_job_id=COALESCE(external_job_id,:external)
+        WHERE id=:id RETURNING id""",
+        id=scan_id,
+        external=payload.external_job_id,
+    )
+    if not rows:
+        raise HTTPException(404, "Scan not found")
+
+
 @router.post(
     "/batch-jobs/{batch_job_id}/status",
     status_code=status.HTTP_204_NO_CONTENT,

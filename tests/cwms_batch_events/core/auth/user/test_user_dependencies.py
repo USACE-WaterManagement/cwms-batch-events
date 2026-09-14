@@ -192,8 +192,26 @@ async def test_get_current_user_cwms_uses_cache():
         second = await get_current_user_cwms(credentials)
 
     assert first == second
-    verify_jwt_mock.assert_called_once_with("token")
+    assert verify_jwt_mock.call_args_list == [mock.call("token"), mock.call("token")]
     get_profile.assert_called_once_with("token")
+
+
+@pytest.mark.anyio
+async def test_cached_profile_does_not_accept_an_expired_bearer():
+    credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="expiring")
+    cda_user = SimpleNamespace(user_name="tester", roles={"SWT": ["CWMS Users"]})
+    with mock.patch(
+        "cwms_batch_events.core.auth.user.dependencies.verify_jwt",
+        side_effect=[{"azp": "cwms"}, ValueError("Token expired")],
+    ), mock.patch(
+        "cwms_batch_events.core.auth.user.dependencies.get_user_profile_jwt",
+        return_value=cda_user,
+    ) as profile:
+        await get_current_user_cwms(credentials)
+        with pytest.raises(HTTPException) as error:
+            await get_current_user_cwms(credentials)
+    assert error.value.status_code == 401
+    profile.assert_called_once()
 
 
 @pytest.mark.anyio

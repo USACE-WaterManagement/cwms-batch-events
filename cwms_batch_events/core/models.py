@@ -152,6 +152,7 @@ class JobRequestedBy(BaseModel):
 
 
 class JobMessage(BaseModel):
+    document_scan: bool = False
     version: str
     job_id: UUID
     runner_type: str
