@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Response, status
 from sqlalchemy.exc import NoResultFound
 
 from cwms_batch_events.api.dependencies import (
@@ -24,11 +24,30 @@ from cwms_batch_events.core.queue import JobQueue
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
 
-@router.get("")
+@router.get(
+    "",
+    responses={200: {"headers": {
+        "X-Total-Count": {
+            "description": "Total jobs for the current user when pagination is requested.",
+            "schema": {"type": "integer"},
+        }
+    }}},
+)
 def get_jobs_for_user(
+    response: Response,
+    limit: int | None = Query(
+        default=None, ge=1, le=100,
+        description="Maximum jobs to return. Omit to return all jobs.",
+    ),
+    offset: int = Query(
+        default=0, ge=0, description="Number of jobs to skip, newest first.",
+    ),
     user: User = Depends(get_current_user),
     job_db: JobDatabase = Depends(get_job_database),
 ) -> list[JobRecord]:
+    if limit is not None or offset:
+        response.headers["X-Total-Count"] = str(job_db.count_jobs_for_user(user.username))
+        return job_db.get_jobs_for_user(user.username, limit=limit, offset=offset)
     job_list = job_db.get_jobs_for_user(user.username)
     return job_list
 

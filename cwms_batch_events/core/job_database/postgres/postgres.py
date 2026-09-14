@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 import re
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 import uuid
@@ -111,11 +111,20 @@ class PostgresJobDatabase:
             return None
         return JobRecord.model_validate(job_model)
 
-    def get_jobs_for_user(self, user_id: str) -> list[JobRecord]:
+    def count_jobs_for_user(self, user_id: str) -> int:
+        return self.db.scalar(
+            select(func.count()).select_from(JobModel).where(JobModel.username == user_id)
+        )
+
+    def get_jobs_for_user(
+        self, user_id: str, limit: int | None = None, offset: int = 0
+    ) -> list[JobRecord]:
         job_models = self.db.scalars(
             select(JobModel)
             .where(JobModel.username == user_id)
-            .order_by(JobModel.created_time.desc())
+            .order_by(JobModel.created_time.desc(), JobModel.id.desc())
+            .limit(limit)
+            .offset(offset)
         ).all()
         return [JobRecord.model_validate(model) for model in job_models]
 

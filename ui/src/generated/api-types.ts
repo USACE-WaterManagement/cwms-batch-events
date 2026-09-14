@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-    "/jobs/": {
+    "/jobs": {
         parameters: {
             query?: never;
             header?: never;
@@ -12,10 +12,10 @@ export interface paths {
             cookie?: never;
         };
         /** Get Jobs For User */
-        get: operations["get_jobs_for_user_jobs__get"];
+        get: operations["get_jobs_for_user_jobs_get"];
         put?: never;
         /** Post Job */
-        post: operations["post_job_jobs__post"];
+        post: operations["post_job_jobs_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -357,9 +357,14 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    get_jobs_for_user_jobs__get: {
+    get_jobs_for_user_jobs_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Maximum jobs to return. Omit to return all jobs. */
+                limit?: number | null;
+                /** @description Number of jobs to skip, newest first. */
+                offset?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -369,15 +374,26 @@ export interface operations {
             /** @description Successful Response */
             200: {
                 headers: {
+                    /** @description Total jobs for the current user when pagination is requested. */
+                    "X-Total-Count"?: number;
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["JobRecord"][];
                 };
             };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
     };
-    post_job_jobs__post: {
+    post_job_jobs_post: {
         parameters: {
             query?: never;
             header?: never;
