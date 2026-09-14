@@ -9,7 +9,7 @@ from cwms_batch_events.core.job_database.postgres.postgres import PostgresJobDat
 from tests.factories import make_job_record, make_script_read, make_script_create_payload
 
 
-@pytest.mark.parametrize("path", ["/jobs/python/report.py", "/python/report.py", "../report.py"])
+@pytest.mark.parametrize("path", ["/python/report.py", "../report.py"])
 def test_legacy_paths_remain_readable_but_cannot_be_saved_or_run(client, job_queue, path):
     session = MagicMock()
     script = ScriptModel(**make_script_read(repo_path=path, roles=["CWMS Users"]).model_dump(by_alias=False))

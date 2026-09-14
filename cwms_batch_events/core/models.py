@@ -45,6 +45,11 @@ class ExecutionOptions(ExecutionRecord):
     @model_validator(mode="after")
     def valid_repository_path(self):
         path = PurePosixPath(self.repo_path)
+        if self.execution_type == "github_file" and self.repo_path.startswith("/jobs/"):
+            self.repo_path = self.repo_path[len("/jobs/"):]
+            if not self.repo_path:
+                raise ValueError("A script path within /jobs is required")
+            path = PurePosixPath(self.repo_path)
         if self.execution_type == "github_file" and (
             path.is_absolute() or ".." in path.parts
         ):
