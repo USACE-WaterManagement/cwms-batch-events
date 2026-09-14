@@ -38,7 +38,7 @@ export const ScriptView = ({ script, onEdit }: ScriptViewProps) => {
                 : "GitHub Repo Path"
             }
           >
-            <span className="block truncate" title={script.repoPath}>{script.repoPath}</span>
+            <span className="block [overflow-wrap:anywhere]">{script.repoPath}</span>
           </ViewField>
           <ViewField label="Source">
             {script.executionType === "command"

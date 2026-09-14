@@ -9,6 +9,24 @@
    **Refresh** reloads the list. **Job History** shows your runs across all scripts.
 
 The Groundwork tabs keep details, submission, and run output in the selected script's workspace.
+Each row groups the script name, runtime, active state, and full path. Actions appear beside
+that information when space permits and below it on smaller screens. The selected script
+appears beside the list on wide screens and below it on narrower screens. Long paths and
+run details wrap so the action buttons remain reachable without horizontal scrolling.
+
+<details>
+<summary>Wide-screen and phone layouts</summary>
+
+On a wide screen, the script list and selected run share the workspace:
+
+![Scripts Manager at 1366 pixels with long names and paths](../ui/public/about/scripts-manager-desktop.png)
+
+On a phone, scroll the script list to choose a script, then scroll down to its tabs:
+
+<img src="../ui/public/about/scripts-manager-mobile.png" alt="Scripts Manager at 390 pixels with stacked actions and run details" width="390" />
+
+</details>
+
 Script rows show a spinner for your queued or running jobs and a warning for your most recent
 failure within the past 24 hours. Click either indicator to open that exact run in **Job runs**.
 Running jobs also show spinners in the run list. The manager refreshes run status every five
@@ -55,3 +73,8 @@ Capture updates with `PR_SCREENSHOT_DIR` set while running
 definitions and output; these images demonstrate the UI, not an AWS execution.
 Keep PR-only screenshots outside the repository and copy only the intended documentation
 images into `ui/public/about/`.
+
+`ui/tests/smoke/script-responsive-layout.spec.ts` checks long names, paths, arguments,
+and usernames at nine widths from 320 to 1920 pixels, plus 200% text size. It checks
+the list and individual content boxes for overflow, verifies action-button bounds,
+and exercises all three tabs. Set `PR_SCREENSHOT_DIR` to capture each layout.

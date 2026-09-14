@@ -120,7 +120,7 @@ export const ScriptsWorkspace = ({ office }: ScriptsWorkspaceProps) => {
     updateScriptMutation.error;
 
   return (
-    <div className={`w-full grid grid-cols-1 gap-6 mt-4 ${scripts.data.length > 0 ? "xl:grid-cols-2" : ""}`}>
+    <div className="scripts-workspace w-full mt-4">
       <div className="min-w-0">
         <header className="flex justify-between">
           <H2>{office.toUpperCase()} Scripts</H2>
@@ -152,7 +152,7 @@ export const ScriptsWorkspace = ({ office }: ScriptsWorkspaceProps) => {
           />
         </div>}
       </div>
-      {scripts.data.length > 0 && <div className="min-w-0 self-start rounded-xl border border-gray-200 bg-white p-3">
+      {scripts.data.length > 0 && <div className="script-workspace-panel min-w-0 self-start rounded-xl border border-gray-200 bg-white p-3 [overflow-wrap:anywhere]">
       {selectedScript ? <>
         <H2 className="mb-3 break-words">{selectedScript.name}</H2>
         <Tabs key={`${selectedScript.id}:${panelTab.revision}`} defaultIndex={panelTab.index} fill tabs={[

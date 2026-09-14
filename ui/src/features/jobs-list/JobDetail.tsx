@@ -31,12 +31,12 @@ interface JobDetailProps {
 
 function JobDetail({ job }: JobDetailProps) {
   return (
-    <>
-      <div className="min-w-0 grow grid grid-cols-1 gap-x-4 py-3 sm:grid-cols-2">
+    <div className="job-detail-container min-w-0 grow">
+      <div className="job-detail-fields min-w-0 grow py-3">
         {jobFields.map((field) => {
           const className = wideFields.includes(field)
-            ? "sm:col-span-2"
-            : "col-span-1";
+            ? "job-detail-wide"
+            : "";
           return (
             <JobDetailField key={field} field={fieldLabels[field] ?? field} className={className}>
               {field === "jobStatus" ? (
@@ -57,7 +57,7 @@ function JobDetail({ job }: JobDetailProps) {
           );
         })}
       </div>
-    </>
+    </div>
   );
 }
 
@@ -71,8 +71,8 @@ const JobDetailField = ({
   className,
   children,
 }: PropsWithChildren<JobDetailFieldProps>) => (
-  <span className={`min-w-0 break-words px-3 py-1.5 ${className}`}>
-    <strong>{field}</strong>: {children}
+  <span className={`min-w-0 [overflow-wrap:anywhere] px-3 py-1.5 ${className}`}>
+    <strong className="block">{field}:</strong> {children}
   </span>
 );
 
