@@ -42,12 +42,17 @@ def main():
             assert jobs.json()[0]["repoPath"] == "/jobs/python/report.py"
             job_id = jobs.json()[0]["id"]
             assert client.get(f"/jobs/{job_id}").status_code == 200
-            for suffix in (2, 3):
+            for suffix in (3,):
                 response = client.post("/jobs", json={"scriptId": f"10000000-0000-0000-0000-{suffix:012d}"})
                 assert response.status_code == 422, response.text
             with engine.connect() as connection:
                 assert connection.scalar(text("SELECT count(*) FROM events.jobs")) == 1
             assert not queue.messages
+            response = client.post("/jobs", json={"scriptId": "10000000-0000-0000-0000-000000000002"})
+            assert response.status_code == 200, response.text
+            assert len(queue.messages) == 1
+            assert queue.messages[0].payload.repo_path == "python/report.py"
+            queue.messages.clear()
         else:
             assert scripts.json() == [] and catalog.json() == [] and jobs.json() == []
         payload = dict(office="SWT", name="New Java registration", description="Upgrade test", repoPath="java-artifacts/report.jar",

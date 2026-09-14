@@ -4,7 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from cwms_batch_events.core.execution import command_for_payload
-from cwms_batch_events.core.models import ScriptRunOptions
+from cwms_batch_events.core.models import ScriptRunOptions, ScriptCreate, ScriptUpdate
 from cwms_batch_events.lambdas.dispatch_job.job_runner.batch import BatchJobRunner
 from tests.factories import make_job_message
 
@@ -13,6 +13,8 @@ from tests.factories import make_job_message
     "runtime,path,expected",
     [
         ("python", "python/report.py", ["python", "/jobs/python/report.py"]),
+        ("python", "/jobs/python/report.py", ["python", "/jobs/python/report.py"]),
+        ("java", "/jobs/java-artifacts/report.jar", ["java", "-jar", "/jobs/java-artifacts/report.jar"]),
         ("java", "lib/report.jar", ["java", "-jar", "/jobs/lib/report.jar"]),
         ("shell", "bin/report.sh", ["bash", "/jobs/bin/report.sh"]),
     ],
@@ -65,6 +67,8 @@ def test_installed_jar_preserves_arguments_and_office_definition():
     [
         {"runtime": "node"},
         {"repo_path": "../escape.py"},
+        {"repo_path": "/jobs/../escape.py"},
+        {"repo_path": "/jobs/"},
         {"repo_path": "/escape.py"},
         {"repo_path": ""},
         {"command_args": ["bad\x00arg"]},
@@ -84,3 +88,12 @@ def test_legacy_execution_remains_python(legacy):
         office="swt", script_slug="report", repo_path="report.py", execution_type=legacy
     )
     assert command_for_payload(payload) == ["python", "/jobs/report.py"]
+
+
+@pytest.mark.parametrize("model", [ScriptCreate, ScriptUpdate])
+def test_saved_legacy_jobs_prefix_is_normalized(model):
+    script = model.model_validate({
+        "office": "SWT", "name": "Report", "description": "Report",
+        "repoPath": "/jobs/python/report.py",
+    })
+    assert script.repo_path == "python/report.py"
