@@ -22,7 +22,31 @@ const fieldHelp: Record<string, React.ReactNode> = {
   name: "A descriptive name for this job. Its slug is generated from the name when you create it.",
   description: "Describe what this job does and when someone should run it.",
   repoPath: <>Enter a path relative to /jobs. Repository files are checked out there. With the Java artifact loader deployed, enabled pins in java/artifacts.json download release JARs into java-artifacts/ before the job runs. Enter those generated paths manually; Browse lists only files committed to GitHub. Files and directories cannot be created here. <Link to="/help/script-files" target="_blank" rel="noopener noreferrer">Script setup (new tab)</Link>. For an installed command, enter its executable; that mode skips checkout and artifact downloads.</>,
-  executionType: "District GitHub repository checks out the office repository and, when configured, downloads its pinned Java release artifacts before running the job. Installed command runs an executable already available in the image and skips both checkout and artifact downloads.",
+  executionType: (
+    <div className="space-y-4">
+      <section className="space-y-2">
+        <h3 className="font-semibold">District GitHub repository</h3>
+        <p>Downloads the selected office’s repository before running a Python file, Bash script, or Java JAR. Paths are relative to <code>/jobs</code>. Enabled Java artifact pins also download their release JARs.</p>
+        <div className="space-y-2 rounded-md border border-blue-200 bg-blue-50 p-3 text-blue-950">
+          <p className="font-semibold">Example: SWT Java release</p>
+          <p>Runtime: <strong>Java JAR</strong><br />JAR Path:</p>
+          <code className="block break-all font-mono">java-artifacts/BuildWSmetadataViaCDA.jar</code>
+          <p>Enter this generated path manually. Browse shows files committed to GitHub.</p>
+        </div>
+      </section>
+      <section className="space-y-2">
+        <h3 className="font-semibold">Installed command</h3>
+        <p>Runs an executable already available in the container, such as <code>cwmscli</code>, <code>java</code>, or <code>bash</code>. Skips repository checkout, artifact downloads, and district dependency installation.</p>
+        <div className="space-y-2 rounded-md border border-blue-200 bg-blue-50 p-3 text-blue-950">
+          <p className="font-semibold">Example: JAR already in the container</p>
+          <p>Executable: <code className="font-mono font-semibold">java</code><br />Arguments (one per line):</p>
+          <pre className="whitespace-pre-wrap break-all rounded bg-white p-2 font-mono text-blue-950"><code>{"-jar\n/opt/reports/report.jar"}</code></pre>
+          <p>Replace this example path with an existing JAR in the image or a mounted directory. Use the repository source for SWT’s downloaded release JAR.</p>
+        </div>
+      </section>
+      <p>Arguments are passed literally. To run shell operations such as <code>&amp;&amp;</code>, use <code>bash</code> with <code>-c</code> on the first argument line and the complete shell command on the next.</p>
+    </div>
+  ),
   runtime: "Choose Python for .py files, Bash for .sh files, or Java JAR for a built .jar file. The runtime determines how the file is invoked and the default browser filter.",
   commandArgs: "Enter one argument per line. Spaces within each line are preserved. For the installed java command, put -jar on one line and the JAR path on the next.",
   roles: "Select the roles permitted to run this script. Choose a role and click Add; use its remove button to remove access for that role.",

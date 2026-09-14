@@ -2,7 +2,18 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@usace-watermanagement/groundwork-water";
 import fetchWithAuth from "../../utils/fetchWithAuth";
 
-interface Catalog { repository: string; ref: string; paths: string[] }
+export interface RepositoryWarning { code: string; message: string }
+interface Catalog { repository: string; ref: string; paths: string[]; warnings?: RepositoryWarning[]; mock?: boolean }
+
+export function useRepositoryStatus() {
+  const auth = useAuth();
+  return useQuery<{ warnings: RepositoryWarning[]; mock: boolean }>({
+    queryKey: ["repository-status", auth.isAuth],
+    queryFn: async () => (await fetchWithAuth("/api/repository-status", {}, auth.token)).json(),
+    enabled: auth.isAuth,
+    staleTime: 60_000,
+  });
+}
 
 export function useRepositoryFiles(office: string, enabled = true) {
   const auth = useAuth();
