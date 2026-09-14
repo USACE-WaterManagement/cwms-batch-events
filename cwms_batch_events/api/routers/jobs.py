@@ -14,6 +14,7 @@ from cwms_batch_events.core.job_database.base import JobDatabase
 from cwms_batch_events.core.job_logger.base import JobLogger
 from cwms_batch_events.core.models import (
     JobLogs,
+    JobLogPage,
     JobRecord,
     JobSource,
     ScriptRunOptions,
@@ -119,3 +120,22 @@ def get_logs_for_job(
             detail=f"Logs are not available for job '{job_id}': {exc}",
         ) from exc
     return JobLogs(logs=logs)
+
+
+@router.get("/{job_id}/logs/page")
+def get_log_page(
+    job_id: UUID,
+    cursor: str | None = Query(default=None, max_length=16384),
+    user: User = Depends(get_current_user),
+    job_db: JobDatabase = Depends(get_job_database),
+    job_logger: JobLogger = Depends(get_job_logger),
+) -> JobLogPage:
+    """Read a bounded log page. Pass nextCursor to retrieve subsequent output."""
+    job = job_db.get_job_by_id(job_id)
+    # Match the user-scoped jobs list; never use a cursor as authorization.
+    if not job or job.username != user.username:
+        raise HTTPException(status_code=404, detail="Job not found")
+    try:
+        return job_logger.get_log_page(job_id, cursor)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid log cursor. Refresh the logs.") from exc

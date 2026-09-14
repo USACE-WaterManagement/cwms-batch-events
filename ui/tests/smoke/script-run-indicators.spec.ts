@@ -41,7 +41,7 @@ test("script indicators open the exact active or recent failed run", async ({ pa
     if (path.endsWith("/job-runners/default")) return route.fulfill({ json: { id: "runner", slug: "batch" } });
     if (path.endsWith("/scripts")) return route.fulfill({ json: [script, { ...script, id: "queued-script", name: "Queued report" }, { ...script, id: "old-script", name: "Old report" }] });
     if (path.endsWith("/jobs")) return route.fulfill({ json: runs });
-    if (path.endsWith("/logs")) return route.fulfill({ json: { logs: "Example failed run output" } });
+    if (path.endsWith("/logs/page")) return route.fulfill({ json: { logs: "Example failed run output", reset: true } });
     const requested = runs.find(run => path.endsWith(`/jobs/${run.id}`));
     if (requested) return route.fulfill({ json: requested });
     return route.fulfill({ json: [] });

@@ -82,6 +82,14 @@ class JobLogs(CamelModel):
     logs: str
 
 
+class JobLogPage(JobLogs):
+    next_cursor: str | None = None
+    has_more: bool = False
+    reset: bool = False
+    available: bool = True
+    supports_live: bool = True
+
+
 class JobRecord(ExecutionRecord):
     model_config = ConfigDict(from_attributes=True)
 
