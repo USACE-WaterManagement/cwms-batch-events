@@ -28,7 +28,8 @@ def update_batch_job_status_endpoint(
 ):
     try:
         update_batch_job_status(
-            batch_job_id, payload.status, payload.event_time, job_db
+            batch_job_id, payload.status, payload.event_time, job_db,
+            **({"batch_detail": payload.batch_detail} if payload.batch_detail is not None else {}),
         )
 
     except ValueError as e:

@@ -14,7 +14,7 @@ def test_log_page_preserves_cursor_contract(client, job_db, job_logger, user):
     job_logger.get_log_page.return_value = JobLogPage(logs="new output", next_cursor="next", has_more=True)
     response = client.get(f"/jobs/{job.id}/logs/page?cursor=previous")
     assert response.status_code == 200
-    assert response.json() == dict(logs="new output", nextCursor="next", hasMore=True, reset=False, available=True, supportsLive=True)
+    assert response.json() == dict(logs="new output", nextCursor="next", hasMore=True, reset=False, available=True, supportsLive=True, message=None)
     job_logger.get_log_page.assert_called_once_with(job.id, "previous")
 
 

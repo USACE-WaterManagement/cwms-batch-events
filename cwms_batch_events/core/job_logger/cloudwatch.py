@@ -1,6 +1,7 @@
 import base64
 import json
 import time
+from datetime import datetime, timezone
 
 import boto3
 from botocore.exceptions import ClientError
@@ -8,6 +9,7 @@ from uuid import UUID
 
 from cwms_batch_events.core.job_database.base import JobDatabase
 from cwms_batch_events.core.models import JobLogPage, JobRecord
+from cwms_batch_events.core.batch_details import container_stream
 
 
 class LogsNotReady(ValueError):
@@ -27,6 +29,19 @@ class CloudWatchJobLogger:
             raise ValueError(f"No job found for job_id {job_id}")
 
         return job
+
+    def refresh_job(self, job_id: UUID) -> JobRecord:
+        job = self.get_job_details(job_id)
+        if not job.external_job_id or (
+            job.job_status in ("Completed", "Failed") and job.log_stream
+        ):
+            return job
+        if self.db.claim_batch_refresh(job_id):
+            observed_at = datetime.now(timezone.utc)
+            jobs = self.batch.describe_jobs(jobs=[job.external_job_id]).get("jobs", [])
+            if jobs:
+                self.db.record_batch_details(job_id, jobs[0], observed_at)
+        return self.get_job_details(job_id)
 
     def get_batch_log_name(self, external_job_id: str) -> str:
         response = self.batch.describe_jobs(jobs=[external_job_id])
@@ -62,16 +77,7 @@ class CloudWatchJobLogger:
 
     @staticmethod
     def _container_stream(detail: dict) -> str | None:
-        stream = detail.get("container", {}).get("logStreamName")
-        if stream:
-            return stream
-        # ECS properties jobs put containers under taskProperties.
-        properties = detail.get("ecsProperties", detail)
-        for task in properties.get("taskProperties", []):
-            for container in task.get("containers", []):
-                if container.get("logStreamName"):
-                    return container["logStreamName"]
-        return None
+        return container_stream(detail)
 
     def get_log_page(self, job_id: UUID, cursor: str | None = None) -> JobLogPage:
         previous = None
@@ -89,16 +95,19 @@ class CloudWatchJobLogger:
             except (ValueError, TypeError, UnicodeError) as exc:
                 raise ValueError("Invalid log cursor") from exc
 
-        job = self.get_job_details(job_id)
+        job = self.refresh_job(job_id)
         if not job.external_job_id:
-            return JobLogPage(logs="", available=False, next_cursor=cursor)
-        try:
-            stream = self.get_batch_log_name(job.external_job_id)
-        except LogsNotReady:
-            return JobLogPage(logs="", available=False, next_cursor=cursor)
+            return JobLogPage(logs="", available=False, next_cursor=cursor,
+                              message="Waiting for dispatch: no AWS Batch job has been linked yet.")
+        stream = job.log_stream
+        if not stream:
+            message = (f"AWS Batch: {job.batch_status}. " if job.batch_status else "")
+            message += job.batch_status_reason or (
+                "No log stream is recorded yet. The job may not have started, or its Batch metadata may have expired."
+            )
+            return JobLogPage(logs="", available=False, next_cursor=cursor, message=message)
 
-        # Resolve stream from Batch every time; a client cannot select another
-        # job's stream. Start over on a new attempt or before a token expires.
+        # Resolve the stream from the job record, never from a client cursor.
         reset = bool(previous and (
             previous["stream"] != stream or time.time() - previous["issued"] >= 23 * 3600
         ))
@@ -109,7 +118,7 @@ class CloudWatchJobLogger:
             # Bound both AWS requests and response size (up to three 1 MB pages).
             for _ in range(3):
                 args = dict(
-                    logGroupName=f"ecs/cwms-batch/{job.office.lower()}-jobs",
+                    logGroupName=job.log_group or f"ecs/cwms-batch/{job.office.lower()}-jobs",
                     logStreamName=stream,
                     startFromHead=True,
                 )
@@ -124,7 +133,8 @@ class CloudWatchJobLogger:
                     break
         except ClientError as exc:
             if exc.response.get("Error", {}).get("Code") == "ResourceNotFoundException":
-                return JobLogPage(logs="", available=False, next_cursor=cursor)
+                return JobLogPage(logs="", available=False, next_cursor=cursor,
+                                  message="The CloudWatch log stream is not available yet or has expired.")
             if token and exc.response.get("Error", {}).get("Code") == "InvalidParameterException":
                 raise ValueError("Invalid log cursor") from exc
             raise
@@ -139,13 +149,15 @@ class CloudWatchJobLogger:
         )
 
     def get_logs_for_job(self, job_id: UUID) -> str:
-        job = self.get_job_details(job_id)
+        job = self.refresh_job(job_id)
 
         if not job.external_job_id:
             raise ValueError(f"No external_job_id found for job_id {job_id}")
-        log_name = self.get_batch_log_name(job.external_job_id)
+        log_name = job.log_stream
+        if not log_name:
+            raise LogsNotReady("No saved log stream; Batch metadata may have expired or the job has not started")
 
-        log_group = f"ecs/cwms-batch/{job.office.lower()}-jobs"
+        log_group = job.log_group or f"ecs/cwms-batch/{job.office.lower()}-jobs"
 
         logs = self.logs.get_log_events(
             logGroupName=log_group,

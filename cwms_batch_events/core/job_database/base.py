@@ -1,4 +1,5 @@
 from typing import Protocol
+from datetime import datetime
 from uuid import UUID
 
 from cwms_batch_events.core.auth.user.models import User
@@ -13,6 +14,8 @@ from cwms_batch_events.core.models import (
 
 
 class JobDatabase(Protocol):
+    def claim_batch_refresh(self, job_id: UUID) -> bool: ...
+    def record_batch_details(self, job_id: UUID, detail: dict, observed_at: datetime) -> None: ...
     def bind_external_job_id(
         self,
         job_id: UUID,

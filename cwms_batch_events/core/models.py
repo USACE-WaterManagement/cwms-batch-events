@@ -83,6 +83,7 @@ class JobLogs(CamelModel):
 
 
 class JobLogPage(JobLogs):
+    message: str | None = None
     next_cursor: str | None = None
     has_more: bool = False
     reset: bool = False
@@ -106,6 +107,10 @@ class JobRecord(ExecutionRecord):
     end_time: datetime | None = None
     job_runner_id: UUID
     external_job_id: str | None = None
+    log_group: str | None = None
+    log_stream: str | None = None
+    batch_status: str | None = None
+    batch_status_reason: str | None = None
 
 
 class JobRunner(CamelModel):
@@ -163,6 +168,7 @@ class JobMessage(BaseModel):
 class BatchJobStatusUpdateRequest(BaseModel):
     status: JobStatus
     event_time: datetime
+    batch_detail: dict | None = None
 
 
 class BindExternalJobIdRequest(BaseModel):

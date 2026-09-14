@@ -1,15 +1,20 @@
 """Exercise real API/ORM/database paths; isolate only authentication and queue delivery."""
 from pathlib import Path
 import sys
+from datetime import datetime, timezone
+from unittest.mock import Mock, patch
+from uuid import UUID
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from fastapi.testclient import TestClient
 from sqlalchemy import text
+from sqlalchemy.orm import Session
 from cwms_batch_events.api.main import app
 from cwms_batch_events.api.dependencies import get_current_user, get_job_queue
 from cwms_batch_events.core.auth.user.models import User
 from cwms_batch_events.core.job_database.postgres.session import engine
 from cwms_batch_events.core.queue import JobQueue
+from cwms_batch_events.core.job_database.postgres.postgres import PostgresJobDatabase
 
 
 class CapturedQueue(JobQueue):
@@ -69,6 +74,37 @@ def main():
         assert queue.messages[0].payload.runtime == "shell"
         assert queue.messages[0].payload.command_args == ["two words"]
         assert client.get(f"/jobs/{response.json()['id']}").status_code == 200
+        job_id = UUID(response.json()["id"])
+        with Session(engine) as session:
+            PostgresJobDatabase(session).bind_external_job_id(job_id, "test-batch-id")
+        batch, logs = Mock(), Mock()
+        batch.describe_jobs.return_value = {"jobs": [{"status": "RUNNING",
+            "container": {"logStreamName": "saved-stream"}, "startedAt": 1000}]}
+        logs.get_log_events.return_value = {"events": [{"message": "retained output"}]}
+        with patch("cwms_batch_events.core.job_logger.cloudwatch.boto3.client",
+                   side_effect=lambda name: batch if name == "batch" else logs):
+            assert client.get(f"/jobs/{job_id}").json()["jobStatus"] == "Running"
+            assert client.get(f"/jobs/{job_id}/logs/page").json()["logs"] == "retained output"
+            batch.describe_jobs.assert_called_once()
+            with Session(engine) as session:
+                PostgresJobDatabase(session).record_batch_details(job_id,
+                    {"status": "SUCCEEDED", "stoppedAt": 2000}, datetime.now(timezone.utc))
+            batch.describe_jobs.return_value = {"jobs": []}
+            for path in ("logs", "logs/page"):
+                result = client.get(f"/jobs/{job_id}/{path}")
+                assert result.status_code == 200, result.text
+                assert result.json()["logs"] == "retained output"
+            batch.describe_jobs.assert_called_once()
+        # A session that loaded the row before another worker's claim must
+        # refresh its identity-map copy under the lock before deciding.
+        with engine.begin() as connection:
+            connection.execute(text("UPDATE events.jobs SET batch_checked_at = NULL WHERE id = :id"), {"id": job_id})
+        with Session(engine) as first, Session(engine) as second:
+            from cwms_batch_events.core.job_database.postgres.models import JobModel
+            stale = first.get(JobModel, job_id)
+            assert stale.batch_checked_at is None
+            assert PostgresJobDatabase(second).claim_batch_refresh(job_id)
+            assert not PostgresJobDatabase(first).claim_batch_refresh(job_id)
         print(f"PASS: {sys.argv[1]} API compatibility checks")
 
 
