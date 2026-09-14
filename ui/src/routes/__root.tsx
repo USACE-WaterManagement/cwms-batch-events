@@ -33,6 +33,19 @@ const authenticatedAboutLinks = [
   { id: "version", text: "Version", href: "/about/version" },
 ];
 
+const batchRepository = "https://github.com/USACE-WaterManagement/cwms-batch-events";
+const externalLink = (id: string, text: string, href: string) => ({
+  id, text, href, target: "_blank", rel: "noopener noreferrer",
+});
+const footerLinks = [
+  { text: "About Batch Events", href: "/events/about" },
+  { text: "Controls and access", href: "/events/about/controls" },
+  { text: "Onboarding", href: "/events/help/onboarding" },
+  { text: "Script setup", href: "/events/help/script-files" },
+  { text: "Report an issue", href: `${batchRepository}/issues` },
+  { text: "Project documentation", href: `${batchRepository}#readme` },
+];
+
 export const Route = createRootRoute({
   shellComponent: RootShell,
   component: RootComponent,
@@ -45,12 +58,17 @@ export const Route = createRootRoute({
 function RootShell({ children }: { children: ReactNode }) {
   const auth = useAuth();
   const [githubOpen, setGithubOpen] = useState(false);
-  const [office] = useRememberedOffice([]);
+  const [selectedOffice] = useRememberedOffice([]);
+  const status = useRepositoryStatus();
+  const repositories = auth.isAuth ? status.data?.repositories : undefined;
+  const offices = Object.keys(repositories ?? {});
+  const office = selectedOffice ?? (offices.length === 1 ? offices[0] : undefined);
   const adminOffices = useAdminOffices();
   const canBrowse = Boolean(office && adminOffices.data?.includes(office));
   const catalog = useRepositoryFiles(office ?? "", canBrowse);
-  useRepositoryStatus();
-  const repository = catalog.data?.repository;
+  const repository = auth.isAuth && office
+    ? repositories?.[office] ?? (canBrowse ? catalog.data?.repository : undefined)
+    : undefined;
   const repositoryUrl = repository && /^[\w.-]+\/[\w.-]+$/.test(repository)
     ? `https://github.com/${repository}` : undefined;
   const aboutLink = {
@@ -67,10 +85,33 @@ function RootShell({ children }: { children: ReactNode }) {
     href: "/help/onboarding",
     children: helpLinks,
   };
-  const navLinks = [...primaryLinks, aboutLink, helpLink];
+  const devLink = {
+    id: "dev-menu",
+    text: "Dev",
+    children: [
+      externalLink("swagger", "Swagger UI", `${window.location.origin}/api/docs`),
+      externalLink("batch-repository", "CWMS Batch Events", batchRepository),
+      ...(repositoryUrl ? [externalLink("district-repository", `${office} CWBI jobs`, repositoryUrl)] : []),
+      externalLink("images-repository", "CWBI WM images", "https://github.com/USACE/cwbi-wm-images"),
+    ],
+  };
+  const navLinks = [...primaryLinks, aboutLink, helpLink, devLink];
 
   return (
-    <SiteWrapper links={navLinks} navRight={<div className="batch-header-actions flex shrink-0 items-center gap-1 whitespace-nowrap py-1" aria-label="Account and notifications">
+    <SiteWrapper links={navLinks}
+      title="CWMS Batch Events"
+      missionText="Support USACE water management teams with shared tools to run district jobs and track their results."
+      aboutText="CWMS Batch Events lets authorized district users submit jobs, review job history and logs, and manage registered scripts. For access or job support, contact your district Batch Events administrator."
+      usaceLinks={[
+        ...footerLinks,
+        ...(auth.isAuth ? [{ text: "Version and environment", href: "/events/about/version" }] : []),
+      ]}
+      externalLinks={[
+        { text: "USACE Water Management", href: "https://github.com/USACE-WaterManagement" },
+        { text: "CWMS Data API", href: "https://github.com/USACE/cwms-data-api" },
+        { text: "CWBI WM images", href: "https://github.com/USACE/cwbi-wm-images" },
+      ]}
+      navRight={<div className="batch-header-actions flex shrink-0 items-center gap-1 whitespace-nowrap py-1" aria-label="Account and notifications">
       {auth.isAuth && <WarningIndicator />}
       <Button type="button" className="gw-px-2 gw-shrink-0" aria-label={office ? `${office} GitHub` : "GitHub"} disabled={!auth.isAuth || !repositoryUrl} title={!office ? "Select an office to open its repository" : !repositoryUrl ? `Repository unavailable for ${office}` : `Open ${repository}`}
         onClick={() => setGithubOpen(true)}><FaGithub aria-hidden /> <span className="hidden min-[1100px]:inline">{office ? `${office} GitHub` : "GitHub"}</span></Button>

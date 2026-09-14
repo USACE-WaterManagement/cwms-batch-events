@@ -7,7 +7,7 @@ interface Catalog { repository: string; ref: string; paths: string[]; warnings?:
 
 export function useRepositoryStatus() {
   const auth = useAuth();
-  return useQuery<{ warnings: RepositoryWarning[]; mock: boolean }>({
+  return useQuery<{ warnings: RepositoryWarning[]; mock: boolean; repositories?: Record<string, string> }>({
     queryKey: ["repository-status", auth.isAuth],
     queryFn: async () => (await fetchWithAuth("/api/repository-status", {}, auth.token)).json(),
     enabled: auth.isAuth,

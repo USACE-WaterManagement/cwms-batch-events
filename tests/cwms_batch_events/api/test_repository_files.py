@@ -77,6 +77,26 @@ def test_mock_cannot_hide_missing_deployment_credentials(client, monkeypatch):
     assert client.get("/repository-status").json()["warnings"][0]["code"] == "github_app_not_configured"
 
 
+@pytest.mark.parametrize("mock", [False, True])
+def test_status_lists_only_users_repositories_without_admin_access(client, user, monkeypatch, mock):
+    user.offices = ["SWT", "SWL"]
+    user.admin_offices = []
+    monkeypatch.setattr(settings, "repository_mock_mode", mock)
+    monkeypatch.setattr(settings, "deployment_environment", "local")
+    monkeypatch.setattr(settings, "github_app_secret_id", "")
+    monkeypatch.setattr(settings, "office_repositories", {
+        "SWT": RepositorySettings(repository="example/custom-jobs", ref="main"),
+        "MVS": RepositorySettings(repository="example/other-district", ref="main"),
+    })
+    response = client.get("/repository-status")
+    assert response.status_code == 200
+    assert response.json()["repositories"] == {
+        "SWL": "USACE-WaterManagement/swl-wm-cwbi-jobs",
+        "SWT": "example/custom-jobs",
+    }
+    assert client.get("/repository-files?office=SWT").status_code == 401
+
+
 @pytest.mark.parametrize("configured", [False, True])
 def test_unreadable_secret_keeps_static_path_and_manual_save(client, user, job_db, monkeypatch, configured):
     office = user.admin_offices[0]

@@ -22,13 +22,21 @@ def warning(error):
 
 @router.get("/repository-status")
 def repository_status(user: User = Depends(get_current_user)):
+    repositories = {
+        office: (
+            settings.office_repositories[office].repository
+            if office in settings.office_repositories
+            else f"USACE-WaterManagement/{office.lower()}-wm-cwbi-jobs"
+        )
+        for office in sorted(set(user.offices + user.admin_offices))
+    }
     if mock_enabled():
-        return {"warnings": [], "mock": True}
+        return {"warnings": [], "mock": True, "repositories": repositories}
     try:
         installation_token()
-        return {"warnings": [], "mock": False}
+        return {"warnings": [], "mock": False, "repositories": repositories}
     except RepositoryUnavailable as error:
-        return {"warnings": [warning(error)], "mock": False}
+        return {"warnings": [warning(error)], "mock": False, "repositories": repositories}
 
 
 @router.get("/repository-files")

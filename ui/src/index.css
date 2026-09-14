@@ -12,6 +12,6 @@ header span:has(> .batch-header-actions) {
    as the account controls. Keep the full 48px link height for touch targets. */
 @media (min-width: 768px) and (max-width: 1023px) {
   header:has(.batch-header-actions) ul[role="list"] > li > a {
-    padding-inline: 0.375rem;
+    padding-inline: 0.25rem;
   }
 }
