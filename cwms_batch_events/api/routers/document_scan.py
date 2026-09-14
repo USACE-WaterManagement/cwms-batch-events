@@ -1,16 +1,11 @@
-"""SWT PDF pilot. Documents exist only in Linux anonymous memory descriptors."""
+"""SWT Batch scan coordination with private temporary S3 staging."""
 
 import asyncio
 import contextlib
-import ctypes
 import hashlib
-import ipaddress
 import json
 import os
-import signal
-import socket
-import ssl
-import sys
+import re
 import uuid
 from urllib.parse import urlsplit
 
@@ -21,23 +16,22 @@ from sqlalchemy import text
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from urllib3 import HTTPSConnectionPool
 
 from cwms_batch_events.api.dependencies import get_current_user
 from cwms_batch_events.core.auth.user.models import User
 from cwms_batch_events.core.job_database.postgres.session import db_url
 from cwms_batch_events.core.settings import settings
+from cwms_batch_events.core.document_storage import storage, prefix, erase
+from cwms_batch_events.core.queue import JobQueue
+from cwms_batch_events.core.models import ScriptRunOptions, JobSource
+from datetime import datetime, timezone, timedelta
 
 router = APIRouter(prefix="/document/scan", tags=["Document scans"])
 MAX_BYTES = 10 * 1024 * 1024
 MAX_OUTPUT = 256 * 1024
-SCAN_TIMEOUT_SECONDS = 120
-tasks: set[asyncio.Task] = set()
 report_engine = create_engine(
     db_url, connect_args={"connect_timeout": 5, "options": "-c statement_timeout=5000"}
 )
-API_WORKER_PID = os.getpid()
-PRCTL = ctypes.CDLL(None).prctl if hasattr(os, "memfd_create") else None
 
 
 def query(statement, **params):
@@ -48,13 +42,135 @@ def query(statement, **params):
         return rows
 
 
-def cleanup():
-    query(
-        """UPDATE document_scans SET status='failed', error='Scan interrupted. Please submit again.',
-        expires_at=CURRENT_TIMESTAMP + INTERVAL '24 hours'
-        WHERE status IN ('receiving','running') AND deadline < CURRENT_TIMESTAMP"""
+def summarize(report):
+    findings = report["findings"]
+    if (
+        report.get("end_status") != "normal"
+        or report.get("profile") != "PDF/UA-1"
+        or not isinstance(report.get("compliant"), bool)
+        or len(findings) > 2000
+    ):
+        raise ValueError("Invalid result")
+    findings = [
+        {
+            "clause": row["clause"],
+            "test": row["test"],
+            "count": row["count"],
+            "description": row["description"],
+        }
+        for row in findings
+    ]
+    for row in findings:
+        if (
+            not isinstance(row["clause"], str)
+            or not re.fullmatch(r"[0-9.]{1,40}", row["clause"])
+            or type(row["test"]) is not int
+            or not 0 < row["test"] < 100000
+            or type(row["count"]) is not int
+            or not 0 < row["count"] < 100000000
+            or not isinstance(row["description"], str)
+            or len(row["description"]) > 8192
+        ):
+            raise ValueError("Invalid finding")
+    report = {
+        "findings": findings,
+        "profile": "PDF/UA-1",
+        "end_status": "normal",
+        "compliant": report["compliant"],
+    }
+    report["failed_rules"] = len(findings)
+    report["failed_checks"] = sum(row["count"] for row in findings)
+    report["summary"] = (
+        f"Automated PDF/UA-1 checks found {len(findings)} failed rules across "
+        f"{report['failed_checks']} checks."
+        if findings
+        else "No failures were found by the automated PDF/UA-1 checks."
     )
-    query("DELETE FROM document_scans WHERE expires_at <= CURRENT_TIMESTAMP")
+    priorities = set()
+    for finding in findings:
+        clause, test = finding["clause"], finding["test"]
+        if clause == "6.2" or (clause == "7.1" and test in (3, 11)):
+            priorities.add("Add document tags and check reading order.")
+        if clause == "7.2":
+            priorities.add("Set the document and text language.")
+        if clause.startswith("7.21"):
+            priorities.add("Review fonts and embed the required font programs.")
+        if clause == "7.1" and test in (8, 10):
+            priorities.add("Review document metadata and title display.")
+    report["priorities"] = sorted(priorities)
+    report["manual_review"] = (
+        "Review reading order, alternative text quality, contrast, and keyboard use. Automated checks do not certify Section 508 compliance."
+    )
+    return report
+
+
+def cleanup():
+    from botocore.exceptions import ClientError
+
+    client = storage()
+    rows = query(
+        """SELECT * FROM document_scans WHERE NOT storage_cleaned
+        OR expires_at <= CURRENT_TIMESTAMP"""
+    )
+    for row in rows:
+        key = prefix(row["id"])
+        terminal = row["status"] in ("completed", "failed")
+        overdue = row["deadline"] < datetime.now(timezone.utc)
+        if not terminal and row["status"] == "running":
+            try:
+                response = client.get_object(
+                    Bucket=settings.document_scan_bucket, Key=key + "result.json"
+                )
+                with response["Body"] as body:
+                    data = body.read(MAX_OUTPUT + 1)
+                if len(data) > MAX_OUTPUT:
+                    raise ValueError("Result exceeds limit")
+                outcome = json.loads(data)
+                if outcome["status"] not in ("completed", "failed"):
+                    raise ValueError("Invalid outcome")
+                if outcome["status"] == "completed" and (
+                    not re.fullmatch(r"[0-9a-f]{64}", outcome.get("sha256", ""))
+                    or type(outcome.get("size_bytes")) is not int
+                    or not 0 < outcome["size_bytes"] <= MAX_BYTES
+                ):
+                    raise ValueError("Invalid document metadata")
+                result = (
+                    summarize(outcome["result"])
+                    if outcome["status"] == "completed"
+                    else None
+                )
+                # Delete the source before exposing a terminal result. Retry on failure.
+                erase(client, row["id"], include_result=False)
+                query(
+                    """UPDATE document_scans SET status=:status,result=CAST(:result AS jsonb),
+                    error=:error,sha256=COALESCE(:sha,sha256),size_bytes=COALESCE(:size,size_bytes),
+                    expires_at=CURRENT_TIMESTAMP + INTERVAL '24 hours'
+                    WHERE id=:id AND status='running'""",
+                    id=row["id"],
+                    status="completed" if result else "failed",
+                    result=json.dumps(result),
+                    error=None if result else "Unable to complete this PDF scan.",
+                    sha=outcome.get("sha256"),
+                    size=outcome.get("size_bytes"),
+                )
+                terminal = True
+            except ClientError as exc:
+                if exc.response["Error"]["Code"] not in ("NoSuchKey", "404"):
+                    raise
+            except (ValueError, KeyError, TypeError):
+                overdue = True  # Malformed runner output cannot retain its source indefinitely.
+        if terminal or overdue:
+            erase(client, row["id"])
+            query(
+                """UPDATE document_scans SET storage_cleaned=true,
+                status=CASE WHEN status IN ('receiving','running') THEN 'failed' ELSE status END,
+                error=CASE WHEN status IN ('receiving','running') THEN 'Scan expired or was interrupted. Please submit again.' ELSE error END,
+                expires_at=COALESCE(expires_at,CURRENT_TIMESTAMP + INTERVAL '24 hours') WHERE id=:id""",
+                id=row["id"],
+            )
+    query(
+        "DELETE FROM document_scans WHERE storage_cleaned AND expires_at <= CURRENT_TIMESTAMP"
+    )
 
 
 async def maintenance():
@@ -62,18 +178,18 @@ async def maintenance():
         try:
             await asyncio.to_thread(cleanup)
         except Exception:
-            # Never log request bodies, URLs, filenames, or scanner diagnostics.
             import logging
 
-            logging.getLogger(__name__).error("Document scan report cleanup failed")
-        await asyncio.sleep(900)
+            logging.getLogger(__name__).error(
+                "Document scan storage reconciliation failed"
+            )
+        await asyncio.sleep(10)
 
 
 @contextlib.asynccontextmanager
 async def lifespan(_app):
-    if settings.document_scan_enabled and hasattr(os, "memfd_create"):
+    if settings.document_scan_enabled and hasattr(os, 'memfd_create'):
         import resource
-
         resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
     worker = (
         asyncio.create_task(maintenance()) if settings.document_scan_enabled else None
@@ -84,9 +200,6 @@ async def lifespan(_app):
         if worker:
             worker.cancel()
             await asyncio.gather(worker, return_exceptions=True)
-        for task in list(tasks):
-            task.cancel()
-        await asyncio.gather(*tasks, return_exceptions=True)
 
 
 async def scan_user(response: Response, user: User = Depends(get_current_user)):
@@ -186,160 +299,6 @@ async def receive_upload(request, fd):
         raise failure(400, "Incomplete PDF upload")
 
 
-def fetch_pdf(url, fd):
-    """Exact configured hosts, public addresses, pinned TLS, no redirects/credentials."""
-    try:
-        parsed = urlsplit(url)
-        host = parsed.hostname
-        if (
-            parsed.scheme != "https"
-            or not host
-            or parsed.port not in (None, 443)
-            or parsed.username
-            or parsed.password
-            or parsed.fragment
-            or host.lower() not in {h.lower() for h in settings.document_scan_url_hosts}
-        ):
-            raise ValueError()
-        addresses = {
-            row[4][0] for row in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM)
-        }
-        if not addresses or any(
-            not ipaddress.ip_address(a).is_global
-            or ipaddress.ip_address(a).is_multicast
-            or ipaddress.ip_address(a).is_reserved
-            for a in addresses
-        ):
-            raise ValueError()
-    except (ValueError, OSError):
-        raise failure(400, "Use a public HTTPS PDF URL from an approved host") from None
-    # Connect directly to the address we validated, but verify the original host.
-    with HTTPSConnectionPool(
-        sorted(addresses)[0],
-        port=443,
-        server_hostname=host,
-        assert_hostname=host,
-        cert_reqs=ssl.CERT_REQUIRED,
-        timeout=10,
-        retries=False,
-    ) as pool:
-        with pool.urlopen(
-            "GET",
-            parsed.path + ("?" + parsed.query if parsed.query else ""),
-            headers={
-                "Host": host,
-                "Accept": "application/pdf",
-                "Accept-Encoding": "identity",
-            },
-            preload_content=False,
-            redirect=False,
-        ) as remote:
-            if remote.status != 200:
-                raise failure(
-                    400, "Document URL must return a PDF directly without redirects"
-                )
-            if remote.headers.get("Content-Encoding", "identity").lower() != "identity":
-                raise failure(400, "Compressed HTTP responses are not supported")
-            for chunk in remote.stream(64 * 1024, decode_content=False):
-                append_pdf(fd, chunk)
-
-
-def child_setup(expected_parent=API_WORKER_PID):
-    # Kill the scanner if its API worker dies. No source survives worker loss.
-    import resource
-
-    resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
-    if PRCTL(1, signal.SIGKILL) != 0 or os.getppid() != expected_parent:
-        os._exit(1)
-
-
-async def bounded_read(stream):
-    output = bytearray()
-    while chunk := await stream.read(8192):
-        output.extend(chunk)
-        if len(output) > MAX_OUTPUT:
-            raise ValueError("Scanner output limit")
-    return bytes(output)
-
-
-async def run_scan(scan_id, fd):
-    process = None
-    try:
-        admitted = query(
-            """UPDATE document_scans SET status='running',
-                deadline=CURRENT_TIMESTAMP + INTERVAL '3 minutes'
-            WHERE id=:id AND status='receiving' AND deadline > CURRENT_TIMESTAMP
-            RETURNING id""",
-            id=scan_id,
-        )
-        if not admitted:
-            raise ValueError("Scan admission expired")
-        async with asyncio.timeout(SCAN_TIMEOUT_SECONDS):
-            process = await asyncio.create_subprocess_exec(
-                sys.executable,
-                "-m",
-                "cwms_batch_events.core.document_worker",
-                str(os.getpid()),
-                settings.document_scan_classpath,
-                f"/proc/{os.getpid()}/fd/{fd}",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.DEVNULL,
-                preexec_fn=child_setup,
-            )
-            output = await bounded_read(process.stdout)
-            code = await process.wait()
-            if code:
-                raise ValueError("Scanner failed")
-            report = json.loads(output)
-            if report["end_status"] != "normal":
-                raise ValueError("Scan incomplete")
-            findings = report["findings"]
-            report["failed_rules"] = len(findings)
-            report["failed_checks"] = sum(row["count"] for row in findings)
-            report["summary"] = (
-                f"Automated PDF/UA-1 checks found {len(findings)} failed rules across "
-                f"{report['failed_checks']} checks."
-                if findings
-                else "No failures were found by the automated PDF/UA-1 checks."
-            )
-            priorities = set()
-            for finding in findings:
-                clause, test = finding["clause"], finding["test"]
-                if clause == "6.2" or (clause == "7.1" and test in (3, 11)):
-                    priorities.add("Add document tags and check reading order.")
-                if clause == "7.2":
-                    priorities.add("Set the document and text language.")
-                if clause.startswith("7.21"):
-                    priorities.add("Review fonts and embed the required font programs.")
-                if clause == "7.1" and test in (8, 10):
-                    priorities.add("Review document metadata and title display.")
-            report["priorities"] = sorted(priorities)
-            report["manual_review"] = (
-                "Review reading order, alternative text quality, contrast, and keyboard use. Automated checks do not certify Section 508 compliance."
-            )
-            query(
-                """UPDATE document_scans SET status='completed', result=CAST(:result AS jsonb),
-                expires_at=CURRENT_TIMESTAMP + INTERVAL '24 hours' WHERE id=:id AND status='running'""",
-                id=scan_id,
-                result=json.dumps(report),
-            )
-    except (Exception, asyncio.CancelledError):
-        if process and process.returncode is None:
-            process.kill()
-            await process.wait()
-        query(
-            """UPDATE document_scans SET status='failed', error=:error,
-            expires_at=CURRENT_TIMESTAMP + INTERVAL '24 hours' WHERE id=:id""",
-            id=scan_id,
-            error="Unable to complete this PDF scan. The PDF may be encrypted, damaged, or exceed scanner limits.",
-        )
-    finally:
-        if process and process.returncode is None:
-            process.kill()
-            await process.wait()
-        os.close(fd)
-
-
 @router.post(
     "",
     status_code=202,
@@ -379,8 +338,12 @@ async def run_scan(scan_id, fd):
 )
 async def create_scan(request: Request, user: User = Depends(scan_user)):
     if not hasattr(os, "memfd_create"):
-        raise failure(503, "Scanning requires the Linux scanner runtime")
-    cleanup()
+        raise failure(503, "Uploads require the Linux API runtime")
+    try:
+        client = await asyncio.to_thread(storage)
+    except Exception:
+        raise failure(503, "Private scan staging is unavailable") from None
+    await asyncio.to_thread(cleanup)
     scan_id = uuid.uuid4()
     try:
         query(
@@ -393,11 +356,13 @@ async def create_scan(request: Request, user: User = Depends(scan_user)):
             429, "A scan is already in progress. Please try again shortly."
         ) from None
     fd = None
-    handed_off = False
+    submitted = False
+    submission_attempted = False
+    key = prefix(scan_id)
     try:
-        import fcntl
-
-        fd = os.memfd_create("document-scan", os.MFD_CLOEXEC | os.MFD_ALLOW_SEALING)
+        manifest = {
+            "expires_at": (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
+        }
         async with asyncio.timeout(30):
             if (
                 request.headers.get("content-type", "").split(";")[0]
@@ -410,71 +375,96 @@ async def create_scan(request: Request, user: User = Depends(scan_user)):
                         raise failure(413, "Document URL request is too large")
                 data = json.loads(body)
                 url = data.get("url") if isinstance(data, dict) else None
-                if not isinstance(url, str):
-                    raise failure(400, "Provide a document URL")
-                child = await asyncio.create_subprocess_exec(
-                    sys.executable,
-                    "-m",
-                    "cwms_batch_events.core.document_fetch",
-                    str(fd),
-                    str(os.getpid()),
-                    stdin=asyncio.subprocess.PIPE,
-                    stdout=asyncio.subprocess.DEVNULL,
-                    stderr=asyncio.subprocess.DEVNULL,
-                    pass_fds=(fd,),
-                )
-                try:
-                    await child.communicate(url.encode("utf-8"))
-                    if child.returncode == 13:
-                        raise failure(413, "PDF must be 10 MiB or smaller")
-                    if child.returncode:
-                        raise failure(
-                            400,
-                            "Could not fetch a PDF from this approved public HTTPS URL",
-                        )
-                finally:
-                    if child.returncode is None:
-                        child.kill()
-                        await child.wait()
+                parsed = urlsplit(url) if isinstance(url, str) else None
+                if (
+                    not parsed
+                    or parsed.scheme != "https"
+                    or not parsed.hostname
+                    or parsed.hostname.lower()
+                    not in {h.lower() for h in settings.document_scan_url_hosts}
+                    or parsed.port not in (None, 443)
+                    or parsed.username
+                    or parsed.password
+                    or parsed.fragment
+                ):
+                    raise failure(
+                        400, "Use a public HTTPS PDF URL from an approved host"
+                    )
+                manifest.update(url=url, allowed_hosts=[parsed.hostname])
             else:
+                fd = os.memfd_create("document-upload", os.MFD_CLOEXEC)
                 await receive_upload(request, fd)
-        size = os.lseek(fd, 0, os.SEEK_END)
-        os.lseek(fd, 0, os.SEEK_SET)
-        if os.read(fd, 5) != b"%PDF-":
-            raise failure(415, "Submit a PDF document")
-        os.lseek(fd, 0, os.SEEK_SET)
-        digest = hashlib.sha256()
-        while chunk := os.read(fd, 64 * 1024):
-            digest.update(chunk)
-        fcntl.fcntl(
-            fd,
-            fcntl.F_ADD_SEALS,
-            fcntl.F_SEAL_WRITE
-            | fcntl.F_SEAL_GROW
-            | fcntl.F_SEAL_SHRINK
-            | fcntl.F_SEAL_SEAL,
+                size = os.lseek(fd, 0, os.SEEK_END)
+                os.lseek(fd, 0, os.SEEK_SET)
+                if os.read(fd, 5) != b"%PDF-":
+                    raise failure(415, "Submit a PDF document")
+                os.lseek(fd, 0, os.SEEK_SET)
+                digest = hashlib.sha256()
+                while chunk := os.read(fd, 65536):
+                    digest.update(chunk)
+                query(
+                    "UPDATE document_scans SET sha256=:sha,size_bytes=:size WHERE id=:id",
+                    id=scan_id,
+                    sha=digest.hexdigest(),
+                    size=size,
+                )
+                os.lseek(fd, 0, os.SEEK_SET)
+                # Synchronous bounded SDK transfer keeps descriptor lifetime deterministic.
+                with os.fdopen(os.dup(fd), "rb") as source:
+                    client.put_object(
+                        Bucket=settings.document_scan_bucket,
+                        Key=key + "input.pdf",
+                        Body=source,
+                        ServerSideEncryption="AES256",
+                    )
+        client.put_object(
+            Bucket=settings.document_scan_bucket,
+            Key=key + "request.json",
+            Body=json.dumps(manifest).encode(),
+            ServerSideEncryption="AES256",
         )
         query(
-            "UPDATE document_scans SET sha256=:sha,size_bytes=:size WHERE id=:id",
+            "UPDATE document_scans SET status='running',deadline=CURRENT_TIMESTAMP + INTERVAL '1 hour' WHERE id=:id",
             id=scan_id,
-            sha=digest.hexdigest(),
-            size=size,
         )
-        task = asyncio.create_task(run_scan(scan_id, fd))
-        tasks.add(task)
-        task.add_done_callback(tasks.discard)
-        handed_off = True
-        return {"id": str(scan_id), "status": "receiving"}
+        queue = JobQueue()
+        options = ScriptRunOptions(
+            office="swt",
+            repo_path="/opt/document-scan/venv/bin/python",
+            script_slug="document-scan",
+            execution_type="command",
+            runtime="python",
+            command_args=[
+                "/opt/document-scan/run.py",
+                "--scan-id",
+                str(scan_id),
+                "--bucket",
+                settings.document_scan_bucket,
+            ],
+        )
+        message = queue.create_job_message(
+            scan_id, user.username, JobSource.API, options
+        )
+        message.document_scan = True
+        submission_attempted = True
+        # Do not retry a mutation after an ambiguous response. Reconciliation expires it.
+        queue.send_job_message(message)
+        submitted = True
+        return {"id": str(scan_id), "status": "running"}
     except TimeoutError:
         raise failure(408, "Receiving the PDF exceeded 30 seconds") from None
     except HTTPException:
         raise
     except Exception:
-        raise failure(400, "Unable to read the PDF request") from None
+        raise failure(
+            503 if submission_attempted else 400,
+            "Unable to submit this PDF scan. Refresh the scan list before retrying.",
+        ) from None
     finally:
-        if not handed_off:
-            if fd is not None:
-                os.close(fd)
+        if fd is not None:
+            os.close(fd)
+        if not submitted and not submission_attempted:
+            erase(client, scan_id)
             query("DELETE FROM document_scans WHERE id=:id", id=scan_id)
 
 

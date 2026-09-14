@@ -104,8 +104,9 @@ def lambda_handler(event, context):
 
         try:
             bind_request = BindExternalJobIdRequest(external_job_id=external_job_id)
+            resource = "document/scan" if message.document_scan else "jobs"
             r = requests.post(
-                f"{API_BASE_URL}/internal/jobs/{message.job_id}/external-job-id",
+                f"{API_BASE_URL}/internal/{resource}/{message.job_id}/external-job-id",
                 headers=headers,
                 json=bind_request.model_dump(),
                 timeout=10,

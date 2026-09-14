@@ -1,5 +1,8 @@
 name: document-scan-pilot
 services:
+  storage:
+    image: motoserver/moto:5.1.22
+    ports: ["127.0.0.1:18083:5000"]
   reports:
     image: postgres:17
     environment:
@@ -79,6 +82,12 @@ services:
     security_opt: [no-new-privileges:true]
     environment:
       DOCUMENT_SCAN_ENABLED: "true"
+      DOCUMENT_SCAN_BUCKET: private-document-scan-pilot
+      AWS_ACCESS_KEY_ID: local-test
+      AWS_SECRET_ACCESS_KEY: local-test
+      AWS_DEFAULT_REGION: us-east-1
+      S3_ENDPOINT_URL: http://storage:5000
+      SQS_ENDPOINT_URL: http://storage:5000
       DOCUMENT_SCAN_URL_HOSTS: '["www.w3.org"]'
       PGHOST: reports
       PGDATABASE: scans

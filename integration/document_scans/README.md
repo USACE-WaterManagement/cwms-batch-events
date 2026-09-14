@@ -1,83 +1,84 @@
-# SWT document scan pilot
+# SWT Batch document scan pilot
 
-Routes are `POST /document/scan`, `GET /document/scan`, and
-`GET /document/scan/{id}`, relative to the configured API root. POST accepts one
-multipart `file` or JSON `{"url":"https://approved-host/document.pdf"}`.
-The standalone UI is in swt-wm-web-internal/document-scans.
+`POST /document/scan` accepts a PDF multipart `file` (10 MiB maximum) or JSON
+`{"url":"https://approved-host/document.pdf"}`. `GET /document/scan` and
+`GET /document/scan/{id}` expose only the submitting SWT user's unexpired reports.
+Responses use `Cache-Control: no-store`. The separate web app is
+`swt-wm-web-internal/document-scans`.
 
-## Runtime and privacy
+## Execution and storage
 
-Only authenticated SWT CWMS Users can scan. Every report query includes the
-submitting CDA username; another user receives 404 for that scan ID. Responses
-use `Cache-Control: no-store`. Each submission has a UUID. SHA-256 is metadata,
-never an authorization token or cross-user cache key.
+The API contains no Java or veraPDF and does not execute a scanner subprocess.
+Uploads stream through a bounded Linux memory descriptor into a dedicated private
+S3 staging bucket. The source closes when submission ends. URLs and host restrictions
+are stored in the private request manifest, never in Batch arguments or job logs.
 
-PDFs up to 10 MiB stream into an anonymous Linux memfd, without UploadFile spooling,
-blobs, S3, or database document bytes. Descriptors close on success, rejection,
-failure and cancellation. A PostgreSQL partial unique index admits one receiving
-or running scan globally, across workers and replicas. This is API-local processing,
-not an AWS Batch job. There is no input recovery after worker loss; submit again.
+The existing SQS dispatcher submits `cwms-swt-jobs-jobdef` on `cwms-swd-jq`.
+It receives only a scan UUID and bucket name with a fixed installed command:
+`/opt/document-scan/venv/bin/python /opt/document-scan/run.py`. The image extension
+and runner live in `swt-wm-cwbi-jobs/document-scans`. This pilot uses server-defined
+arguments; it does not implement the full generic user-argument design in issue 156.
 
-Receiving/fetching is limited to 30 seconds. The scanner has a 120-second timeout,
-256 MiB Java heap and 256 KiB output cap. Children are killed if the API worker
-exits. Scanner stderr is discarded and core dumps disabled. The Java 21 policy
-denies filesystem writes and sockets on both read-only and writable API roots.
-Static veraPDF resources are unpacked when building the image; decoder paths
-requiring disk spill fail closed. The deprecated SecurityManager must be replaced
-before moving to a Java release without that enforcement.
+The runner conditionally claims the scan to tolerate duplicate delivery. It reads
+the PDF into memory, applies the size and 120-second scan limits, then deletes
+`input.pdf` and `request.json` before publishing a result. No user token, database
+credential, or public/presigned source URL is passed through the queue. Approved URL
+downloads require public HTTPS, pin validated DNS addresses, verify TLS, and reject
+redirects, credentials, compressed responses and private/reserved addresses.
 
-Only normalized rule counts, static descriptions, priorities, timestamps, size and
-hash are persisted. Filenames, URLs, PDF bytes, extracted text and raw diagnostics
-are excluded. Reports become invisible 24 hours after completion/failure. Cleanup
-runs at startup, every 15 minutes and before submissions. Interrupted active rows
-are marked failed during cleanup after their five-minute receiving deadline or
-three-minute running deadline. The scanner has an independent process watchdog
-so busy API requests cannot extend its processing timeout. Database backups
-may retain reports under the existing database backup policy.
+The API reconciles S3 results every ten seconds, validates/normalizes the summary,
+stores it in existing PostgreSQL, and removes staging/claim/result objects. Reports
+are visible for 24 hours; expired reports are hidden even before periodic deletion.
+One active scan is admitted across API workers for the SWT pilot. `running` includes
+Batch queue time. The one-hour deadline covers queueing and execution; expiry fails
+the request and deletes staging. Receiving has a five-minute orphan cleanup deadline.
+Delete failures retain cleanup responsibility and are retried by reconciliation.
 
-URL input is opt-in for exact approved hostnames. HTTPS port 443 only: no credentials,
-fragments, redirects, compressed HTTP responses, private/reserved/multicast IPs or
-mixed public/private DNS answers. Connections pin the validated IP and verify TLS
-against the original hostname. No login tokens, cookies or proxy environment are
-used. Fetching runs in a cancellable child sharing the anonymous descriptor.
+Hard task kills or API outages cannot guarantee immediate deletion. A mandatory
+one-day S3 lifecycle rule provides a backstop; lifecycle deletion is asynchronous.
+Reports may remain in existing database backups. General SWT jobs share the existing
+task role: deployment administrators and trusted district job code remain privileged.
 
-## Local validation
+## Deployment requirements (no CDK change in this pilot)
 
-Requires Docker Linux containers, Python with requests and reportlab, and a locally
-built `cwms-rest-api:local-dev` image (or set `CDA_IMAGE`). The compose project owns
-separate Oracle, PostgreSQL and Keycloak services and exposes only loopback ports.
+- Keep `DOCUMENT_SCAN_ENABLED=false` until the prerequisites below are satisfied.
+- Apply both document-scan migrations and update the API and dispatcher images.
+- Build the district scanner extension from the current SWT job image, with Java 21
+  and the existing `SKIP_GIT_CLONE` entrypoint support. Make that extended image
+  available through the image reference already used by the SWT job definition.
+  Do not replace the district image with a scanner-only image or change the job definition.
+- Configure `DOCUMENT_SCAN_BUCKET` explicitly. There is no fallback to existing
+  web, log, or public CDA blob storage. The API checks all four S3 Block Public Access
+  flags, disabled versioning (not suspended), and an enabled one-day expiration rule
+  whose filter is exactly `{"Prefix":"document-scans/"}`.
+- API role: bucket read configuration (`GetBucketPublicAccessBlock`,
+  `GetBucketVersioning`, `GetLifecycleConfiguration`) and Get/Put/DeleteObject for
+  `document-scans/swt/*`. Existing SWT job role: Get/Put/DeleteObject for that same
+  private prefix. Objects use SSE-S3. Provide these through existing approved storage
+  and permissions; this change does not create a bucket or alter IAM/CDK.
+- Set `DOCUMENT_SCAN_ORIGINS` and optional `DOCUMENT_SCAN_URL_HOSTS` JSON lists.
+  Configure the web app and Keycloak redirect. Verify production proxy/WAF upload
+  buffering, size, logs and timeouts before enabling.
+
+## Local checks
+
+Use disposable Docker services, not live AWS. Build the API image and the district
+runner image as described in its repository. The latter must be tagged
+`swt-document-scan-runner:local`. Python needs requests, boto3 and reportlab.
 
 ```powershell
-rtk python integration/document_scans/run_gate.py C:/temp/document-scan-evidence
+rtk docker build -t document-scan-api:local .
 rtk docker compose -f integration/document_scans/compose.yml up -d
 rtk docker cp integration/document_scans/users.sql document-scan-pilot-oracle-1:/tmp/document-scan-users.sql
 rtk docker exec document-scan-pilot-oracle-1 sqlplus -s -L CWMS_20/simplecwmspasswD1@localhost:1521/FREEPDB1 '@/tmp/document-scan-users.sql'
-rtk python integration/document_scans/verify_live.py C:/temp/document-scan-evidence/sample-accessibility.pdf
-rtk docker cp integration/document_scans/verify_lifecycle.py document-scan-pilot-api-1:/tmp/verify_lifecycle.py
-rtk docker exec -e PYTHONPATH=/code document-scan-pilot-api-1 python /tmp/verify_lifecycle.py
+rtk python integration/document_scans/generate_sample.py C:/temp/sample-accessibility.pdf
+rtk python integration/document_scans/verify_batch.py C:/temp/sample-accessibility.pdf
+rtk docker cp integration/document_scans/verify_storage.py document-scan-pilot-api-1:/tmp/verify_storage.py
+rtk docker exec -e PYTHONPATH=/code document-scan-pilot-api-1 python /tmp/verify_storage.py
 ```
 
-Keycloak is on port 18080, CDA on 18081, and Batch Events on 18082.
-`scan-owner` and `scan-other` have SWT access; `scan-outside` has SPK access.
-Their disposable fixture password is `local-scan-only`. The browser uses PKCE;
-the API fixture uses local password grants to exercise real signed JWT/CDA roles.
-The generated PDF deliberately lacks tags/language and produces known failures.
-
-```powershell
-rtk docker build --target builder --build-arg REQ_FILE=requirements-dev.txt -t document-scan-tests:local .
-rtk docker run --rm --network none -e AWS_EC2_METADATA_DISABLED=true -e PYTHONDONTWRITEBYTECODE=1 -v "${PWD}:/code:ro" -w /code document-scan-tests:local pytest -q --no-cov -p no:cacheprovider tests/cwms_batch_events/api tests/cwms_batch_events/core/auth/user
-```
-
-## Deployment configuration
-
-Disabled by default. Run the migration and deploy the scanner-containing API image
-before setting `DOCUMENT_SCAN_ENABLED=true`. Set `DOCUMENT_SCAN_ORIGINS` to a JSON
-list of exact internal-site origins for cross-origin browser calls. Set
-`DOCUMENT_SCAN_URL_HOSTS` to a JSON list of approved public HTTPS hosts, or leave
-empty to disable URL fetching. Register the standalone page in the Keycloak client.
-
-No new per-script CDK/IAM rules, queues, buckets or Batch job definitions are needed.
-The task's new environment settings still need to be applied through deployment
-configuration. Public proxy/WAF upload-size, buffering and timeout behavior must
-be verified before enabling uploads. Local results do not prove live Fargate,
-CAC federation, proxy behavior, or full Section 508 compliance.
+Keycloak is on localhost:18080, CDA on 18081, the API on 18082 and Moto on 18083.
+Fixture users are `scan-owner`, `scan-other` (SWT), and `scan-outside` (SPK), with
+password `local-scan-only`. The harness emulates SQS/S3, uses real CDA/Keycloak, and
+launches actual runner containers. It does not prove AWS IAM, Batch scheduling,
+CAC federation, production image availability, or Fargate operation.

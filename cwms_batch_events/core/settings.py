@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     mock_user: bool = False
     root_path: str = ""
     document_scan_enabled: bool = False
-    document_scan_classpath: str = "/opt/scanner/classes"
+    document_scan_bucket: str = ""
     document_scan_url_hosts: list[str] = []
     document_scan_origins: list[str] = []
     # CWBI deployments use "events"; local Docker overrides this setting.

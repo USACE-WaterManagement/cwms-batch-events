@@ -11,7 +11,6 @@ on:
       - "Dockerfile"
       - "requirements.txt"
       - "integration/document_scans/**"
-      - "scanner/**"
       - ".github/workflows/cwbi-build-push-api.yml"
   schedule:
     - cron: "0 6 * * 1"

@@ -1,35 +1,30 @@
 # Local validation
 
-Validated on 2026-09-14 with Docker Desktop Linux containers. The API used two
-Gunicorn workers at the reviewed task limits: 0.5 CPU and 1 GiB, with no swap.
+The revised implementation moves scanning into a separate SWT runner container.
+The API image was rebuilt and verified to have no `java` executable. No production
+resources or CDK were changed.
 
-- All 224 Python tests passed with networking disabled after rebasing onto the
-  current cwbi-dev branch.
-- The production Docker image built successfully. The compatibility harness
-  passed on read-only and writable container roots, including an embedded-font
-  PDF under the scanner's write-denying policy.
-- Real Keycloak JWTs and CDA profiles verified anonymous and non-SWT rejection,
-  cross-user list/detail isolation, global admission, successful scanning,
-  empty/invalid/oversized upload rejection, unsafe URL rejection, and no-store
-  headers, including unauthenticated responses.
-- PostgreSQL lifecycle checks verified expired reports are hidden and removed,
-  interrupted admission is recovered, malformed PDFs fail, and cancellation and
-  timeout close the input descriptor and terminate scanner children.
-- Browser PKCE login, upload, approved W3C HTTPS URL scanning, result summaries,
-  logout clearing, and desktop/mobile layout were exercised with the separate
-  SWT app. Scan content was absent from browser local/session storage.
-- Both newly added workflow files passed actionlint. The existing API build
-  workflow retains pre-existing ShellCheck quoting warnings in unchanged steps.
+- 214 backend unit tests pass, including existing SWT job-definition routing and
+  scan-specific dispatcher binding, private bucket checks, bounded uploads and summaries.
+- Real local Keycloak/CDA accounts verify SWT access, owner isolation, no-store,
+  admission and size/type rejection through /document/scan.
+- Moto emulates SQS and private S3 staging. Actual district runner containers use
+  the inherited command-capable entrypoint, 1 CPU / 1 GiB, and a 256 MiB Java heap.
+  Upload and approved W3C URL scans complete; sources and manifests are deleted,
+  duplicate delivery is harmless, reports are imported, and staging becomes empty.
+- The synthetic 2,072-byte PDF returns seven failed rules across 27 checks. The
+  W3C dummy PDF returns eight failed rules across 18 checks. Summary priorities
+  identify tagging, language, metadata/title display and embedded fonts.
+- Storage lifecycle tests verify expired reports are hidden/deleted, deletion
+  failures retain cleanup responsibility, retries remove staging, and malformed
+  runner results fail closed.
+- Four web tests pass after updating the upload-storage and queue-status copy.
 
-The generated 2,072-byte untagged PDF returned seven failed rules across 27 failed
-checks in about four seconds. Its SHA-256 was
-`dde1662c021082e69e4ada3068257c84f54bd6fa47a722fb8d5cb3c0e3223226`.
-Summary priorities were tags/reading order, language, metadata/title display,
-and embedded fonts. The public W3C dummy PDF returned eight failed rules across
-18 checks. Neither result is a Section 508 certification.
+The runner's separate repository contains URL validation and real-container success,
+failure, deletion and duplicate-delivery tests. The CI base is a public test fixture;
+local end-to-end tests also exercise a built CWBI command-capable runner base.
 
-Evidence files and browser screenshots were kept outside the source tree.
-No AWS deployment, production throughput, CAC federation, external proxy/WAF
-behavior, or disaster-recovery deletion was tested. Java 21's deprecated
-SecurityManager remains a deliberate pilot dependency; replace that enforcement
-before changing the Java runtime family.
+This does not validate live AWS IAM, S3 access policy enforcement, Batch scheduling,
+Fargate capacity, CAC federation, production image rollout, or proxy buffering.
+S3 lifecycle deletion is asynchronous. Java 21 SecurityManager enforcement remains
+a pilot dependency that must be replaced before upgrading to a runtime without it.

@@ -67,8 +67,10 @@ def test_get_internal_token_requires_secret_string():
             get_internal_token()
 
 
-def test_lambda_handler_processes_messages_and_binds_external_job_id():
+@pytest.mark.parametrize("document_scan", [False, True])
+def test_lambda_handler_processes_messages_and_binds_external_job_id(document_scan):
     message = make_job_message()
+    message.document_scan = document_scan
     response = mock.Mock(status_code=204, text="")
 
     with mock.patch(
@@ -87,6 +89,11 @@ def test_lambda_handler_processes_messages_and_binds_external_job_id():
         lambda_handler({"Records": [{"body": message.model_dump_json()}]}, None)
 
     requests_post.assert_called_once()
+    resource = "document/scan" if document_scan else "jobs"
+    assert (
+        requests_post.call_args.args[0]
+        == f"http://events/internal/{resource}/{message.job_id}/external-job-id"
+    )
     assert requests_post.call_args.kwargs["json"] == {"external_job_id": "ext-123"}
 
 
@@ -116,7 +123,9 @@ def test_lambda_handler_reraises_batch_submit_error():
         return_value="secret",
     ), mock.patch(
         "cwms_batch_events.lambdas.dispatch_job.dispatcher.dispatch_job",
-        side_effect=ClientError({"Error": {"Code": "Oops", "Message": "bad"}}, "Submit"),
+        side_effect=ClientError(
+            {"Error": {"Code": "Oops", "Message": "bad"}}, "Submit"
+        ),
     ):
         with pytest.raises(ClientError):
             lambda_handler({"Records": [{"body": message.model_dump_json()}]}, None)
