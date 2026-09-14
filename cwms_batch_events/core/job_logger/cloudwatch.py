@@ -1,8 +1,17 @@
+import base64
+import json
+import time
+
 import boto3
+from botocore.exceptions import ClientError
 from uuid import UUID
 
 from cwms_batch_events.core.job_database.base import JobDatabase
-from cwms_batch_events.core.models import JobRecord
+from cwms_batch_events.core.models import JobLogPage, JobRecord
+
+
+class LogsNotReady(ValueError):
+    pass
 
 
 class CloudWatchJobLogger:
@@ -24,7 +33,7 @@ class CloudWatchJobLogger:
         jobs = response.get("jobs", [])
 
         if not jobs:
-            raise ValueError(
+            raise LogsNotReady(
                 f"No Batch jobs found for external_job_id {external_job_id}"
             )
         if len(jobs) > 1:
@@ -32,19 +41,102 @@ class CloudWatchJobLogger:
                 f"Multiple jobs found for external_job_id {external_job_id}"
             )
 
-        attempts = jobs[0].get("attempts", [])
+        job = jobs[0]
+        # RUNNING jobs can expose their stream before an attempt is recorded.
+        log_stream_name = self._container_stream(job)
+        if log_stream_name:
+            return log_stream_name
+        attempts = job.get("attempts", [])
         if not attempts:
-            raise ValueError(
+            raise LogsNotReady(
                 f"No Batch job attempts found for external_job_id {external_job_id}"
             )
 
-        log_stream_name = attempts[-1].get("container", {}).get("logStreamName")
+        log_stream_name = self._container_stream(attempts[-1])
         if not log_stream_name:
-            raise ValueError(
+            raise LogsNotReady(
                 f"No log stream found for external_job_id {external_job_id}"
             )
 
         return log_stream_name
+
+    @staticmethod
+    def _container_stream(detail: dict) -> str | None:
+        stream = detail.get("container", {}).get("logStreamName")
+        if stream:
+            return stream
+        # ECS properties jobs put containers under taskProperties.
+        properties = detail.get("ecsProperties", detail)
+        for task in properties.get("taskProperties", []):
+            for container in task.get("containers", []):
+                if container.get("logStreamName"):
+                    return container["logStreamName"]
+        return None
+
+    def get_log_page(self, job_id: UUID, cursor: str | None = None) -> JobLogPage:
+        previous = None
+        if cursor:
+            try:
+                previous = json.loads(base64.b64decode(cursor, altchars=b"-_", validate=True))
+                if (
+                    not isinstance(previous, dict)
+                    or previous.get("job") != str(job_id)
+                    or not isinstance(previous.get("stream"), str)
+                    or not isinstance(previous.get("token"), str)
+                    or not isinstance(previous.get("issued"), (int, float))
+                ):
+                    raise ValueError("Invalid log cursor")
+            except (ValueError, TypeError, UnicodeError) as exc:
+                raise ValueError("Invalid log cursor") from exc
+
+        job = self.get_job_details(job_id)
+        if not job.external_job_id:
+            return JobLogPage(logs="", available=False, next_cursor=cursor)
+        try:
+            stream = self.get_batch_log_name(job.external_job_id)
+        except LogsNotReady:
+            return JobLogPage(logs="", available=False, next_cursor=cursor)
+
+        # Resolve stream from Batch every time; a client cannot select another
+        # job's stream. Start over on a new attempt or before a token expires.
+        reset = bool(previous and (
+            previous["stream"] != stream or time.time() - previous["issued"] >= 23 * 3600
+        ))
+        token = previous["token"] if previous and not reset else None
+        messages = []
+        has_more = False
+        try:
+            # Bound both AWS requests and response size (up to three 1 MB pages).
+            for _ in range(3):
+                args = dict(
+                    logGroupName=f"ecs/cwms-batch/{job.office.lower()}-jobs",
+                    logStreamName=stream,
+                    startFromHead=True,
+                )
+                if token:
+                    args["nextToken"] = token
+                page = self.logs.get_log_events(**args)
+                messages.extend(event["message"] for event in page["events"])
+                next_token = page.get("nextForwardToken")
+                has_more = bool(next_token and next_token != token)
+                token = next_token
+                if not has_more:
+                    break
+        except ClientError as exc:
+            if exc.response.get("Error", {}).get("Code") == "ResourceNotFoundException":
+                return JobLogPage(logs="", available=False, next_cursor=cursor)
+            if token and exc.response.get("Error", {}).get("Code") == "InvalidParameterException":
+                raise ValueError("Invalid log cursor") from exc
+            raise
+        next_cursor = None
+        if token:
+            next_cursor = base64.urlsafe_b64encode(json.dumps({
+                "job": str(job_id), "stream": stream, "token": token, "issued": time.time(),
+            }).encode()).decode()
+        return JobLogPage(
+            logs="\n".join(messages), next_cursor=next_cursor,
+            has_more=has_more, reset=reset,
+        )
 
     def get_logs_for_job(self, job_id: UUID) -> str:
         job = self.get_job_details(job_id)

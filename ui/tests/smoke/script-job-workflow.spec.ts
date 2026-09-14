@@ -49,7 +49,7 @@ test("run from a script row, inspect its runs, and switch Groundwork tabs", asyn
       return route.fulfill({ json: posts ? [job, { ...job, id: "job-other", scriptId: second.id, scriptName: second.name }] : [] });
     }
     if (path.endsWith("/jobs/job-env")) return route.fulfill({ json: job });
-    if (path.endsWith("/jobs/job-env/logs")) return route.fulfill({ json: { logs: "TZ=America/Chicago\n" } });
+    if (path.endsWith("/jobs/job-env/logs/page")) return route.fulfill({ json: { logs: "TZ=America/Chicago\n", reset: true } });
     return route.fulfill({ json: [] });
   });
   await page.setViewportSize({ width: 1600, height: 1000 });

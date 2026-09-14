@@ -3,12 +3,21 @@ from botocore.exceptions import ClientError
 from uuid import UUID
 
 from cwms_batch_events.core.settings import settings
+from cwms_batch_events.core.models import JobLogPage
 
 S3_ENDPOINT_URL = settings.s3_endpoint_url
 S3_BUCKET = settings.s3_bucket
 
 
 class S3JobLogger:
+    def get_log_page(self, job_id: UUID, cursor: str | None = None) -> JobLogPage:
+        # The local executor uploads a complete object only after execution.
+        try:
+            logs = self.get_logs_for_job(job_id)
+        except FileNotFoundError:
+            return JobLogPage(logs="", available=False, supports_live=False)
+        return JobLogPage(logs=logs, reset=True, supports_live=False)
+
     def __init__(self):
         self.s3 = boto3.client(
             "s3",

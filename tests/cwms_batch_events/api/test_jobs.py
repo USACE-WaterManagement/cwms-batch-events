@@ -4,7 +4,34 @@ from uuid import uuid4
 from sqlalchemy.exc import NoResultFound
 
 from cwms_batch_events.core.models import JobSource
+from cwms_batch_events.core.models import JobLogPage
 from tests.factories import make_job_record
+
+
+def test_log_page_preserves_cursor_contract(client, job_db, job_logger, user):
+    job = make_job_record(username=user.username)
+    job_db.get_job_by_id.return_value = job
+    job_logger.get_log_page.return_value = JobLogPage(logs="new output", next_cursor="next", has_more=True)
+    response = client.get(f"/jobs/{job.id}/logs/page?cursor=previous")
+    assert response.status_code == 200
+    assert response.json() == dict(logs="new output", nextCursor="next", hasMore=True, reset=False, available=True, supportsLive=True)
+    job_logger.get_log_page.assert_called_once_with(job.id, "previous")
+
+
+@pytest.mark.parametrize("missing", [False, True])
+def test_log_page_requires_job_owner(client, job_db, job_logger, missing):
+    job = make_job_record(username="someone-else")
+    job_db.get_job_by_id.return_value = None if missing else job
+    assert client.get(f"/jobs/{job.id}/logs/page").status_code == 404
+    job_logger.get_log_page.assert_not_called()
+
+
+def test_log_page_rejects_invalid_and_oversized_cursor(client, job_db, job_logger, user):
+    job = make_job_record(username=user.username)
+    job_db.get_job_by_id.return_value = job
+    job_logger.get_log_page.side_effect = ValueError("bad cursor")
+    assert client.get(f"/jobs/{job.id}/logs/page?cursor=bad").status_code == 400
+    assert client.get(f"/jobs/{job.id}/logs/page?cursor={'x' * 16385}").status_code == 422
 
 
 def test_get_jobs_for_user_returns_jobs(client, job_db, user):
