@@ -47,6 +47,11 @@ task role: deployment administrators and trusted district job code remain privil
   and the existing `SKIP_GIT_CLONE` entrypoint support. Make that extended image
   available through the image reference already used by the SWT job definition.
   Do not replace the district image with a scanner-only image or change the job definition.
+  The reviewed CDK configuration maps SWT to the shared `wmes-job-runner` repository,
+  also used by other offices. Do not overwrite its shared tag as an SWT-only rollout.
+  With job-definition/CDK changes deferred, installation into that shared runtime
+  needs a separately reviewed image rollout; a private district image cannot be
+  selected through the current command override alone.
 - Configure `DOCUMENT_SCAN_BUCKET` explicitly. There is no fallback to existing
   web, log, or public CDA blob storage. The API checks all four S3 Block Public Access
   flags, disabled versioning (not suspended), and an enabled one-day expiration rule
