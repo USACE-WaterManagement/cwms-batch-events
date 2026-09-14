@@ -16,7 +16,7 @@ const useJobsList = () => {
 const fetchJobs = async (token?: string): Promise<JobDetails[]> => {
   const response = await fetchWithAuth("/api/jobs", {}, token);
   if (!response.ok) {
-    throw new Error("Failed to fetch the jobs list");
+    throw new Error("Failed to fetch job history");
   }
   return response.json();
 };

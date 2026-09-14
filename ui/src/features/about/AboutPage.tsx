@@ -141,11 +141,11 @@ const AboutOverview = () => <div className="space-y-8 py-6">
 
 const controls = [
   { action: "Review jobs you ran", access: "An authenticated account",
-    result: "Jobs List shows jobs submitted by your username. It does not show every job for the office." },
-  { action: "Execute a job", access: "An office role that matches one of the script's allowed roles",
-    result: "Active, matching scripts appear under Submit Job. Most office scripts allow CWMS Users." },
+    result: "Job History shows jobs submitted by your username. It does not show every job for the office." },
+  { action: "Execute a job", access: "Office access, plus a matching execution role when the script specifies roles",
+    result: "An empty script role list requires no additional CDA role. Run active scripts from Submit Job or Scripts Manager." },
   { action: "Define or change a job", access: "Data Acquisition Mgr or Data Exchange Mgr for the office",
-    result: "Scripts Manager allows create, edit, and delete. The definition sets which roles may run it." },
+    result: "Scripts Manager provides Details, Run job, and Job runs tabs. Editing still requires office administrator access." },
 ];
 
 const ControlsPane = ({ user }: { user?: ApplicationInfo["user"] }) => {
@@ -165,7 +165,8 @@ const ControlsPane = ({ user }: { user?: ApplicationInfo["user"] }) => {
       <div className="mt-3 space-y-3 text-sm text-slate-700">
         <p>Roles are managed in the CDA user profile and grouped by office.</p>
         <p><strong>CWMS Users</strong> makes an office available in Batch Events. A script can require
-          that role or another role assigned to you for the same office.</p>
+          that role or another role assigned to you for the same office. Leave the script roles empty
+          when no additional execution role is needed. Office access is still required.</p>
         <p><strong>Data Acquisition Mgr</strong> or <strong>Data Exchange Mgr</strong> allows you to
           define and maintain scripts for that office in Scripts Manager.</p>
         <p>The <strong>Roles</strong> field on each script definition controls who may execute it.</p>
@@ -284,7 +285,8 @@ const OnboardingPane = ({ user }: { user?: ApplicationInfo["user"] }) => {
       <OnboardingStep number={1} title="Confirm your office access">
         <p>Open <strong>About → Controls</strong>. To define a job for {officeLabel}, your CDA
           profile needs <strong>Data Acquisition Mgr</strong> or <strong>Data Exchange Mgr</strong> for
-          that office. To run it, you need an office role allowed by the script.</p>
+          that office. To run it, you need access to the office and a matching execution role only
+          when the script specifies roles.</p>
         <p>If a role is missing, contact the person who manages CDA user roles for your office.</p>
       </OnboardingStep>
       <OnboardingStep number={2} title="Prepare the job in your office repository">
@@ -302,26 +304,23 @@ const OnboardingPane = ({ user }: { user?: ApplicationInfo["user"] }) => {
             <p>Open <strong>Scripts Manager</strong>, choose {officeLabel}, then select <strong>New +</strong>.</p>
             <OnboardingScreenshot
               src="/events/about/onboarding-scripts-manager.png"
-              alt="Scripts Manager with the office selector and New button marked."
-              frameClassName="aspect-[16/5]"
-              callouts={[
-                { label: "Choose " + officeLabel, style: { left: "1%", top: "39%", width: "12%", height: "12%" } },
-                { label: "Select New +", style: { left: "43%", top: "51%", width: "9%", height: "14%" } },
-              ]}
+              alt="Scripts Manager with row actions and Details, Run job, and Job runs tabs."
+              frameClassName="aspect-[16/10]"
+              callouts={[]}
             />
           </OnboardingSubstep>
           <OnboardingSubstep number="3.2" title="Complete the job definition">
             <p>Enter a name and description. <strong>GitHub Repo Path</strong> is the path to the
               script inside the office repository, such as <code>python/my_job.py</code>—not a GitHub URL.</p>
-            <p>Select the roles allowed to run the job, keep it active, and save.</p>
+            <p>For a command already in the runner, choose <strong>Installed command</strong> and
+              enter its executable and arguments. The example below uses Bash to print the runner time zone.</p>
+            <p>Roles are optional. Leave them empty when the job needs no additional CDA execution role,
+              or select roles to restrict who can run it. Keep the script active and save.</p>
             <OnboardingScreenshot
               src="/events/about/onboarding-script-form.png"
-              alt="New script form with the repository path and roles fields marked."
+              alt="New script form with source, runtime, arguments, and optional roles."
               frameClassName="aspect-[16/9]"
-              callouts={[
-                { label: "Repository path", style: { left: "63%", top: "56%", width: "35%", height: "9%" } },
-                { label: "Allowed roles", style: { left: "63%", top: "68%", width: "35%", height: "15%" } },
-              ]}
+              callouts={[]}
             />
           </OnboardingSubstep>
         </ol>
@@ -329,29 +328,34 @@ const OnboardingPane = ({ user }: { user?: ApplicationInfo["user"] }) => {
       <OnboardingStep number={4} title="Execute the job">
         <ol className="mt-4 space-y-5">
           <OnboardingSubstep number="4.1" title="Choose the office and script">
-            <p>Open <strong>Submit Job</strong>, select {officeLabel}, then choose the script.
-              Only active scripts that allow one of your {officeLabel} roles are listed.</p>
+            <p>In <strong>Scripts Manager</strong>, select <strong>Run job</strong> at the end of the
+              script row. The script opens with its <strong>Run job</strong> tab selected.
+              You can also switch between <strong>Details</strong>, <strong>Run job</strong>, and
+              <strong> Job runs</strong> in the selected script.</p>
             <OnboardingScreenshot
               src="/events/about/onboarding-submit-job.png"
-              alt="Submit Job with the office, script, and Execute controls marked."
-              frameClassName="aspect-[16/5]"
-              callouts={[
-                { label: "Choose " + officeLabel, style: { left: "1%", top: "39%", width: "12%", height: "12%" } },
-                { label: "Choose script", style: { left: "1%", top: "59%", width: "31%", height: "13%" } },
-                { label: "Execute", style: { left: "1%", top: "76%", width: "8%", height: "14%" } },
-              ]}
+              alt="Run job tab reviewing a Bash command with no additional CDA role."
+              frameClassName="aspect-[16/10]"
+              callouts={[]}
             />
           </OnboardingSubstep>
           <OnboardingSubstep number="4.2" title="Review inputs and execute">
-            <p>Enter any parameters required by the selected script, review the values, then select
-              <strong> Execute</strong>.</p>
+            <p>Review the saved executable or file and arguments, then select <strong>Submit job</strong>.
+              Successful submission opens the new run in <strong>Job runs</strong>. To change inputs,
+              use <strong>Details → Edit</strong> and save before submitting.</p>
+            <p>Users who do not administer scripts can continue to use <strong>Submit Job</strong>{" "}
+              to choose an active script from their permitted catalog and select <strong>Execute</strong>.</p>
           </OnboardingSubstep>
         </ol>
       </OnboardingStep>
       <OnboardingStep number={5} title="Review the result">
-        <p>Open <strong>Jobs List</strong>. Select <strong>Details</strong> for the run to review its
-          status and output. This list contains jobs submitted by your username, not every job for
-          {office ? " " + office : " the office"}.</p>
+        <p>Select <strong>View job runs</strong> at the end of a script row to open its <strong>Job runs</strong>{" "}
+          tab. Select a run to view status and output; use <strong>Refresh</strong> to reload the list.
+          The selected run updates until it finishes, then loads its output.</p>
+        <p>Open <strong>Job History</strong> to review runs across all your scripts. Both lists contain
+          jobs submitted by your username.</p>
+        <OnboardingScreenshot src="/events/about/onboarding-job-runs.png"
+          alt="Job runs tab with a completed Bash job and its output." frameClassName="aspect-[16/10]" callouts={[]} />
       </OnboardingStep>
     </ol>
   </section>;

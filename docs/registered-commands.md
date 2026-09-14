@@ -1,6 +1,6 @@
 # Registered commands
 
-Script administrators can select a district repository file or an installed command in Scripts Manager. Jobs use the office AWS Batch job definition, credentials, queue, and logs.
+Script administrators can select a district repository file or an installed command in Scripts Manager. Jobs use the office AWS Batch job definition, credentials, queue, and logs. Use the row's **Run job** action to review and submit the saved settings, or **View job runs** to review your runs. See the [script manager guide](script-manager.md) for the tab workflow and optional execution roles.
 
 | Source | Runtime / executable | Path / arguments | Container command |
 | --- | --- | --- | --- |
@@ -31,7 +31,7 @@ Enter these two lines in **Arguments**:
 printf 'Job completed\n' > /tmp/job-status.txt && cwms-cli blob upload --input-file /tmp/job-status.txt --blob-id JOB-STATUS --media-type text/plain --office SWT
 ```
 
-The second line is one argument. Bash runs the upload only if file creation succeeds. The job environment supplies `CDA_API_ROOT` and `CDA_API_KEY` for the target CDA service. Use a unique blob ID for each output, or add `--overwrite` to replace an existing blob. Save the registration, then run it from **Submit Job**.
+The second line is one argument. Bash runs the upload only if file creation succeeds. The job environment supplies `CDA_API_ROOT` and `CDA_API_KEY` for the target CDA service. Use a unique blob ID for each output, or add `--overwrite` to replace an existing blob. Save the registration, select **Run job** on its row, then **Submit job** in the selected script. **Job runs** opens the result; **Job History** lists your runs across scripts.
 
 Runtime and arguments are copied into the job record and queue message when submitted, so later script edits do not change an already submitted job. Local Docker execution uses the same command construction as AWS Batch.
 

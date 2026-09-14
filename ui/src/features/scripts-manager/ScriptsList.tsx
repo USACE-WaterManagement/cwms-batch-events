@@ -5,6 +5,7 @@ import {
   TableHead,
   TableHeader,
   TableCell,
+  Button,
 } from "@usace/groundwork";
 import { FaCircleCheck, FaCircleXmark } from "react-icons/fa6";
 import type { Script } from "../scripts-manager/types";
@@ -23,7 +24,7 @@ const ActiveIcon = ({ isActive }: ActiveIconProps) => {
 
 interface ScriptsListProps {
   scripts: Script[];
-  selectScript: (scriptId: string) => void;
+  selectScript: (scriptId: string, tab?: number) => void;
   selectedScriptId?: string;
 }
 
@@ -44,10 +45,11 @@ export const ScriptsList = ({
           <TableHeader>Type</TableHeader>
           <TableHeader>Path</TableHeader>
           <TableHeader>Active</TableHeader>
+          <TableHeader>Actions</TableHeader>
         </TableRow>
       </TableHead>
       <TableBody>
-        {scripts
+        {[...scripts]
           .sort((a, b) => a.name.localeCompare(b.name))
           .map((script) => (
             <TableRow
@@ -56,6 +58,7 @@ export const ScriptsList = ({
               aria-selected={script.id === selectedScriptId}
               onClick={() => selectScript(script.id)}
               onKeyDown={(event: React.KeyboardEvent<HTMLTableRowElement>) => {
+                if (event.target !== event.currentTarget) return;
                 if (event.key === "Enter" || event.key === " ") {
                   event.preventDefault();
                   selectScript(script.id);
@@ -78,6 +81,12 @@ export const ScriptsList = ({
               <TableCell><span className="block max-w-32 truncate sm:max-w-64" title={script.repoPath}>{script.repoPath}</span></TableCell>
               <TableCell>
                 <ActiveIcon isActive={script.active} />
+              </TableCell>
+              <TableCell>
+                <div className="flex flex-wrap gap-2" onClick={(event) => event.stopPropagation()}>
+                  <Button size="sm" disabled={!script.active} onClick={() => selectScript(script.id, 1)}>Run job</Button>
+                  <Button size="sm" onClick={() => selectScript(script.id, 2)}>View job runs</Button>
+                </div>
               </TableCell>
             </TableRow>
           ))}

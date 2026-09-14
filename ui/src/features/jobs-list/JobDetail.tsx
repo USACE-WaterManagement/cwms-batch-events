@@ -20,6 +20,11 @@ const wideFields: (keyof JobDetails)[] = [
   "id",
 ];
 
+const fieldLabels: Partial<Record<keyof JobDetails, string>> = {
+  scriptName: "Script", username: "Submitted by", jobStatus: "Status", office: "Office",
+  createdTime: "Submitted", runTime: "Started", endTime: "Finished", id: "Run ID",
+};
+
 interface JobDetailProps {
   job: JobDetails;
 }
@@ -27,13 +32,13 @@ interface JobDetailProps {
 function JobDetail({ job }: JobDetailProps) {
   return (
     <>
-      <div className="grow grid grid-cols-2 py-3 px-5">
+      <div className="min-w-0 grow grid grid-cols-1 gap-x-4 py-3 sm:grid-cols-2">
         {jobFields.map((field) => {
           const className = wideFields.includes(field)
-            ? "col-span-2"
+            ? "sm:col-span-2"
             : "col-span-1";
           return (
-            <JobDetailField key={field} field={field} className={className}>
+            <JobDetailField key={field} field={fieldLabels[field] ?? field} className={className}>
               {field === "jobStatus" ? (
                 job.jobStatus !== "Completed" && job.jobStatus !== "Failed" ? (
                   <span className="inline-flex items-center gap-2">
@@ -44,7 +49,9 @@ function JobDetail({ job }: JobDetailProps) {
                   job.jobStatus
                 )
               ) : (
-                job[field]
+                field === "createdTime" || field === "runTime" || field === "endTime"
+                  ? (job[field] ? new Date(job[field]).toLocaleString() : "—")
+                  : job[field]
               )}
             </JobDetailField>
           );
@@ -64,7 +71,7 @@ const JobDetailField = ({
   className,
   children,
 }: PropsWithChildren<JobDetailFieldProps>) => (
-  <span className={`px-3 py-1.5 ${className}`}>
+  <span className={`min-w-0 break-words px-3 py-1.5 ${className}`}>
     <strong>{field}</strong>: {children}
   </span>
 );
