@@ -31,11 +31,11 @@ interface JobDetailProps {
 
 function JobDetail({ job }: JobDetailProps) {
   return (
-    <div className="job-detail-container min-w-0 grow">
-      <div className="job-detail-fields min-w-0 grow py-3">
+    <div className="@container/job-details min-w-0 grow">
+      <div className="job-detail-fields grid min-w-0 grow grid-cols-1 gap-x-4 gap-y-1 py-3 @min-[32rem]/job-details:grid-cols-2">
         {jobFields.map((field) => {
           const className = wideFields.includes(field)
-            ? "job-detail-wide"
+            ? "col-span-full"
             : "";
           return (
             <JobDetailField key={field} field={fieldLabels[field] ?? field} className={className}>

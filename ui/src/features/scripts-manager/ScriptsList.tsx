@@ -32,10 +32,10 @@ export const ScriptsList = ({
   jobsUpdatedAt,
 }: ScriptsListProps) => {
   return (
-    <div className="scripts-list-scroll">
-    <table className="scripts-list" aria-label="Scripts">
+    <div className="scripts-list-scroll @container/scripts max-h-[65vh] overflow-y-auto overscroll-contain">
+    <table className="block w-full" aria-label="Scripts">
       <thead className="sr-only"><tr><th scope="col">Script</th><th scope="col">Actions</th></tr></thead>
-      <tbody>
+      <tbody className="block w-full">
         {[...scripts]
           .sort((a, b) => a.name.localeCompare(b.name))
           .map((script) => (
@@ -51,13 +51,13 @@ export const ScriptsList = ({
                   selectScript(script.id);
                 }
               }}
-              className={
+              className={`grid cursor-pointer grid-cols-1 gap-3 border-b border-gray-200 p-4 last:border-b-0 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600 @min-[34rem]/scripts:grid-cols-[minmax(0,1fr)_9rem] ${
                 script.id === selectedScriptId
-                  ? "cursor-pointer bg-blue-100"
-                  : "cursor-pointer hover:bg-gray-100"
-              }
+                  ? "bg-blue-100"
+                  : "hover:bg-gray-100"
+              }`}
             >
-              <td className="min-w-0 [overflow-wrap:anywhere]">
+              <td className="block min-w-0 [overflow-wrap:anywhere]">
                 <span className="font-bold">{script.name}</span>
                 <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-600">
                   <span>{script.runtime}</span>
@@ -69,7 +69,7 @@ export const ScriptsList = ({
                   now={jobsUpdatedAt} scriptName={script.name}
                   onSelectRun={jobId => selectScript(script.id, 2, jobId)} />
               </td>
-              <td className="script-row-actions">
+              <td className="block self-center">
                 <div className="flex flex-wrap gap-2" onClick={(event) => event.stopPropagation()}>
                   <Button size="sm" disabled={!script.active} onClick={() => selectScript(script.id, 1)}>Run job</Button>
                   <Button size="sm" onClick={() => selectScript(script.id, 2)}>View job runs</Button>

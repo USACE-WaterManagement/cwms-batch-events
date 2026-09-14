@@ -1,52 +1,6 @@
 @import "tailwindcss";
 @import "@usace/groundwork/dist/groundwork.css" layer(components);
 
-/* Size the workspace from the space available inside the page, including
-   browser zoom and the surrounding navigation/container padding. */
-.scripts-workspace {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 36rem), 1fr));
-  gap: 1.5rem;
-}
-
-.scripts-list-scroll {
-  container-type: inline-size;
-  max-height: 65vh;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
-
-.scripts-list, .scripts-list tbody { display: block; width: 100%; }
-.scripts-list tr {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0.75rem;
-  padding: 1rem;
-  border-bottom: 1px solid var(--color-gray-200);
-}
-.scripts-list tr:last-child { border-bottom: 0; }
-.scripts-list tr:focus-visible { outline: 2px solid var(--color-blue-600); outline-offset: -2px; }
-.scripts-list td { display: block; }
-.script-row-actions { align-self: center; }
-@container (min-width: 34rem) {
-  .scripts-list tr { grid-template-columns: minmax(0, 1fr) 9rem; }
-}
-
-.script-workspace-panel { container-type: inline-size; }
-@container (min-width: 30rem) {
-  .script-view-field { grid-template-columns: 120px minmax(0, 1fr); gap: 1.5rem; }
-}
-.job-detail-fields {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0.25rem 1rem;
-}
-.job-detail-container { container-type: inline-size; }
-@container (min-width: 32rem) {
-  .job-detail-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-.job-detail-wide { grid-column: 1 / -1; }
-
 /* Groundwork gives navRight a full-width slot. Size our compact actions to
    their contents so the navigation links retain room at tablet widths. */
 header span:has(> .batch-header-actions) {
