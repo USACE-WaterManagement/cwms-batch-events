@@ -3,7 +3,8 @@
 Validated on 2026-09-14 with Docker Desktop Linux containers. The API used two
 Gunicorn workers at the reviewed task limits: 0.5 CPU and 1 GiB, with no swap.
 
-- All 204 Python tests passed with networking disabled.
+- All 224 Python tests passed with networking disabled after rebasing onto the
+  current cwbi-dev branch.
 - The production Docker image built successfully. The compatibility harness
   passed on read-only and writable container roots, including an embedded-font
   PDF under the scanner's write-denying policy.
