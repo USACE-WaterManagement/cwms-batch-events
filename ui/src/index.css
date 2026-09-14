@@ -8,10 +8,19 @@ header span:has(> .batch-header-actions) {
   flex-shrink: 0;
 }
 
-/* At the desktop-menu breakpoint, allow room for wider system fonts as well
-   as the account controls. Keep the full 48px link height for touch targets. */
+/* At tablet widths, give navigation a full row below the logo and account
+   controls. This leaves room for platform font differences and all six links. */
 @media (min-width: 768px) and (max-width: 1023px) {
-  header:has(.batch-header-actions) ul[role="list"] > li > a {
-    padding-inline: 0.25rem;
+  header div:has(> span > .batch-header-actions) {
+    flex-wrap: wrap;
+  }
+
+  header div:has(> span > .batch-header-actions) > div:first-child {
+    top: 0;
+  }
+
+  header div:has(> span > .batch-header-actions) > div:has(> ul[role="list"]) {
+    order: 1;
+    flex-basis: 100%;
   }
 }

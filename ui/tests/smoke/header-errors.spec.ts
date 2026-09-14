@@ -15,8 +15,8 @@ test("header controls and links fit desktop, tablet and phone widths", async ({ 
   await page.getByRole("combobox").selectOption("SWT");
   await expect(page.getByRole("button", { name: "View warnings and errors (1)", exact: true })).toBeVisible();
   // Leave room for the different font metrics on Windows and Linux runners.
-  const layouts = ["normal", "0.25px"].flatMap(letterSpacing =>
-    [1440, 1280, 1100, 1024, 768, 390, 320].map(width => ({ width, letterSpacing })));
+  const layouts = ["normal", "0.25px", "1px"].flatMap(letterSpacing =>
+    [1440, 1280, 1100, 1024, 1023, 900, 768, 390, 320].map(width => ({ width, letterSpacing })));
   for (const { width, letterSpacing } of layouts) {
     await page.getByRole("banner").first().evaluate((header, spacing) => { header.style.letterSpacing = spacing; }, letterSpacing);
     await page.setViewportSize({ width, height: 900 });
@@ -34,6 +34,10 @@ test("header controls and links fit desktop, tablet and phone widths", async ({ 
       const first = await page.getByRole("link", { name: "Job History", exact: true }).first().boundingBox();
       const last = await page.getByRole("link", { name: /^Dev/ }).first().boundingBox();
       expect(Math.abs(first!.y - last!.y), `Navigation at ${width}px with ${letterSpacing} letter spacing`).toBeLessThan(5);
+      if (width < 1024) {
+        const actions = await page.locator(".batch-header-actions").boundingBox();
+        expect(first!.y).toBeGreaterThanOrEqual(actions!.y + actions!.height);
+      }
     }
   }
 });
