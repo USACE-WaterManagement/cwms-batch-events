@@ -3,13 +3,15 @@ import { useAuth } from "@usace-watermanagement/groundwork-water";
 import fetchWithAuth from "../../utils/fetchWithAuth";
 import { JobDetails } from "./useJobDetails";
 
-const useJobsList = () => {
+const useJobsList = (poll = false) => {
   const auth = useAuth();
 
   return useQuery({
     queryKey: ["jobs"],
     queryFn: () => fetchJobs(auth.token),
     enabled: auth.isAuth,
+    refetchInterval: (query) =>
+      poll && query.state.status !== "error" ? 5000 : false,
   });
 };
 

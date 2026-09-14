@@ -354,6 +354,10 @@ const OnboardingPane = ({ user }: { user?: ApplicationInfo["user"] }) => {
           The selected run updates until it finishes, then loads its output.</p>
         <p>Open <strong>Job History</strong> to review runs across all your scripts. Both lists contain
           jobs submitted by your username.</p>
+        <p>Script rows show a spinner for your queued or running jobs and a <strong>Recent failure</strong>{" "}
+          warning for a failure in the past 24 hours. Select either indicator to open that exact run.
+          The manager refreshes status every five seconds while visible. If status cannot be loaded,
+          use <strong>Retry run status</strong>.</p>
         <OnboardingScreenshot src="/events/about/onboarding-job-runs.png"
           alt="Job runs tab with a completed Bash job and its output." frameClassName="aspect-[16/10]" callouts={[]} />
       </OnboardingStep>

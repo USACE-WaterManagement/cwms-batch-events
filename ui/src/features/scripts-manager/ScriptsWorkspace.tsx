@@ -11,6 +11,7 @@ import { useCreateScript } from "./useCreateScript";
 import { useDeleteScript } from "./useDeleteScript";
 import { useDefaultJobRunner } from "./useDefaultJobRunner";
 import { MdCode } from "react-icons/md";
+import useJobsList from "../jobs-list/useJobsList";
 
 interface ScriptsWorkspaceProps {
   office: string;
@@ -18,6 +19,7 @@ interface ScriptsWorkspaceProps {
 
 export const ScriptsWorkspace = ({ office }: ScriptsWorkspaceProps) => {
   const scripts = useOfficeScripts(office);
+  const jobs = useJobsList(true);
   const createScriptMutation = useCreateScript(office);
   const deleteScriptMutation = useDeleteScript(office);
   const updateScriptMutation = useUpdateScript(office);
@@ -45,9 +47,9 @@ export const ScriptsWorkspace = ({ office }: ScriptsWorkspaceProps) => {
     (script) => script.id === selectedScriptId,
   );
 
-  const onSelect = (scriptId: string, tab = 0) => {
+  const onSelect = (scriptId: string, tab = 0, jobId?: string) => {
     setPanelMode("view");
-    if (scriptId !== selectedScriptId) setSelectedJobId(undefined);
+    if (jobId || scriptId !== selectedScriptId) setSelectedJobId(jobId);
     setSelectedScriptId(scriptId);
     showTab(tab);
   };
@@ -137,10 +139,16 @@ export const ScriptsWorkspace = ({ office }: ScriptsWorkspaceProps) => {
           tabIndex={0}
           className="mt-3 min-w-0 rounded border border-gray-200"
         >
+          {jobs.isError && <p role="status" className="flex flex-wrap items-center gap-2 p-3 text-sm">
+            Run status is unavailable.
+            <Button size="sm" disabled={jobs.isFetching} onClick={() => void jobs.refetch()}>Retry run status</Button>
+          </p>}
           <ScriptsList
             scripts={scripts.data}
             selectScript={onSelect}
             selectedScriptId={selectedScriptId}
+            jobs={jobs.isError ? [] : jobs.data ?? []}
+            jobsUpdatedAt={jobs.dataUpdatedAt}
           />
         </div>}
       </div>

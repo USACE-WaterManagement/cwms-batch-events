@@ -9,6 +9,14 @@
    **Refresh** reloads the list. **Job History** shows your runs across all scripts.
 
 The Groundwork tabs keep details, submission, and run output in the selected script's workspace.
+Script rows show a spinner for your queued or running jobs and a warning for your most recent
+failure within the past 24 hours. Click either indicator to open that exact run in **Job runs**.
+Running jobs also show spinners in the run list. The manager refreshes run status every five
+seconds while visible, including when a different tab is selected. A read failure stops polling;
+**Retry run status** resumes it. The indicators remain scoped to your jobs in the selected office.
+
+![Running and queued spinners alongside a clickable recent-failure warning](../ui/public/about/script-run-indicators.png)
+
 Both history views contain jobs submitted by the signed-in username. Existing `/events/jobs`
 and `/events/jobs/{jobId}` links continue to work. **Submit Job** remains available for users
 who can run scripts but do not have script administration access.

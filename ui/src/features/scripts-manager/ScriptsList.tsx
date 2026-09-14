@@ -9,6 +9,8 @@ import {
 } from "@usace/groundwork";
 import { FaCircleCheck, FaCircleXmark } from "react-icons/fa6";
 import type { Script } from "../scripts-manager/types";
+import type { JobDetails } from "../jobs-list/useJobDetails";
+import { ScriptRunIndicators } from "./ScriptRunIndicators";
 
 interface ActiveIconProps {
   isActive: boolean;
@@ -24,7 +26,9 @@ const ActiveIcon = ({ isActive }: ActiveIconProps) => {
 
 interface ScriptsListProps {
   scripts: Script[];
-  selectScript: (scriptId: string, tab?: number) => void;
+  selectScript: (scriptId: string, tab?: number, jobId?: string) => void;
+  jobs: JobDetails[];
+  jobsUpdatedAt: number;
   selectedScriptId?: string;
 }
 
@@ -32,6 +36,8 @@ export const ScriptsList = ({
   scripts,
   selectScript,
   selectedScriptId,
+  jobs,
+  jobsUpdatedAt,
 }: ScriptsListProps) => {
   return (
     <Table
@@ -72,6 +78,10 @@ export const ScriptsList = ({
             >
               <TableCell>
                 <span className="font-bold">{script.name}</span>
+                <ScriptRunIndicators
+                  jobs={jobs.filter(job => job.scriptId === script.id && job.office === script.office)}
+                  now={jobsUpdatedAt} scriptName={script.name}
+                  onSelectRun={jobId => selectScript(script.id, 2, jobId)} />
               </TableCell>
               <TableCell>
                 {script.executionType === "command"
