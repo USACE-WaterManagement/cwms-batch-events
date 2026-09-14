@@ -18,6 +18,26 @@ def test_get_jobs_for_user_returns_jobs(client, job_db, user):
     job_db.get_jobs_for_user.assert_called_once_with(user.username)
 
 
+def test_get_jobs_page_returns_total_and_user_scoped_page(client, job_db, user):
+    jobs = [make_job_record() for _ in range(10)]
+    job_db.get_jobs_for_user.return_value = jobs
+    job_db.count_jobs_for_user.return_value = 23
+
+    response = client.get("/jobs?limit=10&offset=10")
+
+    assert response.status_code == 200
+    assert len(response.json()) == 10
+    assert response.headers["X-Total-Count"] == "23"
+    job_db.get_jobs_for_user.assert_called_once_with(user.username, limit=10, offset=10)
+    job_db.count_jobs_for_user.assert_called_once_with(user.username)
+
+
+@pytest.mark.parametrize("query", ["limit=0", "limit=101", "offset=-1", "limit=all"])
+def test_get_jobs_rejects_invalid_pagination(client, job_db, query):
+    assert client.get(f"/jobs?{query}").status_code == 422
+    job_db.get_jobs_for_user.assert_not_called()
+
+
 def test_post_job_creates_and_dispatches_message(client, job_db, job_queue):
     script_id = str(uuid4())
     job = make_job_record()
