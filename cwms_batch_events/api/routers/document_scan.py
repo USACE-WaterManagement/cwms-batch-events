@@ -150,8 +150,8 @@ def cleanup():
                     status="completed" if result else "failed",
                     result=json.dumps(result),
                     error=None if result else "Unable to complete this PDF scan.",
-                    sha=outcome.get("sha256"),
-                    size=outcome.get("size_bytes"),
+                    sha=outcome.get("sha256") if result else None,
+                    size=outcome.get("size_bytes") if result else None,
                 )
                 terminal = True
             except ClientError as exc:
