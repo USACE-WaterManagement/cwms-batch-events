@@ -18,6 +18,7 @@ const JobLogs = ({ jobId, disabled = false }: JobLogsProps) => {
 
   return (
     <Textarea
+      aria-label="Job output"
       readOnly
       value={message}
       disabled={disabled}

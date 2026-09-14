@@ -4,7 +4,7 @@ import { Button, Text } from "@usace/groundwork";
 import type { Script } from "../scripts-manager/types";
 
 export const RoleList = ({ roles }: { roles: string[] }) => {
-  if (roles) {
+  if (roles.length) {
     return (
       <ul>
         {roles.map((role) => (
@@ -13,7 +13,7 @@ export const RoleList = ({ roles }: { roles: string[] }) => {
       </ul>
     );
   } else {
-    return "<no roles>";
+    return "No additional CDA role required. Office access is required.";
   }
 };
 

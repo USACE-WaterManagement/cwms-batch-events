@@ -35,6 +35,15 @@ def slugify(value: str) -> str:
     return value
 
 
+def can_run_script(script: ScriptModel, roles: dict[str, list[str]]) -> bool:
+    """Empty script roles require office access, but no additional CDA role."""
+    return (
+        script.active
+        and script.office in roles
+        and (not script.roles or not set(script.roles).isdisjoint(roles[script.office]))
+    )
+
+
 class PostgresJobDatabase:
     def __init__(self, db: Session):
         self.db = db
@@ -62,7 +71,7 @@ class PostgresJobDatabase:
     def create_job(self, payload: ScriptRunRequest, user: User) -> JobRecord:
         script = self.db.get_one(ScriptModel, payload.script_id)
 
-        if set(script.roles).isdisjoint(user.roles[script.office]):
+        if not can_run_script(script, user.roles):
             raise PermissionError("Not authorized to run requested script")
 
         # Old registrations remain readable, but must be corrected before a
@@ -150,9 +159,7 @@ class PostgresJobDatabase:
         runnable_scripts = [
             script
             for script in all_scripts
-            if script.office in roles
-            and script.active
-            and not set(script.roles).isdisjoint(roles[script.office])
+            if can_run_script(script, roles)
         ]
 
         return [ScriptRead.model_validate(script) for script in runnable_scripts]

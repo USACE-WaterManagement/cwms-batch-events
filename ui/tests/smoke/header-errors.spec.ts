@@ -31,7 +31,7 @@ test("header controls and links fit desktop, tablet and phone widths", async ({ 
     for (let i = 1; i < boxes.length; i++) expect(boxes[i].x).toBeGreaterThanOrEqual(boxes[i - 1].right);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
     if (width >= 768) {
-      const first = await page.getByRole("link", { name: "Jobs List", exact: true }).first().boundingBox();
+      const first = await page.getByRole("link", { name: "Job History", exact: true }).first().boundingBox();
       const last = await page.getByRole("link", { name: /^Help/ }).first().boundingBox();
       expect(Math.abs(first!.y - last!.y), `Navigation at ${width}px with ${letterSpacing} letter spacing`).toBeLessThan(5);
     }

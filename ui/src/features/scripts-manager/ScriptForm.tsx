@@ -49,7 +49,7 @@ const fieldHelp: Record<string, React.ReactNode> = {
   ),
   runtime: "Choose Python for .py files, Bash for .sh files, or Java JAR for a built .jar file. The runtime determines how the file is invoked and the default browser filter.",
   commandArgs: "Enter one argument per line. Spaces within each line are preserved. For the installed java command, put -jar on one line and the JAR path on the next.",
-  roles: "Select the roles permitted to run this script. Choose a role and click Add; use its remove button to remove access for that role.",
+  roles: "Optional. Leave empty to let users with office access run this script without an additional CDA role. Select roles to restrict execution to users with at least one of those roles in this office. These roles do not grant the script CDA credentials.",
 };
 
 const slugify = (str: string) => {
@@ -104,7 +104,7 @@ export const ScriptForm = ({
     executionType: script?.executionType ?? "github_file",
     runtime: script?.runtime ?? "python",
     commandArgs: script?.commandArgs ?? [],
-    roles: script?.roles ?? ["CWMS Users"],
+    roles: script?.roles ?? [],
   });
 
   const handleSubmit = () => onSave(form);
@@ -230,7 +230,7 @@ export const ScriptForm = ({
             </div>
           </FormRow>
           <FormRow>
-            <InputLabel htmlFor="roles">Roles</InputLabel>
+            <InputLabel htmlFor="roles">Roles (optional)</InputLabel>
             <RoleMultiSelect
               allRoles={allRoles}
               initialSelectedRoles={form.roles}

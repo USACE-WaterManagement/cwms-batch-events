@@ -14,7 +14,7 @@ import { WarningIndicator } from "../components/WarningIndicator";
 import useAdminOffices from "../features/scripts-manager/useAdminOffices";
 
 const primaryLinks = [
-  { id: "jobs", text: "Jobs List", href: "/jobs" },
+  { id: "jobs", text: "Job History", href: "/jobs" },
   { id: "submit", text: "Submit Job", href: "/submit" },
   { id: "manager", text: "Scripts Manager", href: "/scripts-manager" },
 ];
