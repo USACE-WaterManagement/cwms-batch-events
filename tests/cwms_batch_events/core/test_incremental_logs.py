@@ -9,13 +9,19 @@ from botocore.exceptions import ClientError
 
 from cwms_batch_events.core.job_logger.cloudwatch import CloudWatchJobLogger
 from cwms_batch_events.core.job_logger.s3 import S3JobLogger
+from cwms_batch_events.core.batch_details import log_stream
 
 
 @pytest.fixture
 def source():
     job_id = uuid4()
     db, batch, logs = Mock(), Mock(), Mock()
-    db.get_job_by_id.return_value = SimpleNamespace(external_job_id="batch-id", office="SWT")
+    job = SimpleNamespace(external_job_id="batch-id", office="SWT", job_status="Running",
+                          log_stream=None, log_group=None, batch_status=None, batch_status_reason=None)
+    db.get_job_by_id.return_value = job
+    def persist(job_id, detail, observed_at):
+        job.log_stream = log_stream(detail)
+    db.record_batch_details.side_effect = persist
     batch.describe_jobs.return_value = {"jobs": [{"container": {"logStreamName": "active"}}]}
     with patch("cwms_batch_events.core.job_logger.cloudwatch.boto3.client", side_effect=[batch, logs]):
         logger = CloudWatchJobLogger(db)

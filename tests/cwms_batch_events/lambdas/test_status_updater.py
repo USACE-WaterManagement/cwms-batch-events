@@ -76,7 +76,7 @@ def test_lambda_handler_ignores_unsupported_status():
                 "detail": {
                     "jobName": "cwms-swt-event-script",
                     "jobId": "batch-123",
-                    "status": "STARTING",
+                    "status": "UNKNOWN",
                 },
                 "time": "2026-04-16T12:00:00Z",
             },
@@ -115,6 +115,7 @@ def test_lambda_handler_posts_translated_status_to_events_api():
     assert requests_post.call_args.kwargs["json"] == {
         "status": "Completed",
         "event_time": "2026-04-16T12:00:00Z",
+        "batch_detail": {"status": "SUCCEEDED"},
     }
 
 
@@ -138,6 +139,28 @@ def test_lambda_handler_re_raises_request_exceptions():
                 },
                 None,
             )
+
+
+@pytest.mark.parametrize("raw_status", ["SUBMITTED", "PENDING", "RUNNABLE", "STARTING"])
+def test_pending_states_preserve_reason_and_only_log_reference(raw_status):
+    with mock.patch(
+        "cwms_batch_events.lambdas.update_batch_job_status.status_updater.get_internal_token",
+        return_value="secret",
+    ), mock.patch(
+        "cwms_batch_events.lambdas.update_batch_job_status.status_updater.requests.post",
+        return_value=mock.Mock(status_code=204),
+    ) as post:
+        lambda_handler({"time": "2026-09-14T12:00:00Z", "detail": {
+            "jobName": "cwms-swt-event-hourly", "jobId": "batch-id", "status": raw_status,
+            "statusReason": "Waiting for capacity", "container": {
+                "logStreamName": "retained", "environment": [{"name": "SECRET", "value": "not-forwarded"}],
+            },
+        }}, None)
+    assert post.call_args.kwargs["json"] == {
+        "status": "Pending", "event_time": "2026-09-14T12:00:00Z",
+        "batch_detail": {"status": raw_status, "statusReason": "Waiting for capacity",
+                         "container": {"logStreamName": "retained"}},
+    }
 
 
 def test_lambda_handler_raises_when_events_api_rejects_message():

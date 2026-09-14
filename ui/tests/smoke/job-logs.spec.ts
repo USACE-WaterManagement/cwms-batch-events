@@ -4,6 +4,7 @@ async function viewer(page: Page, initialStatus = "Running") {
   const state = {
     status: initialStatus, requests: [] as (string | null)[], failure: 0,
     live: true, available: true, more: false, reset: false,
+    message: null as string | null,
   };
   await page.clock.install();
   await page.route("**/api/**", route => {
@@ -15,6 +16,7 @@ async function viewer(page: Page, initialStatus = "Running") {
         logs: state.available ? `line ${state.requests.length}` : "",
         nextCursor: `cursor-${state.requests.length}`, hasMore: state.more,
         reset: state.reset, available: state.available, supportsLive: state.live,
+        message: state.message,
       } });
     }
     if (url.pathname.endsWith("/jobs/log-job")) return route.fulfill({ json: {
@@ -26,6 +28,8 @@ async function viewer(page: Page, initialStatus = "Running") {
   await page.goto("/events/jobs/log-job");
   await page.getByRole("button", { name: "Login", exact: true }).first().click();
   await expect(page.getByLabel("Job output")).toBeVisible();
+  await expect(page.getByLabel("Update interval")).toHaveValue("5000");
+  if (initialStatus === "Running") await page.getByLabel("Update interval").selectOption("2000");
   return state;
 }
 
@@ -51,9 +55,12 @@ test("polls incrementally at the selected interval, pauses, and stops on complet
   expect(state.requests[3]).toBe("cursor-3");
   await expect(page.getByLabel("Update interval")).toBeDisabled();
   await page.clock.runFor(30000);
-  expect(state.requests).toHaveLength(4);
+  expect(state.requests).toHaveLength(7);
+  await expect(page.getByLabel("Job output")).toHaveValue("line 1\nline 2\nline 3\nline 4\nline 5\nline 6\nline 7");
+  await page.clock.runFor(60000);
+  expect(state.requests).toHaveLength(7);
   await page.getByRole("button", { name: "Refresh logs" }).click();
-  await expect.poll(() => state.requests.length).toBe(5);
+  await expect.poll(() => state.requests.length).toBe(8);
 });
 
 test("completed and failed jobs load once; pagination requires explicit action", async ({ page }) => {
@@ -143,4 +150,29 @@ test("new attempts replace old output and controls fit a narrow viewport", async
   await expect(page.getByLabel("Job output")).toHaveValue("line 2");
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test("pending jobs allow manual diagnostics without starting log polling", async ({ page }) => {
+  const state = await viewer(page, "Pending");
+  state.available = false;
+  state.message = "AWS Batch: RUNNABLE. Waiting for capacity";
+  await page.getByRole("button", { name: "Refresh logs" }).click();
+  await expect(page.getByLabel("Job output")).toHaveValue(state.message);
+  await page.clock.runFor(60000);
+  expect(state.requests).toHaveLength(1);
+});
+
+test("completion catch-up stops after an error", async ({ page }) => {
+  const state = await viewer(page);
+  await expect(page.getByLabel("Job output")).toHaveValue("line 1");
+  await page.getByLabel("Update interval").selectOption("0");
+  state.status = "Completed";
+  await page.clock.runFor(5100);
+  await expect.poll(() => state.requests.length).toBe(2);
+  state.failure = 500;
+  await page.clock.runFor(6100);
+  await expect(page.getByText("Automatic updates stopped after an error.")).toBeVisible();
+  const stopped = state.requests.length;
+  await page.clock.runFor(60000);
+  expect(state.requests).toHaveLength(stopped);
 });

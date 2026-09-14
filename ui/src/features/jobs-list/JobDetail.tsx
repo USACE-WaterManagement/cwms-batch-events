@@ -57,6 +57,8 @@ function JobDetail({ job }: JobDetailProps) {
           );
         })}
       </div>
+      {job.batchStatus && <p className="px-3">AWS Batch: {job.batchStatus}</p>}
+      {job.batchStatusReason && <p className="px-3">{job.batchStatusReason}</p>}
     </div>
   );
 }

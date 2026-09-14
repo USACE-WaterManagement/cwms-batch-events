@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 import uuid
 
 from cwms_batch_events.core.auth.user.models import User
+from cwms_batch_events.core.batch_details import STATUS_MAP, log_stream
 from cwms_batch_events.core.job_database.postgres.models import (
     JobModel,
     JobRunnerModel,
@@ -47,6 +48,40 @@ def can_run_script(script: ScriptModel, roles: dict[str, list[str]]) -> bool:
 class PostgresJobDatabase:
     def __init__(self, db: Session):
         self.db = db
+
+    def claim_batch_refresh(self, job_id: uuid.UUID) -> bool:
+        # A DB claim shares the 15-second limit across API workers and viewers.
+        job = self._load_job_for_update(job_id)
+        now = datetime.now(timezone.utc)
+        due = not job.batch_checked_at or (now - job.batch_checked_at).total_seconds() >= 15
+        if due:
+            job.batch_checked_at = now
+        self.db.commit()
+        return due
+
+    def record_batch_details(self, job_id: uuid.UUID, detail: dict, observed_at: datetime) -> None:
+        job = self._load_job_for_update(job_id)
+        if job.batch_details_time and observed_at < job.batch_details_time:
+            self.db.commit()
+            return
+        incoming = STATUS_MAP.get(detail.get("status"))
+        # A late RUNNING event must not reopen a finished execution.
+        if job.job_status in (JobStatus.COMPLETED, JobStatus.FAILED) and incoming not in (job.job_status, None):
+            self.db.commit()
+            return
+        job.batch_details_time = observed_at
+        if incoming:
+            job.job_status = incoming
+            job.batch_status = detail["status"]
+            job.batch_status_reason = detail.get("statusReason")
+        if stream := log_stream(detail):
+            job.log_stream = stream
+            job.log_group = f"ecs/cwms-batch/{job.office.lower()}-jobs"
+        if detail.get("startedAt"):
+            job.run_time = datetime.fromtimestamp(detail["startedAt"] / 1000, timezone.utc)
+        if detail.get("stoppedAt"):
+            job.end_time = datetime.fromtimestamp(detail["stoppedAt"] / 1000, timezone.utc)
+        self.db.commit()
 
     def bind_external_job_id(
         self,
@@ -140,6 +175,7 @@ class PostgresJobDatabase:
         job = (
             self.db.query(JobModel)
             .filter(JobModel.id == job_id)
+            .populate_existing()
             .with_for_update()
             .one_or_none()
         )

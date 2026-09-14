@@ -58,6 +58,12 @@ class JobModel(Base):
         UUID(as_uuid=True), ForeignKey("job_runners.id")
     )
     external_job_id: Mapped[Optional[str]]
+    log_group: Mapped[str | None]
+    log_stream: Mapped[str | None]
+    batch_status: Mapped[str | None]
+    batch_status_reason: Mapped[str | None]
+    batch_details_time: Mapped[datetime.datetime | None]
+    batch_checked_at: Mapped[datetime.datetime | None]
 
     script: Mapped["ScriptModel | None"] = relationship("ScriptModel", lazy="selectin")
 

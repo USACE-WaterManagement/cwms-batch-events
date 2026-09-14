@@ -157,6 +157,7 @@ def test_cloudwatch_job_logger_returns_joined_log_messages():
     db.get_job_by_id.return_value = SimpleNamespace(
         external_job_id="ext-123",
         office="SWT",
+        job_status="Completed", log_stream="stream", log_group=None,
     )
     batch_client = mock.Mock()
     batch_client.describe_jobs.return_value = {

@@ -152,6 +152,7 @@ export interface components {
     schemas: {
         /** JobLogPage */
         JobLogPage: {
+            message?: string | null;
             /** Logs */
             logs: string;
             /** Nextcursor */
@@ -189,6 +190,10 @@ export interface components {
         };
         /** JobRecord */
         JobRecord: {
+            logGroup?: string | null;
+            logStream?: string | null;
+            batchStatus?: string | null;
+            batchStatusReason?: string | null;
             /**
              * Executiontype
              * @default github_file

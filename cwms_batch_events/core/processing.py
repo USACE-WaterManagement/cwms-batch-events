@@ -12,12 +12,17 @@ STATUS_PRIORITY = {
 
 
 def update_batch_job_status(
-    batch_job_id: str, status: JobStatus, time_iso: datetime, db: JobDatabase
+    batch_job_id: str, status: JobStatus, time_iso: datetime, db: JobDatabase,
+    batch_detail: dict | None = None,
 ):
     job = db.get_job_by_external_id(batch_job_id)
 
     if not job:
         raise ValueError(f"No job found with batch_job_id={batch_job_id}")
+
+    if batch_detail is not None:
+        db.record_batch_details(job.id, batch_detail, time_iso)
+        return
 
     # Idempotency guard
     if STATUS_PRIORITY[status] <= STATUS_PRIORITY[job.job_status]:

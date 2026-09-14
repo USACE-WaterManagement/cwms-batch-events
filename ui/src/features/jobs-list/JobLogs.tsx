@@ -8,13 +8,13 @@ interface JobLogsProps {
 }
 
 const JobLogs = ({ jobId, status }: JobLogsProps) => {
-  const [interval, setInterval] = useState(2000);
+  const [interval, setInterval] = useState(5000);
   const intervalId = useId();
   const { data, error, isLoading, isError, isFetching, refresh } = useJobLogs(jobId, status, interval);
   const pending = status === "Pending";
   const running = status === "Running";
   const live = data?.supportsLive !== false;
-  const message = data?.logs || (pending ? "Waiting for the job to start."
+  const message = data?.logs || data?.message || (pending ? "Waiting for the job to start."
     : isLoading ? "Loading logs..."
     : running ? "Waiting for job output."
     : "No logs available. Refresh to check again.");
@@ -33,13 +33,14 @@ const JobLogs = ({ jobId, status }: JobLogsProps) => {
           <option value={0}>Paused</option>
         </select>
         <button type="button" className="rounded border px-3 py-1 disabled:opacity-50"
-          disabled={pending || isFetching} onClick={() => void refresh()}>
+          disabled={isFetching} onClick={() => void refresh()}>
           {data?.hasMore ? "Load more" : "Refresh logs"}
         </button>
         <span className="text-sm text-gray-600">
-          {isFetching ? "Updating..." : !running ? "Automatic updates stopped."
+          {isFetching ? "Updating..." : isError ? "Automatic updates stopped after an error."
+            : data?.completionChecks !== undefined && data.completionChecks < 3 && live
+            ? "Checking for final output..." : !running ? "Automatic updates stopped."
             : !live ? "Logs are available after this job finishes."
-            : isError ? "Automatic updates stopped after an error."
             : interval === 0 ? "Automatic updates paused." : "Updates pause when this tab is hidden."}
         </span>
       </div>

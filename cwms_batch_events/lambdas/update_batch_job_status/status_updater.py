@@ -12,6 +12,7 @@ import os
 import boto3
 from botocore.exceptions import ClientError
 import requests
+from cwms_batch_events.core.batch_details import STATUS_MAP, log_stream
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -19,7 +20,6 @@ logger.setLevel(logging.INFO)
 API_BASE_URL = os.environ["ALB_DNS_NAME"] + "/api"
 APP_SECRETS_ARN = os.environ["APP_SECRETS_ARN"]
 
-STATUS_MAP = {"FAILED": "Failed", "RUNNING": "Running", "SUCCEEDED": "Completed"}
 
 secrets_client = boto3.client("secretsmanager")
 _cached_internal_token: str | None = None
@@ -92,7 +92,14 @@ def lambda_handler(event, context):
         "X-Internal-Token": internal_token,
     }
 
-    payload = {"status": status, "event_time": time_iso}
+    # Preserve the stream from the event itself; no additional AWS permissions.
+    payload = {"status": status, "event_time": time_iso, "batch_detail": {
+        key: detail[key] for key in (
+            "status", "statusReason", "startedAt", "stoppedAt",
+        ) if key in detail
+    }}
+    if stream := log_stream(detail):
+        payload["batch_detail"]["container"] = {"logStreamName": stream}
     try:
         r = requests.post(
             f"{API_BASE_URL}/internal/batch-jobs/{batch_job_id}/status",

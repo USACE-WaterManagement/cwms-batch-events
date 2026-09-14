@@ -12,6 +12,7 @@ from cwms_batch_events.api.dependencies import (
 from cwms_batch_events.core.auth.user.models import User
 from cwms_batch_events.core.job_database.base import JobDatabase
 from cwms_batch_events.core.job_logger.base import JobLogger
+from cwms_batch_events.core.job_logger.cloudwatch import CloudWatchJobLogger
 from cwms_batch_events.core.models import (
     JobLogs,
     JobLogPage,
@@ -95,12 +96,15 @@ def get_job_by_id(
     job_id: UUID,
     user: User = Depends(get_current_user),
     job_db: JobDatabase = Depends(get_job_database),
+    job_logger: JobLogger = Depends(get_job_logger),
 ) -> JobRecord:
     job = job_db.get_job_by_id(job_id)
     if not job:
         raise HTTPException(
             status_code=404, detail=f"No job found for jobId '{job_id}'"
         )
+    if isinstance(job_logger, CloudWatchJobLogger):
+        return job_logger.refresh_job(job_id)
     return job
 
 
