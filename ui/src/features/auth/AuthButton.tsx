@@ -9,11 +9,12 @@ const AuthButton = () => {
     <Button
       color="white"
       style="plain"
-      className="gw-flex gw-items-center gw-gap-2 gw-font-normal"
+      className="gw-flex gw-items-center gw-gap-2 gw-font-normal gw-px-2 gw-shrink-0"
+      aria-label={auth.isAuth ? "Logout" : "Login"}
       onClick={auth.isAuth ? auth.logout : auth.login}
     >
       {auth.isAuth ? <FiLogOut aria-hidden="true" /> : <FiLogIn aria-hidden="true" />}
-      {auth.isAuth ? "Logout" : "Login"}
+      <span className="hidden min-[360px]:inline">{auth.isAuth ? "Logout" : "Login"}</span>
     </Button>
   );
 };

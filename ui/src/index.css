@@ -1,2 +1,17 @@
 @import "tailwindcss";
 @import "@usace/groundwork/dist/groundwork.css" layer(components);
+
+/* Groundwork gives navRight a full-width slot. Size our compact actions to
+   their contents so the navigation links retain room at tablet widths. */
+header span:has(> .batch-header-actions) {
+  width: auto;
+  flex-shrink: 0;
+}
+
+/* At the desktop-menu breakpoint, allow room for wider system fonts as well
+   as the account controls. Keep the full 48px link height for touch targets. */
+@media (min-width: 768px) and (max-width: 1023px) {
+  header:has(.batch-header-actions) ul[role="list"] > li > a {
+    padding-inline: 0.375rem;
+  }
+}

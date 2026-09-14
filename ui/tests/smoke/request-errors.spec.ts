@@ -75,6 +75,16 @@ test("failed saves show a toast, retain the form, and are not automatically repe
   await expect(page.getByLabel("Name", { exact: true })).toHaveValue("SWT report");
   await page.waitForTimeout(2500);
   expect(saves).toBe(1);
+  await page.getByRole("button", { name: "Dismiss notification" }).click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect.poll(() => saves).toBe(2);
+  await expect(page.getByRole("region", { name: "Notifications" }).getByRole("alert")).toHaveCount(0);
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await page.getByRole("button", { name: "View warnings and errors (1)", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Warnings and errors" });
+  await expect(dialog.getByRole("listitem")).toHaveCount(1);
+  await expect(dialog.getByRole("button", { name: "Check again", exact: true })).toBeDisabled();
+  expect(saves).toBe(2);
 });
 
 test("failed job polling stops after one retry", async ({ page }) => {
