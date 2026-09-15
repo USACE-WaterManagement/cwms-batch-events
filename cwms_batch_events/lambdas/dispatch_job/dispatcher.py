@@ -13,13 +13,15 @@ import os
 import boto3
 from botocore.exceptions import ClientError
 import requests
+from pydantic import ValidationError
+from cwms_batch_events.core.logging_config import configure_logging
 
 from cwms_batch_events.lambdas.dispatch_job.job_runner.base import JobRunner
 from cwms_batch_events.lambdas.dispatch_job.job_runner.batch import BatchJobRunner
 from cwms_batch_events.core.models import BindExternalJobIdRequest, JobMessage
 
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+configure_logging()
+logger = logging.getLogger(__name__)
 
 API_BASE_URL = os.environ["ALB_DNS_NAME"] + "/api"
 APP_SECRETS_ARN = os.environ["APP_SECRETS_ARN"]
@@ -84,22 +86,22 @@ def lambda_handler(event, context):
     }
 
     records = event.get("Records", [])
-    logger.info("Received %d SQS messages", len(records))
+    logger.debug("Received SQS batch", extra={"event": "dispatch_received", "count": len(records)})
 
     for record in records:
         body_raw = record["body"]
 
         try:
             message = JobMessage.model_validate_json(body_raw)
-            logger.info("Processing message: %s", message)
-        except json.JSONDecodeError:
-            logger.error("Invalid JSON in SQS message body: %s", body_raw)
-            raise
+            logger.debug("Dispatching job", extra={"event": "job_dispatching", "job_id": message.job_id})
+        except (json.JSONDecodeError, ValidationError):
+            logger.error("Invalid job queue message", extra={"event": "dispatch_invalid_message"})
+            raise ValueError("Invalid job queue message") from None
 
         try:
             external_job_id = dispatch_job(message)
         except ClientError:
-            logger.exception("Failed to submit batch job for message: %s", message)
+            logger.exception("Failed to submit Batch job", extra={"event": "job_dispatch_failed", "job_id": message.job_id})
             raise
 
         try:
@@ -116,10 +118,8 @@ def lambda_handler(event, context):
 
         if not (200 <= r.status_code < 300):
             logger.error(
-                "Events API rejected message: %s %s",
-                r.status_code,
-                r.text,
+                "Events API rejected job binding", extra={"event": "job_bind_failed", "job_id": message.job_id, "status_code": r.status_code},
             )
             raise RuntimeError("Events API rejected message")
 
-    logger.info("Successfully processed all messages")
+        logger.info("Dispatched job and recorded Batch ID", extra={"event": "job_dispatched", "job_id": message.job_id, "external_job_id": external_job_id})

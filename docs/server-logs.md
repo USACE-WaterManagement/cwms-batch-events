@@ -44,5 +44,40 @@ masking stays enabled (`unmask=false`); no unmask permission is needed. Applicat
 logging must continue to avoid credentials and secrets. DEBUG filtering cannot
 recover DEBUG events that the server did not emit.
 
+## Application logging
+
+The API, Lambda entry points and local dispatcher use named Python loggers with
+one JSON object per line: `timestamp`, `level`, `logger`, `message`, and `process`.
+Lifecycle events add identifiers and status fields that appear under CloudWatch
+details. API events also include a generated `request_id`; the response's
+`X-Request-ID` header identifies the corresponding request.
+
+Set `LOG_LEVEL` to DEBUG, INFO (default), WARNING, ERROR, or CRITICAL. Invalid
+values fall back to INFO. DEBUG applies to application loggers; SDK and database
+wire diagnostics are not enabled by this setting. Existing detailed job-log
+timing diagnostics remain restricted to dev plus DEBUG.
+
+- INFO: initialization, job registration/queueing/dispatch/binding, changed job
+  status or log-stream discovery, successful API writes, and local job exits.
+- DEBUG: successful API reads (including health and log polling), queue polling,
+  ignored/duplicate status events, and CloudWatch page counts.
+- WARNING/ERROR: rejected or failed requests, queue/runner failures, CloudWatch
+  read failures, and failed local container cleanup.
+
+The request logger replaces Uvicorn/Gunicorn access output in API workers. It
+records route templates, status and duration, excluding raw paths, queries,
+headers, bodies and user names. Queue payloads, command arguments and rejected
+API response bodies are not logged. Exception events retain the exception type
+and stack locations, excluding exception text, local variables and source lines
+which can contain credentials or SQL parameters. This is not a general redactor:
+new logging calls must also keep sensitive data out of their message strings.
+
+The reader supports historical bracketed, timestamped and colon-separated levels
+as well as JSON level fields. Old print/access lines and traceback fragments that
+contain no explicit severity remain UNKNOWN; this change cannot retroactively
+add levels to already stored events. Gunicorn master startup before the API
+worker initializes can still use its normal bracketed format. Lambda/dispatcher
+logs remain in their own groups; the server viewer still reads only the API group.
+
 CloudWatch pagination follows the [FilterLogEvents contract](https://docs.aws.amazon.com/boto3/latest/reference/services/logs/client/filter_log_events.html),
 including continuation after empty pages and eventual ingestion delays.

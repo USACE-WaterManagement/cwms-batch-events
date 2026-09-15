@@ -44,9 +44,7 @@ class BatchJobRunner:
         batch_job_id: str = response["jobId"]
 
         logger.info(
-            "Succesfully submitted %s to Batch with external job id %s",
-            job_name,
-            batch_job_id,
+            "Batch job submitted", extra={"event": "batch_submitted", "job_id": message.job_id, "external_job_id": batch_job_id, "office": office},
         )
 
         return batch_job_id

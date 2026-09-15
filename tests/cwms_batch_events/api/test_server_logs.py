@@ -76,6 +76,12 @@ def test_expired_cursor(client, logs):
     ('{"severity":"fatal"}', "CRITICAL"),
     ('["INFO"]', "UNKNOWN"),
     ("ordinary output", "UNKNOWN"),
+    ("2026-09-14 12:00:00,123 INFO: Started dispatcher", "INFO"),
+    ("[2026-09-14 12:00:00 +0000] [12] [INFO] Booting worker", "INFO"),
+    ("[WARNING]\t2026-09-14T12:00:00Z\trequest-id\tQueue delay", "WARNING"),
+    ('{"logLevel":"debug","message":"probe"}', "DEBUG"),
+    ("INFO application: started", "INFO"),
+    ("Traceback line mentioning [ERROR] in user output", "UNKNOWN"),
 ])
 def test_log_level_formats(message, level):
     entry = server_logs.parse_entry({"eventId": "1", "timestamp": 1, "logStreamName": "s", "message": message})

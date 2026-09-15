@@ -1,7 +1,10 @@
 from datetime import datetime, timezone
+import logging
 from cwms_batch_events.core.log_diagnostics import log_timing
 from cwms_batch_events.core.job_database.base import JobDatabase
 from cwms_batch_events.core.models import JobStatus
+
+logger = logging.getLogger(__name__)
 
 
 STATUS_PRIORITY = {
@@ -30,10 +33,11 @@ def update_batch_job_status(
 
     # Idempotency guard
     if STATUS_PRIORITY[status] <= STATUS_PRIORITY[job.job_status]:
+        logger.debug("Ignoring duplicate or older job status", extra={
+            "event": "job_status_ignored", "job_id": job.id, "status": status,
+        })
         return
 
     job_id = job.id
-
-    print(f"Updating job `{job_id}` status to `{status}` at {time_iso}")
 
     db.update_job_status(job_id, status)

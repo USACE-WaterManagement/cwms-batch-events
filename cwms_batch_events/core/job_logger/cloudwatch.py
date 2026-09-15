@@ -1,5 +1,6 @@
 import base64
 import json
+import logging
 import time
 from datetime import datetime, timezone
 
@@ -11,6 +12,8 @@ from cwms_batch_events.core.job_database.base import JobDatabase
 from cwms_batch_events.core.models import JobLogPage, JobRecord
 from cwms_batch_events.core.batch_details import container_stream
 from cwms_batch_events.core.log_diagnostics import log_timing
+
+logger = logging.getLogger(__name__)
 
 
 class LogsNotReady(ValueError):
@@ -43,6 +46,8 @@ class CloudWatchJobLogger:
             jobs = self.batch.describe_jobs(jobs=[job.external_job_id]).get("jobs", [])
             if jobs:
                 self.db.record_batch_details(job_id, jobs[0], observed_at)
+            else:
+                logger.debug("Batch metadata not found", extra={"event": "batch_metadata_missing", "job_id": job_id})
             log_timing("batch_refresh", job_id=job_id, previous_status=job.job_status,
                        batch_status=jobs[0].get("status") if jobs else "missing",
                        elapsed_ms=round((time.monotonic() - started) * 1000))
@@ -153,6 +158,11 @@ class CloudWatchJobLogger:
                 if not has_more:
                     break
         except ClientError as exc:
+            code = exc.response.get("Error", {}).get("Code")
+            logger.log(logging.DEBUG if code in {"ResourceNotFoundException", "InvalidParameterException"} else logging.WARNING, "CloudWatch job log read failed", extra={
+                "event": "job_logs_failed", "job_id": job_id,
+                "aws_error_code": code,
+            })
             log_timing("cloudwatch_error", job_id=job_id,
                        code=exc.response.get("Error", {}).get("Code"),
                        elapsed_ms=round((time.monotonic() - started) * 1000))

@@ -1,6 +1,7 @@
 """Authenticated, bounded reads of the configured API server's CloudWatch logs."""
 
 import json
+import logging
 import re
 import time
 from functools import lru_cache
@@ -17,7 +18,14 @@ from cwms_batch_events.core.models import CamelModel
 from cwms_batch_events.core.settings import settings
 
 router = APIRouter(prefix="/server-logs", tags=["server logs"])
-LEVEL = re.compile(r"(?:^|\[)(TRACE|DEBUG|INFO|WARN(?:ING)?|ERROR|CRITICAL|FATAL)(?:\]|\s*:)", re.I)
+logger = logging.getLogger(__name__)
+# Historical Python, Gunicorn and Lambda prefixes, without treating arbitrary
+# words in a message or traceback as a severity.
+LEVEL = re.compile(
+    r"^\s*(?:\d{4}-\d{2}-\d{2}(?:[T ][\d:.,+Z-]+)?\s+)?"
+    r"(?:\[[^\]\r\n]+\]\s*)*\[?"
+    r"(TRACE|DEBUG|INFO|WARN(?:ING)?|ERROR|CRITICAL|FATAL)(?:\]|\s|:)", re.I,
+)
 
 
 class ServerLogEntry(CamelModel):
@@ -53,7 +61,8 @@ def parse_entry(event: dict) -> ServerLogEntry:
         fields = None
     if not isinstance(fields, dict):
         fields = None
-    level = str((fields or {}).get("level", (fields or {}).get("levelname", (fields or {}).get("severity", "")))).upper()
+    level = next((str(fields[key]).upper() for key in ("level", "levelname", "severity", "logLevel")
+                  if fields and fields.get(key) is not None), "")
     if not level:
         match = LEVEL.search(message)
         level = match.group(1).upper() if match else "UNKNOWN"
@@ -103,11 +112,16 @@ def get_server_logs(
     try:
         page = get_server_log_client().filter_log_events(**args)
     except ClientError as exc:
+        logger.warning("CloudWatch server log read failed", extra={
+            "event": "server_logs_failed", "aws_error_code": exc.response.get("Error", {}).get("Code"),
+        })
         if cursor and exc.response.get("Error", {}).get("Code") == "InvalidParameterException":
             raise HTTPException(400, "Log cursor expired or invalid. Refresh server logs.") from exc
         raise HTTPException(503, "Server logs are currently unavailable.") from exc
     except BotoCoreError as exc:
+        logger.warning("CloudWatch server log client unavailable", extra={"event": "server_logs_failed", "error_type": type(exc).__name__})
         raise HTTPException(503, "Server logs are currently unavailable.") from exc
+    logger.debug("CloudWatch server log page read", extra={"event": "server_logs_read", "count": len(page.get("events", [])), "has_more": bool(page.get("nextToken"))})
     return ServerLogPage(
         entries=[parse_entry(event) for event in page.get("events", [])],
         next_cursor=page.get("nextToken"), start_time=start, end_time=end,
