@@ -45,6 +45,7 @@ def main():
             assert len(scripts.json()) == 5
             assert {row["slug"] for row in catalog.json()} == {"relative", "absolute", "parent"}
             assert jobs.json()[0]["repoPath"] == "/jobs/python/report.py"
+            assert jobs.json()[0]["runTrigger"] == "unknown"
             job_id = jobs.json()[0]["id"]
             assert client.get(f"/jobs/{job_id}").status_code == 200
             for suffix in (3,):
@@ -68,8 +69,9 @@ def main():
         script_id = response.json()["id"]
         payload.update(runtime="shell", repoPath="bin/report.sh")
         assert client.put(f"/scripts/{script_id}", json=payload).status_code == 200
-        response = client.post("/jobs", json={"scriptId": script_id})
+        response = client.post("/jobs", json={"scriptId": script_id, "runTrigger": "manual"})
         assert response.status_code == 200, response.text
+        assert response.json()["runTrigger"] == "manual"
         assert len(queue.messages) == 1
         assert queue.messages[0].payload.runtime == "shell"
         assert queue.messages[0].payload.command_args == ["two words"]
@@ -83,9 +85,22 @@ def main():
         logs.get_log_events.return_value = {"events": [{"message": "retained output"}]}
         with patch("cwms_batch_events.core.job_logger.cloudwatch.boto3.client",
                    side_effect=lambda name: batch if name == "batch" else logs):
+            app.dependency_overrides[get_current_user] = lambda: User(username="colleague", offices=["SWT"],
+                admin_offices=[], roles={"SWT": ["CWMS Users"]})
+            shared = client.get("/jobs?limit=1&offset=0")
+            assert shared.status_code == 200 and shared.json()[0]["id"] == str(job_id)
+            assert int(shared.headers["X-Total-Count"]) >= 1
             assert client.get(f"/jobs/{job_id}").json()["jobStatus"] == "Running"
             assert client.get(f"/jobs/{job_id}/logs/page").json()["logs"] == "retained output"
             batch.describe_jobs.assert_called_once()
+            app.dependency_overrides[get_current_user] = lambda: User(username="outsider", offices=["LRH"],
+                admin_offices=[], roles={"LRH": ["CWMS Users"]})
+            outsider = client.get("/jobs?limit=10&offset=0")
+            assert outsider.json() == [] and outsider.headers["X-Total-Count"] == "0"
+            for suffix in ("", "/logs", "/logs/page"):
+                assert client.get(f"/jobs/{job_id}{suffix}").status_code == 404
+            app.dependency_overrides[get_current_user] = lambda: User(username="colleague", offices=["SWT"],
+                admin_offices=[], roles={"SWT": ["CWMS Users"]})
             with Session(engine) as session:
                 PostgresJobDatabase(session).record_batch_details(job_id,
                     {"status": "SUCCEEDED", "stoppedAt": 2000}, datetime.now(timezone.utc))

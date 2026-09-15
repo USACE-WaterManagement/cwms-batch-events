@@ -140,8 +140,8 @@ const AboutOverview = () => <div className="space-y-8 py-6">
 </div>;
 
 const controls = [
-  { action: "Review jobs you ran", access: "An authenticated account",
-    result: "Job History shows jobs submitted by your username. It does not show every job for the office." },
+  { action: "Review office runs and logs", access: "CWMS Users in the job's office",
+    result: "Job History shares office runs and shows who submitted them. Manual and Scheduled badges identify the trigger when recorded." },
   { action: "Execute a job", access: "Office access, plus a matching execution role when the script specifies roles",
     result: "An empty script role list requires no additional CDA role. Run active scripts from Submit Job or Scripts Manager." },
   { action: "Define or change a job", access: "Data Acquisition Mgr or Data Exchange Mgr for the office",
@@ -352,9 +352,10 @@ const OnboardingPane = ({ user }: { user?: ApplicationInfo["user"] }) => {
         <p>Select <strong>View job runs</strong> at the end of a script row to open its <strong>Job runs</strong>{" "}
           tab. Select a run to view status and output; use <strong>Refresh</strong> to reload the list.
           The selected run updates until it finishes, then loads its output.</p>
-        <p>Open <strong>Job History</strong> to review runs across all your scripts. Both lists contain
-          jobs submitted by your username.</p>
-        <p>Script rows show a spinner for your queued or running jobs and a <strong>Recent failure</strong>{" "}
+        <p>Open <strong>Job History</strong> to review runs across scripts in your offices. Both lists
+          share office runs and show who submitted them. <strong>Manual</strong> and <strong>Scheduled</strong>{" "}
+          badges distinguish the trigger; older runs may show <strong>Unknown</strong>.</p>
+        <p>Script rows show a spinner for queued or running office jobs and a <strong>Recent failure</strong>{" "}
           warning for a failure in the past 24 hours. Select either indicator to open that exact run.
           The manager refreshes status every five seconds while visible. If status cannot be loaded,
           use <strong>Retry run status</strong>.</p>

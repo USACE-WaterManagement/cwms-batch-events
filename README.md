@@ -6,7 +6,9 @@ CWMS Batch Events provides users an API and user interface to execute water mana
 
 Scripts Manager provides **Details**, **Run job**, and **Job runs** tabs for each script.
 Use **Run job** or **View job runs** at the end of a row to open the matching tab.
-**Job History** lists your submitted jobs across scripts. Script execution roles are optional;
+**Job History** shares runs and logs across your CWMS offices, with readable submitter names
+and Manual/Scheduled badges when the trigger was recorded. See [run history and logs](docs/job-logs.md)
+for migration and scheduler setup. Script execution roles are optional;
 an empty role list requires office access with no additional CDA execution role.
 See the [script manager guide](docs/script-manager.md) and [registered commands](docs/registered-commands.md)
 for setup, Bash examples, and access rules. Updated screenshots are included in the in-app Help pages.
