@@ -45,7 +45,7 @@ export const ScriptJobRuns = ({ script, selectedJobId, onSelectJob }: {
     <p className="text-sm text-gray-600">Only jobs submitted by your account are shown. <Link to="/jobs" className="text-blue-700 underline">Open Job History</Link> for all your scripts.</p>
     {jobs.isLoading && <p role="status">Loading job runs...</p>}
     {jobs.isError && <p role="alert">Job runs could not be loaded. Use Refresh to try again.</p>}
-    {!jobs.isError && runs?.length === 0 && <p>No runs yet. Open Run job to submit this script.</p>}
+    {!jobs.isError && runs?.length === 0 && <p>No runs yet. Open Run script to submit this script.</p>}
     {runs && runs.length > 0 && <ul className="max-h-64 space-y-2 overflow-y-auto">
       {runs.map(job => <li key={job.id}>
         <button type="button" aria-pressed={selectedJobId === job.id} onClick={() => onSelectJob(job.id)}

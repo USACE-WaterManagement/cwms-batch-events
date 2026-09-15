@@ -24,6 +24,50 @@ async function openManager(page: Page) {
   await page.getByRole("combobox").selectOption("SWT");
 }
 
+test("modern script actions keep submission explicit and open the latest run", async ({ page }) => {
+  await page.clock.install({ time: now });
+  let submissions = 0;
+  const latest = { ...job, id: "latest-completed", jobStatus: "Completed",
+    createdTime: "2026-09-14T17:45:00Z", endTime: "2026-09-14T17:52:00Z" };
+  await page.route("**/api/**", route => {
+    const path = new URL(route.request().url()).pathname;
+    if (route.request().method() === "POST") submissions++;
+    if (path.endsWith("/admin-offices")) return route.fulfill({ json: ["SWT"] });
+    if (path.endsWith("/job-runners/default")) return route.fulfill({ json: { id: "runner", slug: "batch" } });
+    if (path.endsWith("/scripts")) return route.fulfill({ json: [script] });
+    if (path.endsWith("/jobs")) return route.fulfill({ json: [job, latest] });
+    if (path.endsWith("/jobs/latest-completed")) return route.fulfill({ json: latest });
+    if (path.endsWith("/logs/page")) return route.fulfill({ json: { logs: "Latest run output" } });
+    return route.fulfill({ json: [] });
+  });
+  await openManager(page);
+  const row = page.getByRole("row").filter({ hasText: script.name });
+  const summary = row.getByRole("button", { name: `View latest run for ${script.name}` });
+  await expect(summary).toHaveText("Latest run: Completed · 8 minutes ago");
+  await row.getByRole("button", { name: "Run script", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("tab", { name: "Run script", exact: true })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("button", { name: "Submit job", exact: true })).toBeVisible();
+  expect(submissions).toBe(0);
+  await row.getByRole("button", { name: "Runs", exact: true }).click();
+  await expect(page.getByRole("tab", { name: "Run history", exact: true })).toHaveAttribute("aria-selected", "true");
+  await summary.click();
+  await expect(page.getByRole("region", { name: "Selected job run" })).toContainText("latest-completed");
+  await expect(page.getByLabel("Job output")).toHaveValue("Latest run output");
+  await expect(row).toHaveAttribute("aria-selected", "true");
+  expect(submissions).toBe(0);
+  if (process.env.PR_SCREENSHOT_DIR) {
+    await mkdir(process.env.PR_SCREENSHOT_DIR, { recursive: true });
+    await page.getByRole("region", { name: "SWT scripts list" }).screenshot({ path: join(process.env.PR_SCREENSHOT_DIR, "script-actions-desktop.png") });
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  await row.scrollIntoViewIfNeeded();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  if (process.env.PR_SCREENSHOT_DIR) {
+    await row.screenshot({ path: join(process.env.PR_SCREENSHOT_DIR, "script-actions-mobile.png") });
+  }
+});
+
 test("selected run shares Starting and Running status with the run list without extra requests", async ({ page }) => {
   await page.clock.install({ time: now });
   const current = { ...job, jobStatus: "Pending", batchStatus: "STARTING" };
@@ -112,14 +156,14 @@ test("script indicators open the exact active or recent failed run", async ({ pa
   await expect(page.getByRole("button", { name: "View active run for Queued report", exact: true })).toContainText("Queued");
   await expect(page.getByRole("button", { name: "View recent failed run for Old report", exact: true })).toHaveCount(0);
   await active.click();
-  await expect(page.getByRole("tab", { name: "Job runs", exact: true })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("tab", { name: "Run history", exact: true })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("region", { name: "Selected job run" })).toContainText("running");
   await expect(page.getByRole("tabpanel").getByRole("button", { name: /Running/ }).locator(".animate-spin")).toHaveCount(1);
   await warning.focus();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("region", { name: "Selected job run" })).toContainText("latest-failure");
   await expect(page.getByRole("textbox", { name: "Job output" })).toHaveValue("Example failed run output");
-  await expect(page.getByRole("tab", { name: "Job runs", exact: true })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("tab", { name: "Run history", exact: true })).toHaveAttribute("aria-selected", "true");
   if (process.env.PR_SCREENSHOT_DIR) {
     await mkdir(process.env.PR_SCREENSHOT_DIR, { recursive: true });
     await page.screenshot({ path: join(process.env.PR_SCREENSHOT_DIR, "script-run-indicators.png"), fullPage: true });
