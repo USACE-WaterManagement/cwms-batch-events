@@ -1,6 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 import boto3
+import logging
 
 from cwms_batch_events.core.models import (
     JobMessage,
@@ -10,8 +11,10 @@ from cwms_batch_events.core.models import (
     ScriptRunRequest,
 )
 from cwms_batch_events.core.settings import settings
+from cwms_batch_events.core.logging_config import request_id
 
 MESSAGE_VERSION = "1.0"
+logger = logging.getLogger(__name__)
 
 
 class JobQueue:
@@ -34,8 +37,14 @@ class JobQueue:
             requested_by=requested_by,
             created_at=datetime.now(),
             payload=payload,
+            request_id=request_id.get(),
         )
 
     def send_job_message(self, message: JobMessage) -> str:
-        response = self.queue.send_message(MessageBody=message.model_dump_json())
+        try:
+            response = self.queue.send_message(MessageBody=message.model_dump_json())
+        except Exception:
+            logger.exception("Failed to enqueue job", extra={"event": "job_enqueue_failed", "job_id": message.job_id})
+            raise
+        logger.info("Job queued", extra={"event": "job_queued", "job_id": message.job_id})
         return response["MessageId"]

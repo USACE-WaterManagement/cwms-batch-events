@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 import re
+import logging
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -22,6 +23,8 @@ from cwms_batch_events.core.models import (
     ScriptUpdate,
 )
 from cwms_batch_events.core.utils import get_runner_id
+
+logger = logging.getLogger(__name__)
 
 
 class SlugError(Exception):
@@ -61,13 +64,17 @@ class PostgresJobDatabase:
 
     def record_batch_details(self, job_id: uuid.UUID, detail: dict, observed_at: datetime) -> None:
         job = self._load_job_for_update(job_id)
+        previous_status = job.batch_status
+        previous_stream = job.log_stream
         if job.batch_details_time and observed_at < job.batch_details_time:
             self.db.commit()
+            logger.debug("Ignoring older Batch observation", extra={"event": "batch_observation_ignored", "job_id": job_id})
             return
         incoming = STATUS_MAP.get(detail.get("status"))
         # A late RUNNING event must not reopen a finished execution.
         if job.job_status in (JobStatus.COMPLETED, JobStatus.FAILED) and incoming not in (job.job_status, None):
             self.db.commit()
+            logger.debug("Ignoring Batch observation for terminal job", extra={"event": "batch_observation_ignored", "job_id": job_id})
             return
         job.batch_details_time = observed_at
         if incoming:
@@ -81,7 +88,15 @@ class PostgresJobDatabase:
             job.run_time = datetime.fromtimestamp(detail["startedAt"] / 1000, timezone.utc)
         if detail.get("stoppedAt"):
             job.end_time = datetime.fromtimestamp(detail["stoppedAt"] / 1000, timezone.utc)
+        current_status, current_stream = job.batch_status, job.log_stream
         self.db.commit()
+
+        if previous_status != current_status or previous_stream != current_stream:
+            logger.info("Batch job state or log stream updated", extra={
+                "event": "batch_state_updated", "job_id": job_id,
+                "previous_status": previous_status, "batch_status": current_status,
+                "stream_available": bool(current_stream),
+            })
 
     def bind_external_job_id(
         self,
@@ -93,6 +108,7 @@ class PostgresJobDatabase:
         if job.external_job_id is None:
             job.external_job_id = external_job_id
             self.db.commit()
+            logger.info("External Batch job linked", extra={"event": "job_linked", "job_id": job_id, "external_job_id": external_job_id})
             return
 
         if job.external_job_id == external_job_id:
@@ -130,6 +146,7 @@ class PostgresJobDatabase:
         self.db.add(job)
         self.db.commit()
         self.db.refresh(job)
+        logger.info("Job registered", extra={"event": "job_registered", "job_id": job.id, "script_id": job.script_id, "office": job.office})
         return JobRecord.model_validate(job)
 
     def get_job_by_id(self, job_id: uuid.UUID) -> JobRecord | None:
@@ -251,6 +268,7 @@ class PostgresJobDatabase:
 
     def update_job_status(self, job_id: uuid.UUID, status: JobStatus) -> None:
         job = self._load_job_for_update(job_id)
+        previous_status = job.job_status
 
         now = datetime.now(timezone.utc)
 
@@ -260,6 +278,9 @@ class PostgresJobDatabase:
         elif status in (JobStatus.COMPLETED, JobStatus.FAILED):
             job.end_time = now
         self.db.commit()
+
+        if previous_status != status:
+            logger.info("Job status updated", extra={"event": "job_status_updated", "job_id": job_id, "previous_status": previous_status, "status": status})
 
     def update_script(
         self, script_id: uuid.UUID, payload: ScriptUpdate, admin_offices: list[str]

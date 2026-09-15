@@ -1,3 +1,4 @@
+from tests.factories import make_lambda_context
 import json
 from unittest import mock
 
@@ -61,7 +62,7 @@ def test_lambda_handler_ignores_non_event_jobs():
                 },
                 "time": "2026-04-16T12:00:00Z",
             },
-            None,
+            make_lambda_context(),
         )
 
     requests_post.assert_not_called()
@@ -80,7 +81,7 @@ def test_lambda_handler_ignores_unsupported_status():
                 },
                 "time": "2026-04-16T12:00:00Z",
             },
-            None,
+            make_lambda_context(),
         )
 
     requests_post.assert_not_called()
@@ -108,7 +109,7 @@ def test_lambda_handler_posts_translated_status_to_events_api():
                 },
                 "time": "2026-04-16T12:00:00Z",
             },
-            None,
+            make_lambda_context(),
         )
 
     requests_post.assert_called_once()
@@ -137,7 +138,7 @@ def test_lambda_handler_re_raises_request_exceptions():
                     },
                     "time": "2026-04-16T12:00:00Z",
                 },
-                None,
+                make_lambda_context(),
             )
 
 
@@ -155,7 +156,7 @@ def test_pending_states_preserve_reason_and_only_log_reference(raw_status):
             "statusReason": "Waiting for capacity", "container": {
                 "logStreamName": "retained", "environment": [{"name": "SECRET", "value": "not-forwarded"}],
             },
-        }}, None)
+        }}, make_lambda_context())
     assert post.call_args.kwargs["json"] == {
         "status": "Pending", "event_time": "2026-09-14T12:00:00Z",
         "batch_detail": {"status": raw_status, "statusReason": "Waiting for capacity",
@@ -183,5 +184,5 @@ def test_lambda_handler_raises_when_events_api_rejects_message():
                     },
                     "time": "2026-04-16T12:00:00Z",
                 },
-                None,
+                make_lambda_context(),
             )

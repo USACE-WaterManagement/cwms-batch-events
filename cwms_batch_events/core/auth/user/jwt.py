@@ -1,7 +1,10 @@
+import logging
 import jwt
 from jwt import PyJWKClient
 
 from cwms_batch_events.core.settings import settings
+
+logger = logging.getLogger(__name__)
 
 AUTH_HOST = settings.auth_host
 AUTH_REALM = settings.auth_realm
@@ -23,11 +26,9 @@ ISSUER = {
 def get_public_pem():
     try:
         public_key = PUBLIC_KEY[settings.auth_environment]
-    except KeyError as e:
-        print(
-            f"Cannot find PUBLIC_KEY for AUTH_ENVIRONMENT setting of '{settings.auth_environment}'"
-        )
-        raise e
+    except KeyError:
+        logger.error("No public key configured for AUTH_ENVIRONMENT")
+        raise
     return raw_key_to_pem(public_key)
 
 

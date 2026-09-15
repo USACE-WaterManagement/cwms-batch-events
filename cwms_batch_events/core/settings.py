@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     default_job_runner: str = "batch"
     deployment_environment: str = "local"
     log_level: str = "INFO"
+    service_name: str = "cwms-batch-events-api"
     server_log_group: str = "ecs/cwms-batch/cwms-batch-events-api"
     server_log_stream_prefix: str = "ecs/cwms-batch-events-api/"
     build_revision: str = "local"

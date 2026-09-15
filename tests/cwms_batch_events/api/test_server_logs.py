@@ -34,7 +34,7 @@ def test_rich_events_and_fixed_scope(client, logs):
     assert data["entries"][0]["level"] == "WARNING"
     assert data["entries"][0]["fields"]["duration"] == 123
     assert data["entries"][0]["ingestionTime"] == 200
-    assert data["nextCursor"] == "page-2"
+    assert server_logs.decode_cursor(data["nextCursor"], server_logs.cursor_scope(0, 1000, "ALL")) == "page-2"
     logs.filter_log_events.assert_called_once_with(
         logGroupName=server_logs.settings.server_log_group,
         logStreamNamePrefix=server_logs.settings.server_log_stream_prefix,
@@ -44,10 +44,10 @@ def test_rich_events_and_fixed_scope(client, logs):
 
 def test_empty_page_preserves_continuation(client, logs):
     logs.filter_log_events.return_value = {"events": [], "nextToken": "more"}
-    result = client.get("/server-logs?cursor=previous&start_time=0&end_time=1000").json()
+    result = client.get("/server-logs?start_time=0&end_time=1000").json()
     assert result["entries"] == []
-    assert result["nextCursor"] == "more"
-    assert logs.filter_log_events.call_args.kwargs["nextToken"] == "previous"
+    client.get("/server-logs", params={"cursor": result["nextCursor"], "start_time": 0, "end_time": 1000})
+    assert logs.filter_log_events.call_args.kwargs["nextToken"] == "more"
 
 
 @pytest.mark.parametrize("query", ["cursor=x", "start_time=0&end_time=86400001", "start_time=10&end_time=9", "start_time=-1"])
@@ -65,8 +65,38 @@ def test_aws_failure_is_not_empty_success(client, logs, error):
 
 
 def test_expired_cursor(client, logs):
+    logs.filter_log_events.return_value = {"events": [], "nextToken": "expired"}
+    cursor = client.get("/server-logs?start_time=0&end_time=1000").json()["nextCursor"]
     logs.filter_log_events.side_effect = ClientError({"Error": {"Code": "InvalidParameterException"}}, "FilterLogEvents")
-    assert client.get("/server-logs?cursor=x&start_time=0&end_time=1000").status_code == 400
+    assert client.get("/server-logs", params={"cursor": cursor, "start_time": 0, "end_time": 1000}).status_code == 400
+
+
+@pytest.mark.parametrize("level", ["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"])
+def test_cloudwatch_filters_levels_and_scopes_cursors(client, logs, level):
+    logs.filter_log_events.return_value = {"events": [], "nextToken": "next"}
+    params = {"start_time": 0, "end_time": 1000, "level": level}
+    response = client.get("/server-logs", params=params)
+    assert response.status_code == 200
+    assert logs.filter_log_events.call_args.kwargs["filterPattern"] == '{ $.level = "' + level + '" }'
+    params["cursor"] = response.json()["nextCursor"]
+    assert client.get("/server-logs", params=params).status_code == 200
+    assert logs.filter_log_events.call_args.kwargs["nextToken"] == "next"
+    logs.reset_mock()
+    assert client.get("/server-logs", params=params | {"level": "ALL"}).status_code == 400
+    assert client.get("/server-logs", params=params | {"end_time": 1001}).status_code == 400
+    logs.filter_log_events.assert_not_called()
+
+
+def test_unknown_scans_one_page_and_preserves_cursor(client, logs):
+    logs.filter_log_events.return_value = {"events": [
+        {"eventId": "1", "timestamp": 1, "logStreamName": "s", "message": "plain output"},
+        {"eventId": "2", "timestamp": 1, "logStreamName": "s", "message": '{"level":"INFO"}'},
+    ], "nextToken": "more"}
+    response = client.get("/server-logs?level=UNKNOWN").json()
+    assert [entry["eventId"] for entry in response["entries"]] == ["1"]
+    assert response["nextCursor"]
+    assert "filterPattern" not in logs.filter_log_events.call_args.kwargs
+    assert logs.filter_log_events.call_count == 1
 
 
 @pytest.mark.parametrize(("message", "level"), [
@@ -76,6 +106,12 @@ def test_expired_cursor(client, logs):
     ('{"severity":"fatal"}', "CRITICAL"),
     ('["INFO"]', "UNKNOWN"),
     ("ordinary output", "UNKNOWN"),
+    ("2026-09-14 12:00:00,123 INFO: Started dispatcher", "INFO"),
+    ("[2026-09-14 12:00:00 +0000] [12] [INFO] Booting worker", "INFO"),
+    ("[WARNING]\t2026-09-14T12:00:00Z\trequest-id\tQueue delay", "WARNING"),
+    ('{"logLevel":"debug","message":"probe"}', "DEBUG"),
+    ("INFO application: started", "INFO"),
+    ("Traceback line mentioning [ERROR] in user output", "UNKNOWN"),
 ])
 def test_log_level_formats(message, level):
     entry = server_logs.parse_entry({"eventId": "1", "timestamp": 1, "logStreamName": "s", "message": message})

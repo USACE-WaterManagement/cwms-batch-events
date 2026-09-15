@@ -1,3 +1,4 @@
+from cwms_batch_events.core.job_correlation import runner_environment
 from datetime import datetime
 from unittest import mock
 
@@ -9,7 +10,7 @@ def test_batch_job_runner_submits_expected_batch_job():
     batch_client = mock.Mock()
     batch_client.submit_job.return_value = {"jobId": "ext-123"}
     fixed_now = datetime(2026, 4, 16, 12, 30)
-    message = make_job_message()
+    message = make_job_message(request_id="a" * 32)
 
     with mock.patch(
         "cwms_batch_events.lambdas.dispatch_job.job_runner.batch.boto3.client",
@@ -27,10 +28,11 @@ def test_batch_job_runner_submits_expected_batch_job():
         jobQueue="cwms-swd-jq",
         jobDefinition="cwms-swt-jobs-jobdef",
         containerOverrides={
-            "environment": [{"name": "OFFICE", "value": "swt"}],
+            "environment": [{"name": "OFFICE", "value": "swt"},
+                *[{"name": key, "value": value} for key, value in runner_environment(message).items()]],
             "command": ["python", "/jobs/run.py"],
         },
-        tags={"Office": "swt"},
+        tags={"Office": "swt", "BatchEventsJobId": str(message.job_id), "BatchEventsRequestId": "a" * 32},
     )
 
 

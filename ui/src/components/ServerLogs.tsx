@@ -34,7 +34,7 @@ export function ServerLogs() {
     if (!auth.isAuth) return;
     const controller = new AbortController();
     const end = request.end ?? Date.now();
-    const params = new URLSearchParams({ start_time: String(request.start ?? end - hours * 3600000), end_time: String(end) });
+    const params = new URLSearchParams({ start_time: String(request.start ?? end - hours * 3600000), end_time: String(end), level });
     if (request.cursor) params.set("cursor", request.cursor);
     void fetchWithAuth(`/api/server-logs?${params}`, { signal: controller.signal }, auth.token)
       .then(response => response.json() as Promise<LogPage>)
@@ -53,7 +53,7 @@ export function ServerLogs() {
       })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [auth.isAuth, auth.token, hours, request]);
+  }, [auth.isAuth, auth.token, hours, level, request]);
 
   const refresh = (newHours = hours) => {
     setLoading(true);
@@ -62,13 +62,13 @@ export function ServerLogs() {
     setHours(newHours);
     setRequest(previous => ({ serial: previous.serial + 1 }));
   };
-  const entries = data?.entries.filter(entry => level === "ALL" || entry.level === level) ?? [];
+  const entries = data?.entries ?? [];
   return <section aria-labelledby="server-logs-heading" className="mt-5 min-w-0 space-y-3 border-t pt-4">
     <h2 id="server-logs-heading" className="font-semibold">Server logs</h2>
     <p className="text-sm text-gray-600">API server output from CloudWatch. For Java or other job output, open the run in Job History.</p>
     <div className="flex flex-wrap items-end gap-3">
       <label className="text-sm">Log level
-        <select aria-label="Log level" className="ml-2 rounded border p-2" value={level} onChange={event => setLevel(event.target.value)}>
+        <select aria-label="Log level" className="ml-2 rounded border p-2" value={level} onChange={event => { setLevel(event.target.value); refresh(); }}>
           {["ALL", "TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL", "UNKNOWN"].map(value => <option key={value} value={value}>{value === "ALL" ? "All levels" : value}</option>)}
         </select>
       </label>
@@ -80,7 +80,8 @@ export function ServerLogs() {
       <Button type="button" disabled={loading} onClick={() => refresh()}>Refresh server logs</Button>
     </div>
     {error && <p role="alert" className="text-sm text-red-800">Server logs unavailable. {error} Use Refresh server logs to try again.</p>}
-    <p role="status" className="text-sm text-gray-600">{loading ? "Loading server logs…" : `${entries.length} shown of ${data?.entries.length ?? 0} loaded entries. Level filtering applies to loaded entries.`}</p>
+    <p role="status" className="text-sm text-gray-600">{loading ? "Loading server logs…" : `${entries.length} entries loaded.`}</p>
+    <p className="text-xs text-gray-600">{level === "UNKNOWN" ? "Unclassified historical output. Load more to scan additional pages." : "Levels filter structured logs in CloudWatch. Choose All levels to include older text logs."}</p>
     {data && <>
       <p className="break-all text-xs text-gray-600">{data.logGroup} · {new Date(data.startTime).toLocaleString()} – {new Date(data.endTime).toLocaleString()} · Oldest first</p>
       <div role="region" aria-label="Server log entries" tabIndex={0} className="max-h-[35dvh] overflow-auto overscroll-contain rounded border">

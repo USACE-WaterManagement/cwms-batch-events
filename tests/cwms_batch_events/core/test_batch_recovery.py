@@ -79,3 +79,21 @@ def test_missing_metadata_reports_unavailable_and_is_throttled():
         assert "expired" in page.message
     batch.describe_jobs.assert_called_once()
     logs.get_log_events.assert_not_called()
+
+
+def test_batch_state_logs_only_changes_and_only_after_commit(caplog):
+    import logging
+    import pytest
+    db, job = database()
+    now = datetime.now(timezone.utc)
+    with caplog.at_level(logging.INFO, logger="cwms_batch_events.core.job_database.postgres.postgres"):
+        detail = {"status": "RUNNING", "container": {"logStreamName": "stream"}}
+        db.record_batch_details(job.id, detail, now)
+        db.record_batch_details(job.id, detail, now)
+        db.db.commit.side_effect = RuntimeError("database failed")
+        with pytest.raises(RuntimeError):
+            db.record_batch_details(job.id, {"status": "SUCCEEDED"}, now)
+    records = [r for r in caplog.records if getattr(r, "event", None) == "batch_state_updated"]
+    assert len(records) == 1
+    assert records[0].batch_status == "RUNNING"
+    assert records[0].stream_available is True

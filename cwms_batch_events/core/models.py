@@ -163,6 +163,8 @@ class JobMessage(BaseModel):
     requested_by: JobRequestedBy
     created_at: datetime
     payload: ScriptRunOptions
+    # Optional for compatibility with messages queued before correlation support.
+    request_id: str | None = Field(default=None, pattern=r"^[a-f0-9]{32}$")
 
 
 class BatchJobStatusUpdateRequest(BaseModel):

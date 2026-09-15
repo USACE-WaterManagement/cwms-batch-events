@@ -1,0 +1,3 @@
+aws-lambda-powertools>=3.34,<4
+pydantic-settings
+requests

@@ -1,5 +1,14 @@
 from datetime import datetime, timezone
 from uuid import uuid4
+from types import SimpleNamespace
+
+
+def make_lambda_context():
+    return SimpleNamespace(
+        function_name="test-function", memory_limit_in_mb=256,
+        invoked_function_arn="arn:aws:lambda:us-east-1:123456789012:function:test",
+        aws_request_id="invocation-123",
+    )
 
 from cwms_batch_events.core.auth.user.models import User
 from cwms_batch_events.core.models import (
