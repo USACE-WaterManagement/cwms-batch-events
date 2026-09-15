@@ -1,6 +1,7 @@
 import { FaTriangleExclamation } from "react-icons/fa6";
 import LoadingSpinner from "../../shared/components/LoadingSpinner";
 import type { JobDetails } from "../jobs-list/useJobDetails";
+import { jobStatusLabel } from "../jobs-list/jobStatus";
 
 const recentFailureWindow = 24 * 60 * 60 * 1000;
 const failureTime = (job: JobDetails) => new Date(job.endTime ?? job.createdTime).getTime();
@@ -24,10 +25,10 @@ export const ScriptRunIndicators = ({ jobs, now, scriptName, onSelectRun }: {
   return <div className="mt-2 flex flex-wrap gap-2 whitespace-normal" onClick={event => event.stopPropagation()}>
     {activeRun && <button type="button" onClick={() => onSelectRun(activeRun.id)}
       aria-label={`View active run for ${scriptName}`}
-      title={`${active.length} active run${active.length === 1 ? "" : "s"}. Open ${activeRun.jobStatus.toLowerCase()} run.`}
+      title={`${active.length} active run${active.length === 1 ? "" : "s"}. Open ${jobStatusLabel(activeRun).toLowerCase()} run.`}
       className="inline-flex items-center gap-1.5 rounded border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium text-blue-800 hover:bg-blue-100">
       <span aria-hidden="true"><LoadingSpinner /></span>
-      {active.length > 1 ? `${active.length} active runs` : activeRun.jobStatus === "Running" ? "Running" : "Queued"}
+      {active.length > 1 ? `${active.length} active runs` : activeRun.batchStatus ? jobStatusLabel(activeRun) : activeRun.jobStatus === "Running" ? "Running" : "Queued"}
     </button>}
     {failed && <button type="button" onClick={() => onSelectRun(failed.id)}
       aria-label={`View recent failed run for ${scriptName}`}

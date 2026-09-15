@@ -6,6 +6,7 @@ import JobDetailFull from "../jobs-list/JobDetailFull";
 import type { JobDetails } from "../jobs-list/useJobDetails";
 import type { Script } from "./types";
 import LoadingSpinner from "../../shared/components/LoadingSpinner";
+import { jobStatusLabel } from "../jobs-list/jobStatus";
 
 export const ScriptRunJob = ({ script, onSubmitted }: {
   script: Script;
@@ -51,7 +52,7 @@ export const ScriptJobRuns = ({ script, selectedJobId, onSelectJob }: {
           className={`flex w-full flex-wrap justify-between gap-2 rounded border p-3 text-left hover:bg-blue-50 ${selectedJobId === job.id ? "border-blue-600 bg-blue-50" : "border-gray-300"}`}>
           <span>{new Date(job.createdTime).toLocaleString()}</span><span className="inline-flex items-center gap-2 font-semibold">
             {(job.jobStatus === "Running" || job.jobStatus === "Pending") && <span aria-hidden="true"><LoadingSpinner /></span>}
-            {job.jobStatus}
+            {jobStatusLabel(job)}
           </span>
         </button>
       </li>)}

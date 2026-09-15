@@ -24,6 +24,63 @@ async function openManager(page: Page) {
   await page.getByRole("combobox").selectOption("SWT");
 }
 
+test("selected run shares Starting and Running status with the run list without extra requests", async ({ page }) => {
+  await page.clock.install({ time: now });
+  const current = { ...job, jobStatus: "Pending", batchStatus: "STARTING" };
+  let listRequests = 0;
+  let logRequests = 0;
+  await page.route("**/api/**", route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/admin-offices")) return route.fulfill({ json: ["SWT"] });
+    if (path.endsWith("/job-runners/default")) return route.fulfill({ json: { id: "runner", slug: "batch" } });
+    if (path.endsWith("/scripts")) return route.fulfill({ json: [script] });
+    if (path.endsWith("/jobs")) {
+      listRequests++;
+      return route.fulfill({ json: [{ ...job, jobStatus: "Pending" }] });
+    }
+    if (path.endsWith("/jobs/running")) return route.fulfill({ json: current });
+    if (path.endsWith("/logs/page")) {
+      logRequests++;
+      return route.fulfill({ json: { logs: "", available: true, supportsLive: true } });
+    }
+    return route.fulfill({ json: [] });
+  });
+  await openManager(page);
+  const indicator = page.getByRole("button", { name: `View active run for ${script.name}`, exact: true });
+  await indicator.click();
+  const selected = page.getByRole("region", { name: "Selected job run" });
+  const runButton = page.getByRole("tabpanel").getByRole("button", { name: /Starting/ });
+  await expect(runButton).toBeVisible();
+  await expect(indicator).toContainText("Starting");
+  await expect(selected.getByText("Starting", { exact: true })).toHaveCount(2);
+  await expect(selected.getByText("Pending", { exact: true })).toHaveCount(0);
+  await expect(selected.getByText(/AWS Batch:/)).toHaveCount(0);
+  await expect(page.getByLabel("Job output")).toHaveValue(/Container is starting/);
+  // Existing manager load plus the run-list mount refresh; synchronizing
+  // detail data itself must not request the list again.
+  expect(listRequests).toBe(2);
+  expect(logRequests).toBe(0);
+  if (process.env.PR_SCREENSHOT_DIR) {
+    await mkdir(process.env.PR_SCREENSHOT_DIR, { recursive: true });
+    await selected.screenshot({ path: join(process.env.PR_SCREENSHOT_DIR, "logs-starting-desktop.png") });
+  }
+  current.jobStatus = "Running";
+  current.batchStatus = "RUNNING";
+  await page.clock.runFor(5100);
+  await expect(page.getByRole("tabpanel").getByRole("button", { name: /Running/ })).toBeVisible();
+  await expect(page.getByLabel("Job output")).toHaveValue(/Waiting for the first log lines/);
+  expect(listRequests).toBe(3);
+  expect(logRequests).toBe(1);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByLabel("Update interval").scrollIntoViewIfNeeded();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  if (process.env.PR_SCREENSHOT_DIR) {
+    await page.getByRole("region", { name: "Job logs", exact: true }).screenshot({
+      path: join(process.env.PR_SCREENSHOT_DIR, "logs-running-mobile.png"),
+    });
+  }
+});
+
 test("script indicators open the exact active or recent failed run", async ({ page }) => {
   await page.clock.install({ time: now });
   const runs = [

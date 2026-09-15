@@ -1,6 +1,7 @@
 import { PropsWithChildren } from "react";
 import LoadingSpinner from "../../shared/components/LoadingSpinner";
 import { JobDetails } from "./useJobDetails";
+import { jobStatusLabel } from "./jobStatus";
 
 const jobFields: (keyof JobDetails)[] = [
   "scriptName",
@@ -42,7 +43,7 @@ function JobDetail({ job }: JobDetailProps) {
               {field === "jobStatus" ? (
                 job.jobStatus !== "Completed" && job.jobStatus !== "Failed" ? (
                   <span className="inline-flex items-center gap-2">
-                    <span>{job.jobStatus}</span>
+                    <span>{jobStatusLabel(job)}</span>
                     <LoadingSpinner />
                   </span>
                 ) : (
@@ -57,8 +58,7 @@ function JobDetail({ job }: JobDetailProps) {
           );
         })}
       </div>
-      {job.batchStatus && <p className="px-3">AWS Batch: {job.batchStatus}</p>}
-      {job.batchStatusReason && <p className="px-3">{job.batchStatusReason}</p>}
+      {job.batchStatusReason && <p className="px-3 pb-3 text-sm text-gray-600">{job.batchStatusReason}</p>}
     </div>
   );
 }

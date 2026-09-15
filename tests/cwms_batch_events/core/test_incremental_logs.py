@@ -123,3 +123,20 @@ def test_local_executor_reports_completion_only_logs():
         assert page.logs == "complete output"
         assert page.reset
         assert not page.supports_live
+
+
+def test_dev_diagnostics_report_ingestion_delay_without_output_or_cursor(source, monkeypatch, caplog):
+    import logging
+    from cwms_batch_events.core import log_diagnostics
+    logger, job_id, _, logs = source
+    monkeypatch.setattr(log_diagnostics.settings, "deployment_environment", "dev")
+    monkeypatch.setattr(log_diagnostics.settings, "log_level", "DEBUG")
+    logs.get_log_events.return_value = {"events": [
+        {"message": "private script output", "timestamp": 1000, "ingestionTime": 2500},
+    ], "nextForwardToken": "private-cursor-token"}
+    with caplog.at_level(logging.DEBUG, logger=log_diagnostics.logger.name):
+        logger.get_log_page(job_id)
+    assert "max_ingestion_delay_ms=1500" in caplog.text
+    assert "event=cloudwatch_page" in caplog.text
+    assert "private script output" not in caplog.text
+    assert "private-cursor-token" not in caplog.text

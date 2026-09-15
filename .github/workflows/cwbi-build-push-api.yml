@@ -76,7 +76,10 @@ jobs:
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
+          LOG_LEVEL=INFO
+          if [ "$IMAGE_TAG" = dev ]; then LOG_LEVEL=DEBUG; fi
           docker build $BUILD_FLAGS \
+          --build-arg LOG_LEVEL="$LOG_LEVEL" \
           --build-arg API_VERSION="$(git rev-parse --short=12 HEAD)" \
           --build-arg BUILD_REVISION="$(git rev-parse HEAD)" \
           --build-arg BUILD_TIME="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
@@ -130,6 +133,7 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
           docker build --pull --push \
+          --build-arg LOG_LEVEL="${{ matrix.env.tag == 'dev' && 'DEBUG' || 'INFO' }}" \
           --build-arg API_VERSION="$(git rev-parse --short=12 HEAD)" \
           --build-arg BUILD_REVISION="$(git rev-parse HEAD)" \
           --build-arg BUILD_TIME="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \

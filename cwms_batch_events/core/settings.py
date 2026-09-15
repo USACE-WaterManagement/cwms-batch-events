@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     cda_api_root: str = "http://traefik/cwms-data/"
     default_job_runner: str = "batch"
     deployment_environment: str = "local"
+    log_level: str = "INFO"
     build_revision: str = "local"
     build_time: str | None = None
     dynamodb_host: str = "http://dynamodb:9010"
