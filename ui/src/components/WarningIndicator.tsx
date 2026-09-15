@@ -22,7 +22,7 @@ export function WarningIndicator() {
       className={`inline-flex h-10 shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded border px-2 text-sm font-semibold focus-visible:outline-2 ${notifications.length ? "border-amber-400 bg-amber-50 text-amber-900 hover:bg-amber-100" : "border-green-400 bg-green-50 text-green-900 hover:bg-green-100"}`}>
       {notifications.length ? <><MdWarningAmber aria-hidden className="size-5 shrink-0" />{notifications.length}</> : <MdCheckCircleOutline aria-hidden className="size-5 shrink-0" />}
     </button>
-    <Modal opened={open} onClose={() => setOpen(false)} dialogTitle="Warnings and errors"
+    <Modal className="server-status-modal" opened={open} onClose={() => setOpen(false)} dialogTitle="Warnings and errors"
       buttons={<div className="flex flex-wrap justify-end gap-3">
         <Button type="button" disabled={checking || !notifications.some(item => item.retry)} onClick={() => void checkAgain()}>Check again</Button>
         <Button type="button" onClick={() => setOpen(false)}>Close</Button>

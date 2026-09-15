@@ -34,10 +34,16 @@ test("authenticated status modal filters rich logs and continues empty pages", a
   for (const width of [1440, 768, 390, 320]) {
     await page.setViewportSize({ width, height: 900 });
     await expect(dialog.getByRole("button", { name: "Close", exact: true })).toBeVisible();
+    for (const control of [dialog.getByRole("button", { name: "Close", exact: true }), dialog.getByLabel("Log level", { exact: true }), dialog.getByRole("button", { name: "Refresh server logs" })]) {
+      const box = await control.boundingBox();
+      expect(box!.x).toBeGreaterThanOrEqual(0);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width);
+    }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
     const region = dialog.getByRole("region", { name: "Server log entries" });
     await region.focus();
     await expect(region).toBeFocused();
+    await region.evaluate(element => { element.scrollLeft = 0; });
     await page.screenshot({ path: testInfo.outputPath(`server-logs-${width}.png`) });
   }
   await dialog.getByRole("button", { name: "Close", exact: true }).click();
