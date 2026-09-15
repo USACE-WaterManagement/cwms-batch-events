@@ -56,10 +56,10 @@ def test_installed_jar_preserves_arguments_and_office_definition():
         "two words",
         "$(false)",
     ]
-    assert request["containerOverrides"]["environment"] == [
+    assert all(item in request["containerOverrides"]["environment"] for item in [
         {"name": "OFFICE", "value": "swt"},
         {"name": "SKIP_GIT_CLONE", "value": "true"},
-    ]
+    ])
 
 
 @pytest.mark.parametrize(

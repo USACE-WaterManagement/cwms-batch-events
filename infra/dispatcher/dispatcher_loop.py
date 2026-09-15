@@ -11,7 +11,7 @@ from cwms_batch_events.core.job_logger.s3 import S3JobLogger
 from cwms_batch_events.core.models import JobMessage
 from cwms_batch_events.local.dispatcher import LocalJobDispatcher
 
-configure_logging()
+configure_logging(service="cwms-batch-events-local-dispatcher")
 logger = logging.getLogger("cwms_batch_events.local.dispatcher_loop")
 
 logger.info("Starting the local job dispatcher (lambda mock)...")

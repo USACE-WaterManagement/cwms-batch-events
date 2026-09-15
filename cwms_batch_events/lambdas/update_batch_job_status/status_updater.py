@@ -6,17 +6,18 @@ them to the events API status update endpoint.
 """
 
 import json
-import logging
 import os
 
 import boto3
 from botocore.exceptions import ClientError
 import requests
 from cwms_batch_events.core.batch_details import STATUS_MAP, log_stream
-from cwms_batch_events.core.logging_config import configure_logging
+from cwms_batch_events.core.logging_config import configure_logging, bind_log_context
+from cwms_batch_events.core.lambda_logging import lambda_logger, with_lambda_logging
+from cwms_batch_events.core.job_correlation import correlation_from_batch
 
-configure_logging()
-logger = logging.getLogger(__name__)
+configure_logging(service="cwms-batch-events-status-updater")
+logger = lambda_logger("cwms-batch-events-status-updater")
 
 API_BASE_URL = os.environ["ALB_DNS_NAME"] + "/api"
 APP_SECRETS_ARN = os.environ["APP_SECRETS_ARN"]
@@ -55,7 +56,13 @@ def get_internal_token() -> str:
     return _cached_internal_token
 
 
+@with_lambda_logging(logger)
 def lambda_handler(event, context):
+    with bind_log_context(**correlation_from_batch(event.get("detail", {}))):
+        return _forward_status(event)
+
+
+def _forward_status(event):
     logger.debug("Received Batch job state change event from EventBridge")
 
     try:

@@ -4,6 +4,8 @@ from cwms_batch_events.core.job_logger.base import JobLogger
 from cwms_batch_events.core.execution import command_for_payload
 from cwms_batch_events.core.models import JobMessage, JobStatus
 from cwms_batch_events.core.settings import settings
+from cwms_batch_events.core.job_correlation import runner_environment
+from cwms_batch_events.core.logging_config import bind_log_context
 
 CDA_API_ROOT = settings.cda_api_root
 logger = logging.getLogger(__name__)
@@ -15,6 +17,10 @@ class LocalExecutor:
         self.logger = logger
 
     def run_job(self, message: JobMessage):
+        with bind_log_context(service="cwms-batch-events-local-runner", job_id=str(message.job_id), request_id=message.request_id):
+            return self._run_job(message)
+
+    def _run_job(self, message: JobMessage):
         from docker import DockerClient
         from docker.client import from_env
 
@@ -28,6 +34,7 @@ class LocalExecutor:
                 detach=True,
                 stderr=True,
                 environment=[
+                    *(f"{key}={value}" for key, value in runner_environment(message).items()),
                     f"OFFICE={message.payload.office}",
                     "GITHUB_BRANCH=cwbi-dev",
                     "ENVIRONMENT=cwbi-dev",

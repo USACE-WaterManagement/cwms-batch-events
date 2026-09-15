@@ -1,11 +1,12 @@
 """Authenticated, bounded reads of the configured API server's CloudWatch logs."""
 
 import json
+import base64
 import logging
 import re
 import time
 from functools import lru_cache
-from typing import Any
+from typing import Any, Literal
 
 import boto3
 from botocore.config import Config
@@ -18,6 +19,7 @@ from cwms_batch_events.core.models import CamelModel
 from cwms_batch_events.core.settings import settings
 
 router = APIRouter(prefix="/server-logs", tags=["server logs"])
+LogLevel = Literal["ALL", "TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL", "UNKNOWN"]
 logger = logging.getLogger(__name__)
 # Historical Python, Gunicorn and Lambda prefixes, without treating arbitrary
 # words in a message or traceback as a severity.
@@ -44,6 +46,22 @@ class ServerLogPage(CamelModel):
     start_time: int
     end_time: int
     log_group: str
+    level: LogLevel = "ALL"
+
+
+def cursor_scope(start: int, end: int, level: str) -> dict:
+    return {"start": start, "end": end, "level": level,
+            "group": settings.server_log_group, "prefix": settings.server_log_stream_prefix}
+
+
+def decode_cursor(cursor: str, scope: dict) -> str:
+    try:
+        value = json.loads(base64.b64decode(cursor, altchars=b"-_", validate=True))
+        if not isinstance(value, dict) or value.get("scope") != scope or not isinstance(value.get("token"), str) or not value["token"]:
+            raise ValueError("Invalid cursor scope")
+        return value["token"]
+    except (ValueError, TypeError, UnicodeError) as exc:
+        raise HTTPException(400, "Log cursor does not match the query. Refresh server logs.") from exc
 
 
 @lru_cache
@@ -83,13 +101,15 @@ def get_server_logs(
     cursor: str | None = Query(default=None, max_length=16384),
     start_time: int | None = Query(default=None, ge=0),
     end_time: int | None = Query(default=None, ge=0),
+    level: LogLevel = Query(default="ALL", description="CloudWatch JSON level; ALL includes historical text. UNKNOWN scans a bounded page for unclassified entries."),
     _user: User = Depends(get_current_user),
 ) -> ServerLogPage:
     """Read up to 200 events, oldest first, within a maximum 24-hour window.
 
     Pass nextCursor and the returned startTime/endTime for the next page,
     including after empty pages. Only the server-configured group/prefix is read.
-    Level filtering is performed on loaded entries in the UI.
+    Named levels filter the canonical JSON level field in CloudWatch before
+    pagination. ALL includes historical text. UNKNOWN scans each bounded page.
     """
     response.headers["Cache-Control"] = "no-store"
     if cursor and (start_time is None or end_time is None):
@@ -108,7 +128,9 @@ def get_server_logs(
         unmask=False,
     )
     if cursor:
-        args["nextToken"] = cursor
+        args["nextToken"] = decode_cursor(cursor, cursor_scope(start, end, level))
+    if level not in {"ALL", "UNKNOWN"}:
+        args["filterPattern"] = '{ $.level = "' + level + '" }'
     try:
         page = get_server_log_client().filter_log_events(**args)
     except ClientError as exc:
@@ -122,8 +144,12 @@ def get_server_logs(
         logger.warning("CloudWatch server log client unavailable", extra={"event": "server_logs_failed", "error_type": type(exc).__name__})
         raise HTTPException(503, "Server logs are currently unavailable.") from exc
     logger.debug("CloudWatch server log page read", extra={"event": "server_logs_read", "count": len(page.get("events", [])), "has_more": bool(page.get("nextToken"))})
+    entries = [parse_entry(event) for event in page.get("events", [])]
+    next_cursor = None
+    if token := page.get("nextToken"):
+        next_cursor = base64.urlsafe_b64encode(json.dumps({"scope": cursor_scope(start, end, level), "token": token}).encode()).decode()
     return ServerLogPage(
-        entries=[parse_entry(event) for event in page.get("events", [])],
-        next_cursor=page.get("nextToken"), start_time=start, end_time=end,
-        log_group=settings.server_log_group,
+        entries=[entry for entry in entries if level != "UNKNOWN" or entry.level == "UNKNOWN"],
+        next_cursor=next_cursor, start_time=start, end_time=end,
+        log_group=settings.server_log_group, level=level,
     )
