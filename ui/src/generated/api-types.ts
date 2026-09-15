@@ -190,10 +190,6 @@ export interface components {
         };
         /** JobRecord */
         JobRecord: {
-            logGroup?: string | null;
-            logStream?: string | null;
-            batchStatus?: string | null;
-            batchStatusReason?: string | null;
             /**
              * Executiontype
              * @default github_file
@@ -224,6 +220,14 @@ export interface components {
             jobStatus: components["schemas"]["JobStatus"];
             /** Username */
             username: string;
+            /** Displayname */
+            displayName?: string;
+            /**
+             * Runtrigger
+             * @default unknown
+             * @enum {string}
+             */
+            runTrigger: "manual" | "scheduled" | "unknown";
             /** Office */
             office: string;
             /**
@@ -242,6 +246,14 @@ export interface components {
             jobRunnerId: string;
             /** Externaljobid */
             externalJobId?: string | null;
+            /** Loggroup */
+            logGroup?: string | null;
+            /** Logstream */
+            logStream?: string | null;
+            /** Batchstatus */
+            batchStatus?: string | null;
+            /** Batchstatusreason */
+            batchStatusReason?: string | null;
         };
         /**
          * JobStatus
@@ -352,6 +364,13 @@ export interface components {
              * Format: uuid
              */
             scriptId: string;
+            /**
+             * Runtrigger
+             * @description Caller-reported trigger for display only; grants no permissions. UI sends manual; cron/scheduler clients send scheduled. Omitted values remain unknown.
+             * @default unknown
+             * @enum {string}
+             */
+            runTrigger: "manual" | "scheduled" | "unknown";
         };
         /** ScriptUpdate */
         ScriptUpdate: {
@@ -459,7 +478,7 @@ export interface operations {
             /** @description Successful Response */
             200: {
                 headers: {
-                    /** @description Total jobs for the current user when pagination is requested. */
+                    /** @description Total jobs in the user offices when pagination is requested. */
                     "X-Total-Count"?: number;
                     [name: string]: unknown;
                 };

@@ -6,7 +6,7 @@
 4. Review the saved file or executable and arguments, then select **Submit job** once.
 5. The new run opens in **Job runs**. Its status updates until it finishes, then output loads.
 6. Use **View job runs** on a row to return to that script's runs. Select a run to inspect it;
-   **Refresh** reloads the list. **Job History** shows your runs across all scripts.
+   **Refresh** reloads the list. **Job History** shows shared runs across scripts in your offices.
 
 The Groundwork tabs keep details, submission, and run output in the selected script's workspace.
 Each row groups the script name, runtime, active state, and full path. Actions appear beside
@@ -27,15 +27,18 @@ On a phone, scroll the script list to choose a script, then scroll down to its t
 
 </details>
 
-Script rows show a spinner for your queued or running jobs and a warning for your most recent
+Script rows show a spinner for queued or running office jobs and a warning for the most recent
 failure within the past 24 hours. Click either indicator to open that exact run in **Job runs**.
 Running jobs also show spinners in the run list. The manager refreshes run status every five
 seconds while visible, including when a different tab is selected. A read failure stops polling;
-**Retry run status** resumes it. The indicators remain scoped to your jobs in the selected office.
+**Retry run status** resumes it. The indicators remain scoped to jobs in the selected office.
 
 ![Running and queued spinners alongside a clickable recent-failure warning](../ui/public/about/script-run-indicators.png)
 
-Both history views contain jobs submitted by the signed-in username. Existing `/events/jobs`
+Both history views share runs within the user's CWMS offices and show the submitter's readable
+name. Manual and Scheduled badges identify recorded triggers; historical or unmarked runs
+show Unknown. See [run attribution](job-logs.md#shared-run-attribution) for scheduler setup.
+Existing `/events/jobs`
 and `/events/jobs/{jobId}` links continue to work. **Submit Job** remains available for users
 who can run scripts but do not have script administration access.
 

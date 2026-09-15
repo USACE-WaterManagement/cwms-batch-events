@@ -29,13 +29,38 @@ request. `available: false` indicates an unavailable stream/object; `message`
 explains missing dispatch, missing stream metadata, or an unavailable CloudWatch resource.
 `supportsLive: false` identifies the completion-only local executor.
 
-The endpoint requires the submitting user, matching the existing user-scoped
-job list. The server resolves the stream from the job; a cursor never grants
+Job history, details, and both log endpoints require CWMS Users membership in
+the job's office. Colleagues can read each other's runs without a management
+role. List pagination and totals use the same office filter. Jobs outside the
+user's offices return 404, even when that user originally submitted them.
+The server resolves the stream from the job; a cursor never grants
 access to another job. A request reads at most three CloudWatch pages (up to
 3 MB before JSON encoding), and follows forward tokens even across empty
 pages. `hasMore` means more pages may remain, not that every next page contains
 output. Expired cursors and new streams restart from the head with `reset`.
 Malformed cursors return 400; other AWS failures remain errors.
+
+## Shared run attribution
+
+Apply V1_01_15 before deploying this API version. It adds a display-name
+snapshot, trigger metadata, and an index for office history queries. No
+ownership backfill is required: existing jobs already have an office.
+
+New runs capture a readable name from verified token claims, falling back to
+the CDA username for API-key callers. Raw usernames remain internal audit
+identities; job responses suppress numeric/EDIPI-bearing attribution fields.
+The UI uses `displayName`, with a safe username fallback for older responses.
+Old rows containing only an EDIPI show "Name unavailable"; no name is guessed.
+This does not redact arbitrary text printed by scripts into their logs.
+
+`POST /jobs` accepts `runTrigger`: `manual`, `scheduled`, or `unknown`.
+The UI sends `manual`. Cron/Airflow clients should send
+`{"scriptId": "<registered-script-uuid>", "runTrigger": "scheduled"}`.
+This is caller-reported display metadata, not an authorization mechanism.
+Existing clients and historical rows default to `unknown`; the UI never infers
+scheduling from a username, timestamp, or a script's current configuration.
+Scheduled executions appear only if submitted through Batch Events. Jobs
+submitted directly to AWS Batch are not imported by this change.
 
 The existing `GET /jobs/{job_id}/logs` response is unchanged. Apply migration
 V1_01_14 through the existing migration pipeline before deploying the API,

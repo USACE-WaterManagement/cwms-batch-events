@@ -26,11 +26,18 @@ from cwms_batch_events.core.queue import JobQueue
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
 
+def get_office_job(job_id: UUID, user: User, job_db: JobDatabase) -> JobRecord:
+    job = job_db.get_job_by_id(job_id)
+    if not job or job.office not in user.offices:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return job
+
+
 @router.get(
     "",
     responses={200: {"headers": {
         "X-Total-Count": {
-            "description": "Total jobs for the current user when pagination is requested.",
+            "description": "Total jobs in the user's CWMS offices when pagination is requested.",
             "schema": {"type": "integer"},
         }
     }}},
@@ -48,9 +55,9 @@ def get_jobs_for_user(
     job_db: JobDatabase = Depends(get_job_database),
 ) -> list[JobRecord]:
     if limit is not None or offset:
-        response.headers["X-Total-Count"] = str(job_db.count_jobs_for_user(user.username))
-        return job_db.get_jobs_for_user(user.username, limit=limit, offset=offset)
-    job_list = job_db.get_jobs_for_user(user.username)
+        response.headers["X-Total-Count"] = str(job_db.count_jobs_for_offices(user.offices))
+        return job_db.get_jobs_for_offices(user.offices, limit=limit, offset=offset)
+    job_list = job_db.get_jobs_for_offices(user.offices)
     return job_list
 
 
@@ -98,11 +105,7 @@ def get_job_by_id(
     job_db: JobDatabase = Depends(get_job_database),
     job_logger: JobLogger = Depends(get_job_logger),
 ) -> JobRecord:
-    job = job_db.get_job_by_id(job_id)
-    if not job:
-        raise HTTPException(
-            status_code=404, detail=f"No job found for jobId '{job_id}'"
-        )
+    job = get_office_job(job_id, user, job_db)
     if isinstance(job_logger, CloudWatchJobLogger):
         return job_logger.refresh_job(job_id)
     return job
@@ -110,8 +113,12 @@ def get_job_by_id(
 
 @router.get("/{job_id}/logs")
 def get_logs_for_job(
-    job_id: UUID, job_logger: JobLogger = Depends(get_job_logger)
+    job_id: UUID,
+    user: User = Depends(get_current_user),
+    job_db: JobDatabase = Depends(get_job_database),
+    job_logger: JobLogger = Depends(get_job_logger),
 ) -> JobLogs:
+    get_office_job(job_id, user, job_db)
     try:
         logs = job_logger.get_logs_for_job(job_id)
     except FileNotFoundError as exc:
@@ -135,10 +142,7 @@ def get_log_page(
     job_logger: JobLogger = Depends(get_job_logger),
 ) -> JobLogPage:
     """Read a bounded log page. Pass nextCursor to retrieve subsequent output."""
-    job = job_db.get_job_by_id(job_id)
-    # Match the user-scoped jobs list; never use a cursor as authorization.
-    if not job or job.username != user.username:
-        raise HTTPException(status_code=404, detail="Job not found")
+    get_office_job(job_id, user, job_db)
     try:
         return job_logger.get_log_page(job_id, cursor)
     except ValueError as exc:

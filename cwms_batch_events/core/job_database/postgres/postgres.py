@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 import uuid
 
 from cwms_batch_events.core.auth.user.models import User
+from cwms_batch_events.core.display_names import readable_name
 from cwms_batch_events.core.batch_details import STATUS_MAP, log_stream
 from cwms_batch_events.core.job_database.postgres.models import (
     JobModel,
@@ -136,6 +137,8 @@ class PostgresJobDatabase:
         job.script_slug = script.slug
         job.job_status = JobStatus.PENDING
         job.username = user.username
+        job.display_name = readable_name(user.display_name, user.username)
+        job.run_trigger = payload.run_trigger
         job.office = script.office
         job.repo_path = script.repo_path
         job.execution_type = script.execution_type
@@ -163,17 +166,17 @@ class PostgresJobDatabase:
             return None
         return JobRecord.model_validate(job_model)
 
-    def count_jobs_for_user(self, user_id: str) -> int:
+    def count_jobs_for_offices(self, offices: list[str]) -> int:
         return self.db.scalar(
-            select(func.count()).select_from(JobModel).where(JobModel.username == user_id)
+            select(func.count()).select_from(JobModel).where(JobModel.office.in_(offices))
         )
 
-    def get_jobs_for_user(
-        self, user_id: str, limit: int | None = None, offset: int = 0
+    def get_jobs_for_offices(
+        self, offices: list[str], limit: int | None = None, offset: int = 0
     ) -> list[JobRecord]:
         job_models = self.db.scalars(
             select(JobModel)
-            .where(JobModel.username == user_id)
+            .where(JobModel.office.in_(offices))
             .order_by(JobModel.created_time.desc(), JobModel.id.desc())
             .limit(limit)
             .offset(offset)
