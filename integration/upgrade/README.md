@@ -17,10 +17,21 @@ through current request models.
 
 The candidate API uses its real database dependencies and application database
 role. Only authentication and outbound queue delivery are replaced. Checks cover
-office/role filtering, catalogs, historical jobs, invalid execution rejection
-without pending jobs, and creating/editing/queuing valid registrations. No district
+office/role filtering, catalogs, historical jobs, migration defaults of v1,
+unchanged legacy records after reads/runs, historical command construction in both
+runners, explicit edit-to-v2, immutable submitted job versions, all v2 runtimes,
+installed commands, and corrupt/unsupported configuration rejection without
+pending jobs. Parent-directory paths were accepted by the historical runner and
+are checked as v1; v2 still rejects them. No district
 program executes. This is an in-process API integration test, not a deployed
 network/credential test.
+
+The harness also runs `verify_execution.py`: a disposable `python:3.13-slim`
+container executes harmless fixture scripts with both historical commands and
+the v1 commands. It checks leading/duplicate slashes, dot/parent segments, and the
+historical differences in handling spaces and inline arguments between AWS argv
+and Docker command strings. The container has no network or host mounts. This
+proves Linux command execution, not AWS submission or district program behavior.
 
 The workflow runs for every environment-targeted PR. Configure `upgrade` as a
 required check in branch protection to make it a merge gate.
