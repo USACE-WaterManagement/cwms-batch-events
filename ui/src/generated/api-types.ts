@@ -190,22 +190,21 @@ export interface components {
         };
         /** JobRecord */
         JobRecord: {
-            logGroup?: string | null;
-            logStream?: string | null;
-            batchStatus?: string | null;
-            batchStatusReason?: string | null;
+            /**
+             * Configversion
+             * @default 1
+             */
+            configVersion: number;
             /**
              * Executiontype
              * @default github_file
-             * @enum {string}
              */
-            executionType: "github_file" | "command";
+            executionType: string | null;
             /**
              * Runtime
              * @default python
-             * @enum {string}
              */
-            runtime: "python" | "java" | "shell";
+            runtime: string;
             /** Repopath */
             repoPath: string;
             /** Commandargs */
@@ -242,6 +241,14 @@ export interface components {
             jobRunnerId: string;
             /** Externaljobid */
             externalJobId?: string | null;
+            /** Loggroup */
+            logGroup?: string | null;
+            /** Logstream */
+            logStream?: string | null;
+            /** Batchstatus */
+            batchStatus?: string | null;
+            /** Batchstatusreason */
+            batchStatusReason?: string | null;
         };
         /**
          * JobStatus
@@ -250,6 +257,12 @@ export interface components {
         JobStatus: "Failed" | "Pending" | "Running" | "Completed";
         /** ScriptCreate */
         ScriptCreate: {
+            /**
+             * Configversion
+             * @default 2
+             * @constant
+             */
+            configVersion: 2;
             /**
              * Executiontype
              * @default github_file
@@ -291,17 +304,20 @@ export interface components {
         /** ScriptRead */
         ScriptRead: {
             /**
+             * Configversion
+             * @default 1
+             */
+            configVersion: number;
+            /**
              * Executiontype
              * @default github_file
-             * @enum {string}
              */
-            executionType: "github_file" | "command";
+            executionType: string | null;
             /**
              * Runtime
              * @default python
-             * @enum {string}
              */
-            runtime: "python" | "java" | "shell";
+            runtime: string;
             /** Repopath */
             repoPath: string;
             /** Commandargs */
@@ -355,6 +371,12 @@ export interface components {
         };
         /** ScriptUpdate */
         ScriptUpdate: {
+            /**
+             * Configversion
+             * @default 2
+             * @constant
+             */
+            configVersion: 2;
             /**
              * Executiontype
              * @default github_file

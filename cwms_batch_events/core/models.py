@@ -20,20 +20,25 @@ class CamelModel(BaseModel):
 class ExecutionRecord(CamelModel):
     """Stored execution fields, including paths accepted by older API versions."""
 
-    execution_type: Literal["github_file", "command"] = "github_file"
-    runtime: Literal["python", "java", "shell"] = "python"
+    config_version: int = Field(default=1, strict=True)
+    execution_type: str | None = "github_file"
+    runtime: str = "python"
     repo_path: str
     command_args: list[str] = Field(default_factory=list)
+
+
+class ExecutionOptions(ExecutionRecord):
+    """Current schema, used exclusively for creating/editing v2 scripts."""
+
+    config_version: Literal[2] = 2
+    execution_type: Literal["github_file", "command"] = "github_file"
+    runtime: Literal["python", "java", "shell"] = "python"
 
     @field_validator("execution_type", mode="before")
     @classmethod
     def legacy_execution_type(cls, value):
         # These historical values all dispatched Python repository files.
         return "github_file" if value in (None, "", "python", "batch") else value
-
-
-class ExecutionOptions(ExecutionRecord):
-    """Validated options for saving scripts and dispatching jobs."""
 
     @field_validator("repo_path")
     @classmethod
@@ -141,10 +146,21 @@ class ScriptRunRequest(CamelModel):
     script_id: UUID
 
 
-class ScriptRunOptions(ExecutionOptions):
+class ScriptRunOptions(ExecutionRecord):
     office: str
     repo_path: str
     script_slug: str | None
+
+    @model_validator(mode="after")
+    def validate_execution_schema(self):
+        from cwms_batch_events.core.execution import execution_for_config
+
+        options = execution_for_config(self)
+        self.repo_path = options.repo_path
+        self.execution_type = options.execution_type
+        self.runtime = options.runtime
+        self.command_args = options.command_args
+        return self
 
 
 class JobSource(str, Enum):
@@ -177,7 +193,7 @@ class BindExternalJobIdRequest(BaseModel):
     external_job_id: str
 
 
-class ScriptBase(ExecutionRecord):
+class ScriptBase(CamelModel):
     name: str
     description: str
     repo_path: str
@@ -190,7 +206,7 @@ class ScriptCreate(ScriptBase, ExecutionOptions):
     office: str
 
 
-class ScriptRead(ScriptBase):
+class ScriptRead(ScriptBase, ExecutionRecord):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID

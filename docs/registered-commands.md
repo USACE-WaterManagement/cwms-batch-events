@@ -33,7 +33,46 @@ printf 'Job completed\n' > /tmp/job-status.txt && cwms-cli blob upload --input-f
 
 The second line is one argument. Bash runs the upload only if file creation succeeds. The job environment supplies `CDA_API_ROOT` and `CDA_API_KEY` for the target CDA service. Use a unique blob ID for each output, or add `--overwrite` to replace an existing blob. Save the registration, select **Run job** on its row, then **Submit job** in the selected script. **Job runs** opens the result; **Job History** lists your runs across scripts.
 
-Runtime and arguments are copied into the job record and queue message when submitted, so later script edits do not change an already submitted job. Local Docker execution uses the same command construction as AWS Batch.
+Configuration version, runtime, path, and arguments are copied into the job record and queue message when submitted, so later script edits do not change an already submitted job. Version 2 uses the same command construction for local Docker execution and AWS Batch.
+
+## Configuration versions
+
+New registrations and explicit edits use **v2** (`configVersion: 2` in the API).
+Clients may omit the version on POST/PUT; they cannot create v1 registrations.
+Saving a legacy script validates all execution fields against v2 and upgrades that
+registration to v2. Reading or running it never upgrades it.
+
+Flyway migration `V1_01_15` adds `config_version INTEGER NOT NULL DEFAULT 1`
+to both scripts and jobs. All existing unversioned rows are classified as v1,
+including rows saved between the registered-runtime release and this migration.
+There is no reliable version marker in those rows. The application explicitly
+supplies v2 on new registrations and saves; the database default stays 1.
+Queued messages without a configuration version also use v1. The queue envelope's
+`version` is independent of the script's `configVersion`.
+
+V1 reproduces the execution code immediately before commit
+[`3c830a4`](https://github.com/USACE-WaterManagement/cwms-batch-events/commit/3c830a46b4c9a55a00eda702fefd0e75e5ffa779):
+
+- AWS Batch receives `["python", "/jobs/" + repo_path]`.
+- Local Docker receives the string `"python /jobs/" + repo_path`, which the Docker
+  SDK splits into arguments. Historical quoting and inline arguments retain that
+  local behavior; AWS still treats the whole path as one argument.
+- Execution type did not select the interpreter. Runtime and separate command
+  arguments were not supported. V1 always uses Python and repository checkout.
+- The path is preserved literally: `/python/run_hourly.py` becomes
+  `/jobs//python/run_hourly.py`; `/jobs/python/report.py` becomes
+  `/jobs//jobs/python/report.py`. Dot and parent-directory segments are also
+  retained because the old runner accepted them. Success still depends on the
+  target file existing in the runner filesystem.
+- Empty/blank paths and NUL characters are rejected; they cannot identify a
+  runnable historical script.
+
+V2 retains repository path validation, `/jobs/` prefix normalization, Python,
+Java JAR and Bash execution, installed commands, and literal argument boundaries.
+Its path restrictions are not relaxed for legacy data. Unknown versions fail
+with an unsupported configuration schema error before a job is created or
+dispatched. Version-specific validation and command construction live in
+`core/execution.py`; future schemas should add an explicit handler there.
 
 ## Repository browsing configuration
 

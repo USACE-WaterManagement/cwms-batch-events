@@ -21,6 +21,7 @@ from tests.factories import make_job_message
 )
 def test_repository_command(runtime, path, expected):
     payload = ScriptRunOptions(
+        config_version=2,
         office="swt",
         script_slug="report",
         repo_path=path,
@@ -32,6 +33,7 @@ def test_repository_command(runtime, path, expected):
 
 def test_installed_jar_preserves_arguments_and_office_definition():
     payload = ScriptRunOptions(
+        config_version=2,
         office="swt",
         script_slug="report",
         repo_path="java",
@@ -78,7 +80,7 @@ def test_installed_jar_preserves_arguments_and_office_definition():
 def test_invalid_execution_is_rejected(changes):
     with pytest.raises(ValidationError):
         ScriptRunOptions.model_validate(
-            dict(office="swt", script_slug="report", repo_path="report.py") | changes
+            dict(config_version=2, office="swt", script_slug="report", repo_path="report.py") | changes
         )
 
 

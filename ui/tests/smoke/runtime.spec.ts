@@ -44,6 +44,7 @@ test("registers and edits an installed Java command with separate arguments", as
     page.getByRole("button", { name: "Edit", exact: true }),
   ).toBeVisible();
   expect(saved?.executionType).toBe("command");
+  expect(saved?.configVersion).toBe(2);
   expect(saved?.commandArgs).toEqual(["-jar", "/opt/report.jar", "two words"]);
   expect(saved?.jobRunners).toEqual(["runner-1"]);
   await page.getByRole("button", { name: "Edit", exact: true }).click();
@@ -64,4 +65,39 @@ test("registers and edits an installed Java command with separate arguments", as
   expect(saved?.repoPath).toBe("java-artifacts/BuildWSmetadataViaCDA.jar");
   expect(saved?.executionType).toBe("github_file");
   expect(errors).toEqual([]);
+});
+
+test("editing a legacy registration saves the current configuration version", async ({ page }) => {
+  let script = {
+    id: "legacy-1", office: "SWT", name: "Legacy Python", slug: "legacy-python",
+    description: "Historical registration", repoPath: "python/report.py",
+    executionType: "python", runtime: "python", commandArgs: [], configVersion: 1,
+    active: true, roles: [], jobRunners: ["runner-1"],
+    createdTime: "2026-01-01T00:00:00Z", updatedTime: "2026-01-01T00:00:00Z",
+  };
+  let writes = 0;
+  await page.route("**/api/**", async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/admin-offices")) return route.fulfill({ json: ["SWT"] });
+    if (path.endsWith("/job-runners/default")) return route.fulfill({ json: { id: "runner-1", slug: "batch" } });
+    if (route.request().method() === "PUT") {
+      writes++;
+      script = { ...script, ...route.request().postDataJSON() };
+      return route.fulfill({ json: script });
+    }
+    return route.fulfill({ json: path.endsWith("/scripts") ? [script] : [] });
+  });
+  await page.goto("/events/scripts-manager");
+  await page.getByRole("button", { name: "Login", exact: true }).first().click();
+  await page.getByRole("combobox").selectOption("SWT");
+  await page.getByText("Legacy Python", { exact: true }).click();
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await expect(page.getByLabel("Source", { exact: true })).toHaveValue("github_file");
+  expect(writes).toBe(0);
+  expect(script.configVersion).toBe(1);
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Edit", exact: true })).toBeVisible();
+  expect(writes).toBe(1);
+  expect(script.configVersion).toBe(2);
+  expect(script.repoPath).toBe("python/report.py");
 });
