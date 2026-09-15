@@ -26,6 +26,8 @@ class Settings(BaseSettings):
     default_job_runner: str = "batch"
     deployment_environment: str = "local"
     log_level: str = "INFO"
+    server_log_group: str = "ecs/cwms-batch/cwms-batch-events-api"
+    server_log_stream_prefix: str = "ecs/cwms-batch-events-api/"
     build_revision: str = "local"
     build_time: str | None = None
     dynamodb_host: str = "http://dynamodb:9010"

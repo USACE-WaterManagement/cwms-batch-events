@@ -11,6 +11,12 @@ an empty role list requires office access with no additional CDA execution role.
 See the [script manager guide](docs/script-manager.md) and [registered commands](docs/registered-commands.md)
 for setup, Bash examples, and access rules. Updated screenshots are included in the in-app Help pages.
 
+## Server logs
+
+Signed-in users can open the header checkmark or warning indicator to view API
+server logs, filter loaded entries by level, and expand CloudWatch event details.
+See [server logs](docs/server-logs.md) for endpoint and deployment configuration.
+
 ## Contributions
 
 To get your local environment setup and/or make contributions please see the contributions documentation: [CONTRIBUTING.md](https://github.com/USACE-WaterManagement/cwms-batch-events/blob/cwbi-dev/CONTRIBUTING.md)
