@@ -10,6 +10,7 @@ from uuid import UUID
 from cwms_batch_events.core.job_database.base import JobDatabase
 from cwms_batch_events.core.models import JobLogPage, JobRecord
 from cwms_batch_events.core.batch_details import container_stream
+from cwms_batch_events.core.log_diagnostics import log_timing
 
 
 class LogsNotReady(ValueError):
@@ -31,6 +32,7 @@ class CloudWatchJobLogger:
         return job
 
     def refresh_job(self, job_id: UUID) -> JobRecord:
+        started = time.monotonic()
         job = self.get_job_details(job_id)
         if not job.external_job_id or (
             job.job_status in ("Completed", "Failed") and job.log_stream
@@ -41,6 +43,11 @@ class CloudWatchJobLogger:
             jobs = self.batch.describe_jobs(jobs=[job.external_job_id]).get("jobs", [])
             if jobs:
                 self.db.record_batch_details(job_id, jobs[0], observed_at)
+            log_timing("batch_refresh", job_id=job_id, previous_status=job.job_status,
+                       batch_status=jobs[0].get("status") if jobs else "missing",
+                       elapsed_ms=round((time.monotonic() - started) * 1000))
+        else:
+            log_timing("batch_refresh_throttled", job_id=job_id)
         return self.get_job_details(job_id)
 
     def get_batch_log_name(self, external_job_id: str) -> str:
@@ -80,6 +87,7 @@ class CloudWatchJobLogger:
         return container_stream(detail)
 
     def get_log_page(self, job_id: UUID, cursor: str | None = None) -> JobLogPage:
+        started = time.monotonic()
         previous = None
         if cursor:
             try:
@@ -97,10 +105,12 @@ class CloudWatchJobLogger:
 
         job = self.refresh_job(job_id)
         if not job.external_job_id:
+            log_timing("awaiting_dispatch", job_id=job_id)
             return JobLogPage(logs="", available=False, next_cursor=cursor,
                               message="Waiting for dispatch: no AWS Batch job has been linked yet.")
         stream = job.log_stream
         if not stream:
+            log_timing("awaiting_stream", job_id=job_id, batch_status=job.batch_status)
             message = (f"AWS Batch: {job.batch_status}. " if job.batch_status else "")
             message += job.batch_status_reason or (
                 "No log stream is recorded yet. The job may not have started, or its Batch metadata may have expired."
@@ -114,6 +124,10 @@ class CloudWatchJobLogger:
         token = previous["token"] if previous and not reset else None
         messages = []
         has_more = False
+        pages_read = 0
+        event_count = 0
+        newest_event = None
+        ingestion_delay = None
         try:
             # Bound both AWS requests and response size (up to three 1 MB pages).
             for _ in range(3):
@@ -125,6 +139,13 @@ class CloudWatchJobLogger:
                 if token:
                     args["nextToken"] = token
                 page = self.logs.get_log_events(**args)
+                pages_read += 1
+                for event in page["events"]:
+                    event_count += 1
+                    if event.get("timestamp") is not None:
+                        newest_event = max(newest_event or 0, event["timestamp"])
+                        if event.get("ingestionTime") is not None:
+                            ingestion_delay = max(ingestion_delay or 0, event["ingestionTime"] - event["timestamp"])
                 messages.extend(event["message"] for event in page["events"])
                 next_token = page.get("nextForwardToken")
                 has_more = bool(next_token and next_token != token)
@@ -132,6 +153,9 @@ class CloudWatchJobLogger:
                 if not has_more:
                     break
         except ClientError as exc:
+            log_timing("cloudwatch_error", job_id=job_id,
+                       code=exc.response.get("Error", {}).get("Code"),
+                       elapsed_ms=round((time.monotonic() - started) * 1000))
             if exc.response.get("Error", {}).get("Code") == "ResourceNotFoundException":
                 return JobLogPage(logs="", available=False, next_cursor=cursor,
                                   message="The CloudWatch log stream is not available yet or has expired.")
@@ -139,6 +163,12 @@ class CloudWatchJobLogger:
                 raise ValueError("Invalid log cursor") from exc
             raise
         next_cursor = None
+        log_timing("cloudwatch_page", job_id=job_id, batch_status=job.batch_status,
+                   pages=pages_read, events=event_count, has_cursor=bool(cursor),
+                   has_more=has_more, reset=reset,
+                   elapsed_ms=round((time.monotonic() - started) * 1000),
+                   newest_event_age_ms=round(time.time() * 1000 - newest_event) if newest_event is not None else None,
+                   max_ingestion_delay_ms=ingestion_delay)
         if token:
             next_cursor = base64.urlsafe_b64encode(json.dumps({
                 "job": str(job_id), "stream": stream, "token": token, "issued": time.time(),

@@ -56,3 +56,28 @@ was saved cannot be recovered automatically by this change.
 Deploy the runner image from `cwbi-dev` for dev jobs. Publishing the main-branch
 image does not update the dev image. Successful builds alone do not prove the
 API service or Batch runner is using the new image.
+
+## Status and timing diagnostics
+
+The viewer displays Batch's Starting state within the normal status field;
+run lists reuse the selected job's detail updates without additional requests.
+Starting means the container has not begun running. Running does not guarantee
+that output has reached CloudWatch yet. The existing five-second UI interval
+and 15-second Batch reconciliation limit are unchanged.
+
+API timing diagnostics require both `DEPLOYMENT_ENVIRONMENT=dev` and
+`LOG_LEVEL=DEBUG`. The dev API image workflow sets DEBUG; local, test, and prod
+images default to INFO. Setting DEBUG in another environment does not enable
+these diagnostics. Set LOG_LEVEL=INFO to disable them in dev. Only the
+`cwms_batch_events.job_log_timing` logger is raised to DEBUG, keeping AWS SDK
+request/response logging at its existing level.
+
+Search API service logs for `job_log_timing` and a job ID. `status_callback`
+records callback delay; `batch_refresh` records lookup duration and status;
+`batch_refresh_throttled` identifies the shared refresh limit. `awaiting_dispatch`
+and `awaiting_stream` identify missing references. `cloudwatch_page` records
+request duration, page/event counts, newest event age, and the largest observed
+ingestion delay (ingestionTime minus event timestamp). Empty pages have no
+event-age or ingestion-delay measurement. `cloudwatch_error` records only the
+AWS error code. These diagnostics exclude log content, cursor values, tokens,
+and environment values. They do not measure buffering inside the job process.

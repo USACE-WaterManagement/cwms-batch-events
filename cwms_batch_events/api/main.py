@@ -13,12 +13,14 @@ from cwms_batch_events.api.routers import (
     users,
 )
 from cwms_batch_events.core.settings import settings
+from cwms_batch_events.core.log_diagnostics import configure_log_diagnostics
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     stream=sys.stdout,
 )
+configure_log_diagnostics()
 
 app = FastAPI(root_path=settings.root_path)
 

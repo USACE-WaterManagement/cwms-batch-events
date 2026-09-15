@@ -6,6 +6,7 @@ import { Link } from "@tanstack/react-router";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import JobDetail from "./JobDetail";
+import { jobStatusLabel } from "./jobStatus";
 import LoginPrompt from "../auth/LoginPrompt";
 
 dayjs.extend(relativeTime);
@@ -80,7 +81,7 @@ const JobsList = () => {
                 <span className="min-w-0 break-all">
                   {job.scriptName} ({dateAgo})
                 </span>
-                <span>{job.jobStatus}</span>
+                <span>{jobStatusLabel(job)}</span>
               </span>
             }
           >

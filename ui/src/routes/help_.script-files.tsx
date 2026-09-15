@@ -32,7 +32,7 @@ git push -u origin add-daily-report`}</code></pre>
     <p>Roles are optional. Leave them empty to allow users with office access to run the script without an additional CDA execution role. Selecting roles requires the user to match at least one role for that office.</p>
     <p>The browser filters files for the selected runtime. Use <strong>All files</strong> when needed. Saving a script definition does not create or upload a file in GitHub.</p>
     <H2>5. Run and review the job</H2>
-    <p>Select <strong>Run job</strong> at the end of the script row. Review the saved settings in the <strong>Run job</strong> tab and select <strong>Submit job</strong>. The new run opens in <strong>Job runs</strong> with its status and output. Use <strong>Details</strong> to edit the script or <strong>View job runs</strong> on the row to return to its history. <Link to="/jobs">Job History</Link> lists your runs across all scripts.</p>
+    <p>Select <strong>Run script</strong> at the end of the script row. Review the saved settings in the <strong>Run script</strong> tab and select <strong>Submit job</strong>. The new run opens in <strong>Run history</strong> with its status and output. Use <strong>Details</strong> to edit the script or <strong>Runs</strong> on the row to return to its history. <Link to="/jobs">Job History</Link> lists your runs across all scripts.</p>
     <H2>Inspect a Bash environment value</H2>
     <p>For a command that does not use CDA, choose <strong>Installed command</strong>, enter <code>bash</code> as the executable, and leave Roles empty. Enter these two arguments on separate lines to inspect the runner time zone:</p>
     <pre><code>{`-lc\nprintf 'TZ=%s\\n' "$TZ"`}</code></pre>

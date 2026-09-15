@@ -1,4 +1,5 @@
-from datetime import datetime
+from datetime import datetime, timezone
+from cwms_batch_events.core.log_diagnostics import log_timing
 from cwms_batch_events.core.job_database.base import JobDatabase
 from cwms_batch_events.core.models import JobStatus
 
@@ -22,6 +23,9 @@ def update_batch_job_status(
 
     if batch_detail is not None:
         db.record_batch_details(job.id, batch_detail, time_iso)
+        event_time = time_iso.replace(tzinfo=time_iso.tzinfo or timezone.utc)
+        log_timing("status_callback", job_id=job.id, batch_status=batch_detail.get("status"),
+                   callback_delay_ms=round((datetime.now(timezone.utc) - event_time).total_seconds() * 1000))
         return
 
     # Idempotency guard

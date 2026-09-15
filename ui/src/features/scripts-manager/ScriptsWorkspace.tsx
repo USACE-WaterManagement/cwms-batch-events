@@ -149,24 +149,28 @@ export const ScriptsWorkspace = ({ office }: ScriptsWorkspaceProps) => {
             selectedScriptId={selectedScriptId}
             jobs={jobs.isError ? [] : jobs.data ?? []}
             jobsUpdatedAt={jobs.dataUpdatedAt}
+            runHistoryState={jobs.isError ? "unavailable" : jobs.isPending ? "loading" : "ready"}
           />
         </div>}
       </div>
       {scripts.data.length > 0 && <div className="script-workspace-panel @container/script-panel min-w-0 self-start rounded-xl border border-gray-200 bg-white p-3 [overflow-wrap:anywhere]">
       {selectedScript ? <>
-        <H2 className="mb-3 break-words">{selectedScript.name}</H2>
+        <header className="mb-3 border-b border-gray-200 px-1 pb-3">
+          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-gray-500">{office.toUpperCase()} · {selectedScript.runtime}</p>
+          <H2 className="break-words">{selectedScript.name}</H2>
+        </header>
         <Tabs key={`${selectedScript.id}:${panelTab.revision}`} defaultIndex={panelTab.index} fill tabs={[
           { name: "Details", content: <ScriptDetailPanel
             office={office} script={selectedScript} mode={panelMode} isPending={isPending}
             mutationError={mutationError} onDelete={onDelete} onEdit={onEdit}
             onSave={onSave} onCancelEdit={onCancelEdit} /> },
-          { name: "Run job", content: <ScriptRunJob script={selectedScript} onSubmitted={job => {
+          { name: "Run script", content: <ScriptRunJob script={selectedScript} onSubmitted={job => {
             setSelectedScriptId(job.scriptId ?? selectedScript.id);
             setPanelMode("view");
             setSelectedJobId(job.id);
             showTab(2);
           }} /> },
-          { name: "Job runs", content: <ScriptJobRuns script={selectedScript}
+          { name: "Run history", content: <ScriptJobRuns script={selectedScript}
             selectedJobId={selectedJobId} onSelectJob={setSelectedJobId} /> },
         ]} />
       </> : <ScriptDetailPanel
