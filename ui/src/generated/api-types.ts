@@ -4,7 +4,27 @@
  */
 
 export interface paths {
-    "/jobs/": {
+    "/jobs/{job_id}/logs/page": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Log Page
+         * @description Read a bounded log page. Pass nextCursor to retrieve subsequent output.
+         */
+        get: operations["get_log_page_jobs__job_id__logs_page_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/jobs": {
         parameters: {
             query?: never;
             header?: never;
@@ -12,10 +32,10 @@ export interface paths {
             cookie?: never;
         };
         /** Get Jobs For User */
-        get: operations["get_jobs_for_user_jobs__get"];
+        get: operations["get_jobs_for_user_jobs_get"];
         put?: never;
         /** Post Job */
-        post: operations["post_job_jobs__post"];
+        post: operations["post_job_jobs_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -130,6 +150,34 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** JobLogPage */
+        JobLogPage: {
+            message?: string | null;
+            /** Logs */
+            logs: string;
+            /** Nextcursor */
+            nextCursor?: string | null;
+            /**
+             * Hasmore
+             * @default false
+             */
+            hasMore: boolean;
+            /**
+             * Reset
+             * @default false
+             */
+            reset: boolean;
+            /**
+             * Available
+             * @default true
+             */
+            available: boolean;
+            /**
+             * Supportslive
+             * @default true
+             */
+            supportsLive: boolean;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -142,6 +190,26 @@ export interface components {
         };
         /** JobRecord */
         JobRecord: {
+            logGroup?: string | null;
+            logStream?: string | null;
+            batchStatus?: string | null;
+            batchStatusReason?: string | null;
+            /**
+             * Executiontype
+             * @default github_file
+             * @enum {string}
+             */
+            executionType: "github_file" | "command";
+            /**
+             * Runtime
+             * @default python
+             * @enum {string}
+             */
+            runtime: "python" | "java" | "shell";
+            /** Repopath */
+            repoPath: string;
+            /** Commandargs */
+            commandArgs?: string[];
             /**
              * Id
              * Format: uuid
@@ -158,10 +226,6 @@ export interface components {
             username: string;
             /** Office */
             office: string;
-            /** Repopath */
-            repoPath: string;
-            /** Executiontype */
-            executionType: string | null;
             /**
              * Createdtime
              * Format: date-time
@@ -186,14 +250,26 @@ export interface components {
         JobStatus: "Failed" | "Pending" | "Running" | "Completed";
         /** ScriptCreate */
         ScriptCreate: {
+            /**
+             * Executiontype
+             * @default github_file
+             * @enum {string}
+             */
+            executionType: "github_file" | "command";
+            /**
+             * Runtime
+             * @default python
+             * @enum {string}
+             */
+            runtime: "python" | "java" | "shell";
+            /** Repopath */
+            repoPath: string;
+            /** Commandargs */
+            commandArgs?: string[];
             /** Name */
             name: string;
             /** Description */
             description: string;
-            /** Repopath */
-            repoPath: string;
-            /** Executiontype */
-            executionType: string;
             /**
              * Active
              * @default true
@@ -214,14 +290,26 @@ export interface components {
         };
         /** ScriptRead */
         ScriptRead: {
+            /**
+             * Executiontype
+             * @default github_file
+             * @enum {string}
+             */
+            executionType: "github_file" | "command";
+            /**
+             * Runtime
+             * @default python
+             * @enum {string}
+             */
+            runtime: "python" | "java" | "shell";
+            /** Repopath */
+            repoPath: string;
+            /** Commandargs */
+            commandArgs?: string[];
             /** Name */
             name: string;
             /** Description */
             description: string;
-            /** Repopath */
-            repoPath: string;
-            /** Executiontype */
-            executionType: string;
             /**
              * Active
              * @default true
@@ -267,14 +355,26 @@ export interface components {
         };
         /** ScriptUpdate */
         ScriptUpdate: {
+            /**
+             * Executiontype
+             * @default github_file
+             * @enum {string}
+             */
+            executionType: "github_file" | "command";
+            /**
+             * Runtime
+             * @default python
+             * @enum {string}
+             */
+            runtime: "python" | "java" | "shell";
+            /** Repopath */
+            repoPath: string;
+            /** Commandargs */
+            commandArgs?: string[];
             /** Name */
             name: string;
             /** Description */
             description: string;
-            /** Repopath */
-            repoPath: string;
-            /** Executiontype */
-            executionType: string;
             /**
              * Active
              * @default true
@@ -309,11 +409,15 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    get_jobs_for_user_jobs__get: {
+    get_log_page_jobs__job_id__logs_page_get: {
         parameters: {
-            query?: never;
+            query?: {
+                cursor?: string | null;
+            };
             header?: never;
-            path?: never;
+            path: {
+                job_id: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -324,12 +428,57 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JobRecord"][];
+                    "application/json": components["schemas"]["JobLogPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    post_job_jobs__post: {
+    get_jobs_for_user_jobs_get: {
+        parameters: {
+            query?: {
+                /** @description Maximum jobs to return. Omit to return all jobs. */
+                limit?: number | null;
+                /** @description Number of jobs to skip, newest first. */
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    /** @description Total jobs for the current user when pagination is requested. */
+                    "X-Total-Count"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobRecord"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_job_jobs_post: {
         parameters: {
             query?: never;
             header?: never;

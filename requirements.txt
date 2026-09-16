@@ -1,4 +1,5 @@
 boto3
+aws-lambda-powertools>=3.34,<4
 cachetools
 fastapi
 psycopg2-binary

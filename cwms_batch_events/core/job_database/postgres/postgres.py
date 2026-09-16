@@ -1,17 +1,20 @@
 from datetime import datetime, timezone
 import re
-from sqlalchemy import select
+import logging
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 import uuid
 
 from cwms_batch_events.core.auth.user.models import User
+from cwms_batch_events.core.batch_details import STATUS_MAP, log_stream
 from cwms_batch_events.core.job_database.postgres.models import (
     JobModel,
     JobRunnerModel,
     ScriptModel,
 )
 from cwms_batch_events.core.models import (
+    ExecutionOptions,
     JobRecord,
     JobStatus,
     ScriptCreate,
@@ -20,6 +23,8 @@ from cwms_batch_events.core.models import (
     ScriptUpdate,
 )
 from cwms_batch_events.core.utils import get_runner_id
+
+logger = logging.getLogger(__name__)
 
 
 class SlugError(Exception):
@@ -34,9 +39,64 @@ def slugify(value: str) -> str:
     return value
 
 
+def can_run_script(script: ScriptModel, roles: dict[str, list[str]]) -> bool:
+    """Empty script roles require office access, but no additional CDA role."""
+    return (
+        script.active
+        and script.office in roles
+        and (not script.roles or not set(script.roles).isdisjoint(roles[script.office]))
+    )
+
+
 class PostgresJobDatabase:
     def __init__(self, db: Session):
         self.db = db
+
+    def claim_batch_refresh(self, job_id: uuid.UUID) -> bool:
+        # A DB claim shares the 15-second limit across API workers and viewers.
+        job = self._load_job_for_update(job_id)
+        now = datetime.now(timezone.utc)
+        due = not job.batch_checked_at or (now - job.batch_checked_at).total_seconds() >= 15
+        if due:
+            job.batch_checked_at = now
+        self.db.commit()
+        return due
+
+    def record_batch_details(self, job_id: uuid.UUID, detail: dict, observed_at: datetime) -> None:
+        job = self._load_job_for_update(job_id)
+        previous_status = job.batch_status
+        previous_stream = job.log_stream
+        if job.batch_details_time and observed_at < job.batch_details_time:
+            self.db.commit()
+            logger.debug("Ignoring older Batch observation", extra={"event": "batch_observation_ignored", "job_id": job_id})
+            return
+        incoming = STATUS_MAP.get(detail.get("status"))
+        # A late RUNNING event must not reopen a finished execution.
+        if job.job_status in (JobStatus.COMPLETED, JobStatus.FAILED) and incoming not in (job.job_status, None):
+            self.db.commit()
+            logger.debug("Ignoring Batch observation for terminal job", extra={"event": "batch_observation_ignored", "job_id": job_id})
+            return
+        job.batch_details_time = observed_at
+        if incoming:
+            job.job_status = incoming
+            job.batch_status = detail["status"]
+            job.batch_status_reason = detail.get("statusReason")
+        if stream := log_stream(detail):
+            job.log_stream = stream
+            job.log_group = f"ecs/cwms-batch/{job.office.lower()}-jobs"
+        if detail.get("startedAt"):
+            job.run_time = datetime.fromtimestamp(detail["startedAt"] / 1000, timezone.utc)
+        if detail.get("stoppedAt"):
+            job.end_time = datetime.fromtimestamp(detail["stoppedAt"] / 1000, timezone.utc)
+        current_status, current_stream = job.batch_status, job.log_stream
+        self.db.commit()
+
+        if previous_status != current_status or previous_stream != current_stream:
+            logger.info("Batch job state or log stream updated", extra={
+                "event": "batch_state_updated", "job_id": job_id,
+                "previous_status": previous_status, "batch_status": current_status,
+                "stream_available": bool(current_stream),
+            })
 
     def bind_external_job_id(
         self,
@@ -48,6 +108,7 @@ class PostgresJobDatabase:
         if job.external_job_id is None:
             job.external_job_id = external_job_id
             self.db.commit()
+            logger.info("External Batch job linked", extra={"event": "job_linked", "job_id": job_id, "external_job_id": external_job_id})
             return
 
         if job.external_job_id == external_job_id:
@@ -61,8 +122,12 @@ class PostgresJobDatabase:
     def create_job(self, payload: ScriptRunRequest, user: User) -> JobRecord:
         script = self.db.get_one(ScriptModel, payload.script_id)
 
-        if set(script.roles).isdisjoint(user.roles[script.office]):
+        if not can_run_script(script, user.roles):
             raise PermissionError("Not authorized to run requested script")
+
+        # Old registrations remain readable, but must be corrected before a
+        # job is persisted or dispatched with an invalid execution target.
+        ExecutionOptions.model_validate(script, from_attributes=True)
 
         job = JobModel()
         job.id = uuid.uuid4()
@@ -74,11 +139,14 @@ class PostgresJobDatabase:
         job.office = script.office
         job.repo_path = script.repo_path
         job.execution_type = script.execution_type
+        job.runtime = script.runtime
+        job.command_args = list(script.command_args)
         job.job_runner_id = get_runner_id()
 
         self.db.add(job)
         self.db.commit()
         self.db.refresh(job)
+        logger.info("Job registered", extra={"event": "job_registered", "job_id": job.id, "script_id": job.script_id, "office": job.office})
         return JobRecord.model_validate(job)
 
     def get_job_by_id(self, job_id: uuid.UUID) -> JobRecord | None:
@@ -95,11 +163,20 @@ class PostgresJobDatabase:
             return None
         return JobRecord.model_validate(job_model)
 
-    def get_jobs_for_user(self, user_id: str) -> list[JobRecord]:
+    def count_jobs_for_user(self, user_id: str) -> int:
+        return self.db.scalar(
+            select(func.count()).select_from(JobModel).where(JobModel.username == user_id)
+        )
+
+    def get_jobs_for_user(
+        self, user_id: str, limit: int | None = None, offset: int = 0
+    ) -> list[JobRecord]:
         job_models = self.db.scalars(
             select(JobModel)
             .where(JobModel.username == user_id)
-            .order_by(JobModel.created_time.desc())
+            .order_by(JobModel.created_time.desc(), JobModel.id.desc())
+            .limit(limit)
+            .offset(offset)
         ).all()
         return [JobRecord.model_validate(model) for model in job_models]
 
@@ -115,6 +192,7 @@ class PostgresJobDatabase:
         job = (
             self.db.query(JobModel)
             .filter(JobModel.id == job_id)
+            .populate_existing()
             .with_for_update()
             .one_or_none()
         )
@@ -143,9 +221,7 @@ class PostgresJobDatabase:
         runnable_scripts = [
             script
             for script in all_scripts
-            if script.office in roles
-            and script.active
-            and not set(script.roles).isdisjoint(roles[script.office])
+            if can_run_script(script, roles)
         ]
 
         return [ScriptRead.model_validate(script) for script in runnable_scripts]
@@ -160,6 +236,8 @@ class PostgresJobDatabase:
                 script.description = payload.description
                 script.repo_path = payload.repo_path
                 script.execution_type = payload.execution_type
+                script.runtime = payload.runtime
+                script.command_args = payload.command_args
                 script.active = payload.active
                 script.roles = payload.roles
 
@@ -190,6 +268,7 @@ class PostgresJobDatabase:
 
     def update_job_status(self, job_id: uuid.UUID, status: JobStatus) -> None:
         job = self._load_job_for_update(job_id)
+        previous_status = job.job_status
 
         now = datetime.now(timezone.utc)
 
@@ -199,6 +278,9 @@ class PostgresJobDatabase:
         elif status in (JobStatus.COMPLETED, JobStatus.FAILED):
             job.end_time = now
         self.db.commit()
+
+        if previous_status != status:
+            logger.info("Job status updated", extra={"event": "job_status_updated", "job_id": job_id, "previous_status": previous_status, "status": status})
 
     def update_script(
         self, script_id: uuid.UUID, payload: ScriptUpdate, admin_offices: list[str]

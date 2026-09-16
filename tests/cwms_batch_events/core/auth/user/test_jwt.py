@@ -3,12 +3,17 @@ from unittest import mock
 import pytest
 
 from cwms_batch_events.core.auth.user.jwt import (
+    ISSUER,
     get_public_pem,
     raw_key_to_pem,
     verify_jwt,
     verify_jwt_by_api,
     verify_jwt_by_saved_key,
 )
+
+
+def test_production_issuer_uses_cwbi_keycloak():
+    assert ISSUER["PROD"] == "https://identity.cwbi.mil/auth/realms/cwbi"
 
 
 def test_raw_key_to_pem_wraps_public_key():
@@ -89,11 +94,15 @@ def test_verify_jwt_by_api_uses_jwks_client():
 
 
 def test_verify_jwt_by_saved_key_uses_saved_public_key_and_issuer():
+    mock_issuer = {"TEST": "https://keycloak.issuer.com"}
+
     with mock.patch(
         "cwms_batch_events.core.auth.user.jwt.settings.auth_environment", "TEST"
     ), mock.patch(
         "cwms_batch_events.core.auth.user.jwt.get_public_pem",
         return_value="pem",
+    ), mock.patch(
+        "cwms_batch_events.core.auth.user.jwt.ISSUER", mock_issuer
     ), mock.patch(
         "cwms_batch_events.core.auth.user.jwt.jwt.decode",
         return_value={"sub": "123"},
@@ -105,6 +114,6 @@ def test_verify_jwt_by_saved_key_uses_saved_public_key_and_issuer():
         "token",
         "pem",
         algorithms=["RS256"],
-        issuer="https://identity-test.cwbi.us/auth/realms/cwbi",
+        issuer=mock_issuer["TEST"],
         options={"verify_aud": False},
     )

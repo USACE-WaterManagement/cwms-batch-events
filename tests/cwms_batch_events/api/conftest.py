@@ -4,6 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from cwms_batch_events.api.dependencies import (
+    get_db_session,
     get_current_user,
     get_job_database,
     get_job_logger,
@@ -36,11 +37,23 @@ def job_queue():
 
 
 @pytest.fixture
-def client(user: User, job_db: MagicMock, job_logger: MagicMock, job_queue: MagicMock):
+def db_session():
+    return MagicMock()
+
+
+@pytest.fixture
+def client(
+    user: User,
+    job_db: MagicMock,
+    job_logger: MagicMock,
+    job_queue: MagicMock,
+    db_session: MagicMock,
+):
     app.dependency_overrides[get_current_user] = lambda: user
     app.dependency_overrides[get_job_database] = lambda: job_db
     app.dependency_overrides[get_job_logger] = lambda: job_logger
     app.dependency_overrides[get_job_queue] = lambda: job_queue
+    app.dependency_overrides[get_db_session] = lambda: db_session
     app.dependency_overrides[require_internal_auth] = lambda: True
 
     with TestClient(app) as test_client:

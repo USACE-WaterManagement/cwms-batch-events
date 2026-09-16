@@ -1,0 +1,21 @@
+name: Migration Image Build on PR
+
+on:
+  pull_request:
+    branches:
+      - cwbi-dev
+      - cwbi-test
+      - cwbi-prod
+    paths:
+      - "infra/migration/**"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build migration image
+        run: docker build --pull infra/migration

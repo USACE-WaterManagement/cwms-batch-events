@@ -9,15 +9,27 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SubmitRouteImport } from './routes/submit'
-import { Route as ScriptsManagerRouteImport } from './routes/scripts-manager'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AboutRouteImport } from './routes/about'
+import { Route as ScriptsManagerRouteImport } from './routes/scripts-manager'
+import { Route as SubmitRouteImport } from './routes/submit'
+import { Route as AboutControlsRouteImport } from './routes/about_.controls'
+import { Route as AboutOnboardingRouteImport } from './routes/about_.onboarding'
+import { Route as AboutScriptFilesRouteImport } from './routes/about_.script-files'
+import { Route as AboutVersionRouteImport } from './routes/about_.version'
+import { Route as HelpOnboardingRouteImport } from './routes/help_.onboarding'
+import { Route as HelpScriptFilesRouteImport } from './routes/help_.script-files'
 import { Route as JobsIndexRouteImport } from './routes/jobs/index'
 import { Route as JobsJobIdRouteImport } from './routes/jobs/$jobId'
 
-const SubmitRoute = SubmitRouteImport.update({
-  id: '/submit',
-  path: '/submit',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ScriptsManagerRoute = ScriptsManagerRouteImport.update({
@@ -25,9 +37,39 @@ const ScriptsManagerRoute = ScriptsManagerRouteImport.update({
   path: '/scripts-manager',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const SubmitRoute = SubmitRouteImport.update({
+  id: '/submit',
+  path: '/submit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutControlsRoute = AboutControlsRouteImport.update({
+  id: '/about_/controls',
+  path: '/about/controls',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutOnboardingRoute = AboutOnboardingRouteImport.update({
+  id: '/about_/onboarding',
+  path: '/about/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutScriptFilesRoute = AboutScriptFilesRouteImport.update({
+  id: '/about_/script-files',
+  path: '/about/script-files',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutVersionRoute = AboutVersionRouteImport.update({
+  id: '/about_/version',
+  path: '/about/version',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HelpOnboardingRoute = HelpOnboardingRouteImport.update({
+  id: '/help_/onboarding',
+  path: '/help/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HelpScriptFilesRoute = HelpScriptFilesRouteImport.update({
+  id: '/help_/script-files',
+  path: '/help/script-files',
   getParentRoute: () => rootRouteImport,
 } as any)
 const JobsIndexRoute = JobsIndexRouteImport.update({
@@ -43,55 +85,121 @@ const JobsJobIdRoute = JobsJobIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/scripts-manager': typeof ScriptsManagerRoute
   '/submit': typeof SubmitRoute
+  '/about/controls': typeof AboutControlsRoute
+  '/about/onboarding': typeof AboutOnboardingRoute
+  '/about/script-files': typeof AboutScriptFilesRoute
+  '/about/version': typeof AboutVersionRoute
+  '/help/onboarding': typeof HelpOnboardingRoute
+  '/help/script-files': typeof HelpScriptFilesRoute
   '/jobs/$jobId': typeof JobsJobIdRoute
   '/jobs/': typeof JobsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/scripts-manager': typeof ScriptsManagerRoute
   '/submit': typeof SubmitRoute
+  '/about/controls': typeof AboutControlsRoute
+  '/about/onboarding': typeof AboutOnboardingRoute
+  '/about/script-files': typeof AboutScriptFilesRoute
+  '/about/version': typeof AboutVersionRoute
+  '/help/onboarding': typeof HelpOnboardingRoute
+  '/help/script-files': typeof HelpScriptFilesRoute
   '/jobs/$jobId': typeof JobsJobIdRoute
   '/jobs': typeof JobsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/scripts-manager': typeof ScriptsManagerRoute
   '/submit': typeof SubmitRoute
+  '/about_/controls': typeof AboutControlsRoute
+  '/about_/onboarding': typeof AboutOnboardingRoute
+  '/about_/script-files': typeof AboutScriptFilesRoute
+  '/about_/version': typeof AboutVersionRoute
+  '/help_/onboarding': typeof HelpOnboardingRoute
+  '/help_/script-files': typeof HelpScriptFilesRoute
   '/jobs/$jobId': typeof JobsJobIdRoute
   '/jobs/': typeof JobsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/scripts-manager' | '/submit' | '/jobs/$jobId' | '/jobs/'
+  fullPaths:
+    | '/'
+    | '/about'
+    | '/scripts-manager'
+    | '/submit'
+    | '/about/controls'
+    | '/about/onboarding'
+    | '/about/script-files'
+    | '/about/version'
+    | '/help/onboarding'
+    | '/help/script-files'
+    | '/jobs/$jobId'
+    | '/jobs/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/scripts-manager' | '/submit' | '/jobs/$jobId' | '/jobs'
+  to:
+    | '/'
+    | '/about'
+    | '/scripts-manager'
+    | '/submit'
+    | '/about/controls'
+    | '/about/onboarding'
+    | '/about/script-files'
+    | '/about/version'
+    | '/help/onboarding'
+    | '/help/script-files'
+    | '/jobs/$jobId'
+    | '/jobs'
   id:
     | '__root__'
     | '/'
+    | '/about'
     | '/scripts-manager'
     | '/submit'
+    | '/about_/controls'
+    | '/about_/onboarding'
+    | '/about_/script-files'
+    | '/about_/version'
+    | '/help_/onboarding'
+    | '/help_/script-files'
     | '/jobs/$jobId'
     | '/jobs/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AboutRoute: typeof AboutRoute
   ScriptsManagerRoute: typeof ScriptsManagerRoute
   SubmitRoute: typeof SubmitRoute
+  AboutControlsRoute: typeof AboutControlsRoute
+  AboutOnboardingRoute: typeof AboutOnboardingRoute
+  AboutScriptFilesRoute: typeof AboutScriptFilesRoute
+  AboutVersionRoute: typeof AboutVersionRoute
+  HelpOnboardingRoute: typeof HelpOnboardingRoute
+  HelpScriptFilesRoute: typeof HelpScriptFilesRoute
   JobsJobIdRoute: typeof JobsJobIdRoute
   JobsIndexRoute: typeof JobsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/submit': {
-      id: '/submit'
-      path: '/submit'
-      fullPath: '/submit'
-      preLoaderRoute: typeof SubmitRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/scripts-manager': {
@@ -101,11 +209,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ScriptsManagerRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/submit': {
+      id: '/submit'
+      path: '/submit'
+      fullPath: '/submit'
+      preLoaderRoute: typeof SubmitRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about_/controls': {
+      id: '/about_/controls'
+      path: '/about/controls'
+      fullPath: '/about/controls'
+      preLoaderRoute: typeof AboutControlsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about_/onboarding': {
+      id: '/about_/onboarding'
+      path: '/about/onboarding'
+      fullPath: '/about/onboarding'
+      preLoaderRoute: typeof AboutOnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about_/script-files': {
+      id: '/about_/script-files'
+      path: '/about/script-files'
+      fullPath: '/about/script-files'
+      preLoaderRoute: typeof AboutScriptFilesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about_/version': {
+      id: '/about_/version'
+      path: '/about/version'
+      fullPath: '/about/version'
+      preLoaderRoute: typeof AboutVersionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/help_/onboarding': {
+      id: '/help_/onboarding'
+      path: '/help/onboarding'
+      fullPath: '/help/onboarding'
+      preLoaderRoute: typeof HelpOnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/help_/script-files': {
+      id: '/help_/script-files'
+      path: '/help/script-files'
+      fullPath: '/help/script-files'
+      preLoaderRoute: typeof HelpScriptFilesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/jobs/': {
@@ -127,8 +277,15 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AboutRoute: AboutRoute,
   ScriptsManagerRoute: ScriptsManagerRoute,
   SubmitRoute: SubmitRoute,
+  AboutControlsRoute: AboutControlsRoute,
+  AboutOnboardingRoute: AboutOnboardingRoute,
+  AboutScriptFilesRoute: AboutScriptFilesRoute,
+  AboutVersionRoute: AboutVersionRoute,
+  HelpOnboardingRoute: HelpOnboardingRoute,
+  HelpScriptFilesRoute: HelpScriptFilesRoute,
   JobsJobIdRoute: JobsJobIdRoute,
   JobsIndexRoute: JobsIndexRoute,
 }

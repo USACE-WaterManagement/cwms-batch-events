@@ -1,1 +1,34 @@
-@import "tailwindcss"
+@import "tailwindcss";
+@import "@usace/groundwork/dist/groundwork.css" layer(components);
+
+/* Bound the modal panel itself; wide log tables scroll inside the panel. */
+.server-status-modal [id^="headlessui-dialog-panel-"] {
+  width: min(64rem, 100%);
+  max-width: 64rem;
+  min-width: 0;
+  padding: clamp(1rem, 3vw, 2rem);
+}
+
+/* Groundwork gives navRight a full-width slot. Size our compact actions to
+   their contents so the navigation links retain room at tablet widths. */
+header span:has(> .batch-header-actions) {
+  width: auto;
+  flex-shrink: 0;
+}
+
+/* At tablet widths, give navigation a full row below the logo and account
+   controls. This leaves room for platform font differences and all six links. */
+@media (min-width: 768px) and (max-width: 1023px) {
+  header div:has(> span > .batch-header-actions) {
+    flex-wrap: wrap;
+  }
+
+  header div:has(> span > .batch-header-actions) > div:first-child {
+    top: 0;
+  }
+
+  header div:has(> span > .batch-header-actions) > div:has(> ul[role="list"]) {
+    order: 1;
+    flex-basis: 100%;
+  }
+}

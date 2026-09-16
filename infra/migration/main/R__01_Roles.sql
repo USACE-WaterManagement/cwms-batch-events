@@ -39,6 +39,10 @@ GRANT INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA ${flyway:defaultSchema} TO 
 REVOKE ALL ON flyway_schema_history FROM events_reader;
 REVOKE ALL ON flyway_schema_history FROM events_writer;
 
+-- The authenticated About endpoint reports only the latest applied migration.
+-- Keep this grant on the application user instead of the general reader role.
+GRANT SELECT ON flyway_schema_history TO ${APP_USER};
+
 GRANT events_reader, events_writer TO ${APP_USER};
 
 GRANT USAGE ON SCHEMA ${flyway:defaultSchema} TO ${APP_USER};

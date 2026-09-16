@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from uuid import UUID
+import logging
 
 
 from cwms_batch_events.core.auth.service.dependencies import require_internal_auth
@@ -14,6 +15,7 @@ from cwms_batch_events.core.models import (
 from cwms_batch_events.core.processing import update_batch_job_status
 
 router = APIRouter(prefix="/internal", include_in_schema=False)
+logger = logging.getLogger(__name__)
 
 
 @router.post(
@@ -28,13 +30,15 @@ def update_batch_job_status_endpoint(
 ):
     try:
         update_batch_job_status(
-            batch_job_id, payload.status, payload.event_time, job_db
+            batch_job_id, payload.status, payload.event_time, job_db,
+            **({"batch_detail": payload.batch_detail} if payload.batch_detail is not None else {}),
         )
 
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     except Exception as e:
+        logger.exception("Failed to apply Batch status callback", extra={"event": "status_callback_failed", "external_job_id": batch_job_id})
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
         )
@@ -57,6 +61,7 @@ def bind_external_job_id(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     except Exception as e:
+        logger.exception("Failed to bind external Batch job", extra={"event": "job_bind_failed", "job_id": job_id})
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
         )

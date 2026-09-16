@@ -1,0 +1,61 @@
+{
+  "name": "CWMS Batch Events",
+  "build": {
+    "context": "..",
+    "dockerfile": "Dockerfile"
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "22"
+    },
+    "ghcr.io/devcontainers/features/docker-in-docker:4": {
+      "version": "latest",
+      "moby": true
+    }
+  },
+  "remoteEnv": {
+    "PYTHONPATH": "${containerWorkspaceFolder}"
+  },
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "forwardPorts": [
+    5173,
+    8000,
+    9001,
+    9325
+  ],
+  "portsAttributes": {
+    "5173": {
+      "label": "Batch Events UI"
+    },
+    "8000": {
+      "label": "Batch Events API"
+    },
+    "9001": {
+      "label": "MinIO Console"
+    },
+    "9325": {
+      "label": "ElasticMQ UI"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "charliermarsh.ruff",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "ms-azuretools.vscode-docker",
+        "ms-python.python",
+        "ms-python.vscode-pylance"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.testing.pytestEnabled": true,
+        "python.testing.unittestEnabled": false,
+        "python.testing.pytestArgs": [
+          "tests"
+        ],
+        "typescript.tsdk": "ui/node_modules/typescript/lib"
+      }
+    }
+  }
+}

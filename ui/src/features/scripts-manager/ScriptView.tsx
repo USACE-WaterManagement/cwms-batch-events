@@ -4,7 +4,7 @@ import { Button, Text } from "@usace/groundwork";
 import type { Script } from "../scripts-manager/types";
 
 export const RoleList = ({ roles }: { roles: string[] }) => {
-  if (roles) {
+  if (roles.length) {
     return (
       <ul>
         {roles.map((role) => (
@@ -13,7 +13,7 @@ export const RoleList = ({ roles }: { roles: string[] }) => {
       </ul>
     );
   } else {
-    return "<no roles>";
+    return "No additional CDA role required. Office access is required.";
   }
 };
 
@@ -31,8 +31,30 @@ export const ScriptView = ({ script, onEdit }: ScriptViewProps) => {
           <ViewField label="Name">{script.name}</ViewField>
           <ViewField label="Slug">{script.slug}</ViewField>
           <ViewField label="Description">{script.description}</ViewField>
-          <ViewField label="GitHub Repo Path">{script.repoPath}</ViewField>
-          <ViewField label="Execution Type">{script.executionType}</ViewField>
+          <ViewField
+            label={
+              script.executionType === "command"
+                ? "Executable"
+                : "GitHub Repo Path"
+            }
+          >
+            <span className="block [overflow-wrap:anywhere]">{script.repoPath}</span>
+          </ViewField>
+          <ViewField label="Source">
+            {script.executionType === "command"
+              ? "Installed command"
+              : "District GitHub repository"}
+          </ViewField>
+          <ViewField label="Runtime">
+            {script.executionType === "command"
+              ? script.repoPath
+              : script.runtime}
+          </ViewField>
+          <ViewField label="Arguments">
+            <pre className="whitespace-pre-wrap">
+              {(script.commandArgs ?? []).join("\n")}
+            </pre>
+          </ViewField>
           <ViewField label="Roles">
             <RoleList roles={script.roles} />
           </ViewField>

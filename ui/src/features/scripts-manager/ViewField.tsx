@@ -21,9 +21,9 @@ export const ViewField = ({
   children,
 }: PropsWithChildren<ViewFieldProps>) => {
   return (
-    <div className="grid grid-cols-[120px_1fr] gap-6">
+    <div className="script-view-field min-w-0 grid gap-1 [overflow-wrap:anywhere] @min-[30rem]/script-panel:grid-cols-[120px_minmax(0,1fr)] @min-[30rem]/script-panel:gap-6">
       <ViewLabel>{label}</ViewLabel>
-      <div>{children}</div>
+      <div className="min-w-0">{children}</div>
     </div>
   );
 };

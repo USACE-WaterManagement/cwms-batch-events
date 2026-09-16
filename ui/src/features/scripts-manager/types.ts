@@ -8,4 +8,4 @@ export type Script = Schemas["ScriptRead"];
 export type ScriptCreate = Schemas["ScriptCreate"];
 export type ScriptUpdate = Schemas["ScriptUpdate"];
 
-export type ScriptFormData = Omit<ScriptUpdate, "executionType" | "jobRunners">;
+export type ScriptFormData = Omit<ScriptUpdate, "jobRunners">;

@@ -1,7 +1,9 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "./utils/queryClient";
+import ErrorToasts from "./components/ErrorToasts";
 import { LinkProvider } from "@usace/groundwork";
 import {
   AuthProvider,
@@ -40,14 +42,14 @@ const authMethod = (() => {
       host: authHost,
       realm: authRealm,
       client: "cwms",
-      flow: "direct-grant",
+      flow: "authorization-code-pkce",
+      redirectUri: window.location.href,
+      providerHint: "federation-eams",
     });
   } else {
     return createMockAuthMethod();
   }
 })();
-
-const queryClient = new QueryClient();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -55,8 +57,9 @@ createRoot(document.getElementById("root")!).render(
       <AuthProvider method={authMethod}>
         <LinkProvider component={Link} hrefMap="to">
           <RouterProvider router={router} />
+          <ErrorToasts />
         </LinkProvider>
       </AuthProvider>
     </QueryClientProvider>
-  </StrictMode>
+  </StrictMode>,
 );

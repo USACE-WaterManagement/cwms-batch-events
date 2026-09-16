@@ -1,6 +1,7 @@
 import logging
-import re
+from cwms_batch_events.core.execution import command_for_payload
 from cwms_batch_events.core.models import JobMessage
+from cwms_batch_events.core.job_correlation import runner_environment
 from cwms_batch_events.lambdas.dispatch_job.utils import OFFICES
 
 import boto3
@@ -24,27 +25,29 @@ class BatchJobRunner:
             f"cwms-{office}-event-{script_slug}-{datetime.now().strftime('%Y%m%d-%H%M')}"
         ).replace(".", "_")
 
+        environment = [{"name": "OFFICE", "value": office}]
+        environment.extend({"name": name, "value": value} for name, value in runner_environment(message).items())
+        tags = {"Office": office, "BatchEventsJobId": str(message.job_id)}
+        if message.request_id:
+            tags["BatchEventsRequestId"] = message.request_id
+        if message.payload.execution_type == "command":
+            environment.append({"name": "SKIP_GIT_CLONE", "value": "true"})
+
         response = self.batch.submit_job(
             jobName=job_name,
             jobQueue=f"cwms-{OFFICES[office]['division']}-jq",
             jobDefinition=f"cwms-{office}-jobs-jobdef",
             containerOverrides={
-                "environment": [
-                    {"name": "OFFICE", "value": office},
-                ],
-                "command": ["python", f"/jobs/{repo_path}"],
+                "environment": environment,
+                "command": command_for_payload(message.payload),
             },
-            tags={
-                "Office": office,
-            },
+            tags=tags,
         )
 
         batch_job_id: str = response["jobId"]
 
         logger.info(
-            "Succesfully submitted %s to Batch with external job id %s",
-            job_name,
-            batch_job_id,
+            "Batch job submitted", extra={"event": "batch_submitted", "job_id": message.job_id, "external_job_id": batch_job_id, "office": office},
         )
 
         return batch_job_id
