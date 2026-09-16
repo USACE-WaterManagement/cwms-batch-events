@@ -3,9 +3,12 @@ from cwms_batch_events.core.job_database.base import JobDatabase
 from cwms_batch_events.core.job_logger.base import JobLogger
 from cwms_batch_events.core.execution import command_for_payload
 from cwms_batch_events.core.models import JobMessage, JobStatus
-from cwms_batch_events.core.settings import settings
+from cwms_batch_events.core.settings import ExecutorSettings, get_settings
+
 from cwms_batch_events.core.job_correlation import runner_environment
 from cwms_batch_events.core.logging_config import bind_log_context
+
+settings = get_settings(ExecutorSettings)
 
 CDA_API_ROOT = settings.cda_api_root
 logger = logging.getLogger(__name__)

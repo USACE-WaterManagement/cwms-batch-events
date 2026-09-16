@@ -1,6 +1,8 @@
 from fastapi import HTTPException, Header, status
 
-from cwms_batch_events.core.settings import settings
+from cwms_batch_events.core.settings import get_settings
+
+settings = get_settings()
 
 
 async def require_internal_auth(x_internal_token: str = Header(None)):

@@ -1,6 +1,11 @@
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from cwms_batch_events.core.settings import ApiSettings, get_settings
+
+# Validate before router imports create database or authentication dependencies.
+settings = get_settings(ApiSettings)
+
 from cwms_batch_events.api.routers import (
     about,
     health,
@@ -12,7 +17,6 @@ from cwms_batch_events.api.routers import (
     server_logs,
     users,
 )
-from cwms_batch_events.core.settings import settings
 from cwms_batch_events.core.log_diagnostics import configure_log_diagnostics
 from cwms_batch_events.core.logging_config import configure_logging
 from cwms_batch_events.api.request_logging import RequestLoggingMiddleware
@@ -21,7 +25,7 @@ configure_logging(api=True)
 configure_log_diagnostics()
 logging.getLogger(__name__).info("API initialized", extra={"event": "api_initialized"})
 
-app = FastAPI(root_path=settings.root_path)
+app = FastAPI(root_path=settings.fastapi_root_path)
 
 
 origins = r"http://localhost(:\d+)?"

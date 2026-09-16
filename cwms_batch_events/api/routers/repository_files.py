@@ -11,7 +11,9 @@ from cwms_batch_events.api.dependencies import get_current_user
 from cwms_batch_events.api.routers.scripts import check_user_office_admin
 from cwms_batch_events.core.auth.user.models import User
 from cwms_batch_events.core.github_app import RepositoryUnavailable, installation_token, mock_enabled
-from cwms_batch_events.core.settings import RepositorySettings, settings
+from cwms_batch_events.core.settings import RepositorySettings, get_settings
+
+settings = get_settings()
 
 router = APIRouter(tags=["repositories"])
 

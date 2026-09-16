@@ -1,8 +1,12 @@
-import os
 import boto3
 import json
 import logging
 from pydantic import ValidationError
+from cwms_batch_events.core.settings import DispatcherSettings, get_settings
+
+# The dispatcher has no API authentication dependency.
+settings = get_settings(DispatcherSettings)
+
 from cwms_batch_events.core.logging_config import configure_logging
 
 from cwms_batch_events.core.job_database.postgres import session
@@ -24,7 +28,7 @@ sqs = boto3.client(
     aws_secret_access_key="x",
 )
 
-QUEUE_URL = os.environ.get("QUEUE_URL", "")
+QUEUE_URL = settings.queue_url
 
 job_logger = S3JobLogger()
 

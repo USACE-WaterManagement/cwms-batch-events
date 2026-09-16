@@ -16,7 +16,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from cwms_batch_events.api.dependencies import get_current_user
 from cwms_batch_events.core.auth.user.models import User
 from cwms_batch_events.core.models import CamelModel
-from cwms_batch_events.core.settings import settings
+from cwms_batch_events.core.settings import get_settings
+
+settings = get_settings()
 
 router = APIRouter(prefix="/server-logs", tags=["server logs"])
 LogLevel = Literal["ALL", "TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL", "UNKNOWN"]

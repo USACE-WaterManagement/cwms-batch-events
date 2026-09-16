@@ -5,7 +5,9 @@ from urllib.error import URLError
 
 import pytest
 
-from cwms_batch_events.core.settings import RepositorySettings, settings
+from cwms_batch_events.core.settings import RepositorySettings, get_settings
+
+settings = get_settings()
 from tests.factories import make_script_read, make_script_create_payload
 
 

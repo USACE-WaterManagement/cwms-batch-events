@@ -66,6 +66,7 @@ services:
       PGDATABASE: postgres
       PGHOST: db
       QUEUE_URL: http://elasticmq:9324/000000000000/cwms-batch-events
+      CDA_API_ROOT: http://traefik/cwms-data/
       S3_BUCKET: wm-event-manager-local
       S3_ENDPOINT_URL: http://minio:9000
     volumes:

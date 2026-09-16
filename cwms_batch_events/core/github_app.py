@@ -9,7 +9,9 @@ import boto3
 import jwt
 from botocore.config import Config
 
-from cwms_batch_events.core.settings import settings
+from cwms_batch_events.core.settings import get_settings
+
+settings = get_settings()
 
 
 class RepositoryUnavailable(Exception):

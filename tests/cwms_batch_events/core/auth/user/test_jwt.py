@@ -40,6 +40,14 @@ def test_get_public_pem_raises_for_unknown_environment():
             get_public_pem()
 
 
+def test_get_public_pem_raises_when_auth_environment_missing():
+    with mock.patch(
+        "cwms_batch_events.core.auth.user.jwt.settings.auth_environment", None
+    ):
+        with pytest.raises(ValueError, match="AUTH_ENVIRONMENT is not configured"):
+            get_public_pem()
+
+
 def test_verify_jwt_routes_local_to_api_verification():
     with mock.patch(
         "cwms_batch_events.core.auth.user.jwt.settings.auth_environment", "LOCAL"

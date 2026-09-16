@@ -34,7 +34,9 @@ def test_bootstrap_handles_existing_sinks_and_server_loggers_without_duplicates(
     script = '''
 import logging
 from cwms_batch_events.core.logging_config import configure_logging
-from cwms_batch_events.core.settings import settings
+from cwms_batch_events.core.settings import LoggingSettings, get_settings
+
+settings = get_settings(LoggingSettings)
 settings.log_level = "DEBUG"
 logging.basicConfig()
 for name in ("uvicorn", "uvicorn.error", "uvicorn.access", "gunicorn.error", "gunicorn.access"):

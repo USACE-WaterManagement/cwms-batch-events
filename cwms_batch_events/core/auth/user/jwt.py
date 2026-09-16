@@ -2,7 +2,9 @@ import logging
 import jwt
 from jwt import PyJWKClient
 
-from cwms_batch_events.core.settings import settings
+from cwms_batch_events.core.settings import get_settings
+
+settings = get_settings()
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +26,9 @@ ISSUER = {
 
 
 def get_public_pem():
+    if not settings.auth_environment:
+        raise ValueError("AUTH_ENVIRONMENT is not configured")
+
     try:
         public_key = PUBLIC_KEY[settings.auth_environment]
     except KeyError:
@@ -54,6 +59,9 @@ def verify_jwt_by_api(token: str) -> dict:
 
 
 def verify_jwt_by_saved_key(token: str) -> dict:
+    if settings.auth_environment not in ISSUER:
+        raise ValueError(f"Invalid AUTH_ENVIRONMENT: '{settings.auth_environment}'. Must be one of {list(ISSUER.keys())}")
+
     key = get_public_pem()
     payload = jwt.decode(
         token,

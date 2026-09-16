@@ -7,7 +7,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from cwms_batch_events.core import github_app
-from cwms_batch_events.core.settings import settings
+from cwms_batch_events.core.settings import get_settings
+
+settings = get_settings()
 
 
 @pytest.fixture(autouse=True)

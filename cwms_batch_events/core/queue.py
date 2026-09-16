@@ -10,8 +10,11 @@ from cwms_batch_events.core.models import (
     ScriptRunOptions,
     ScriptRunRequest,
 )
-from cwms_batch_events.core.settings import settings
+from cwms_batch_events.core.settings import RunnerSettings, get_settings
+
 from cwms_batch_events.core.logging_config import request_id
+
+settings = get_settings(RunnerSettings)
 
 MESSAGE_VERSION = "1.0"
 logger = logging.getLogger(__name__)
