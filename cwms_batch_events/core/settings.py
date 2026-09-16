@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import Literal
+from typing import Literal, Protocol, TypeVar, cast, overload
 
 from pydantic import BaseModel, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings
@@ -124,7 +124,25 @@ class DispatcherSettings(DatabaseSettings, StorageSettings, ExecutorSettings):
         return self.require("queue_url", "s3_bucket", "s3_endpoint_url", "cda_api_root")
 
 
+SettingsT = TypeVar("SettingsT", bound=ComponentSettings)
+
+
+class _SettingsFactory(Protocol):
+    @overload
+    def __call__(self) -> Settings: ...
+
+    @overload
+    def __call__(self, settings_type: type[SettingsT]) -> SettingsT: ...
+
+    def cache_clear(self) -> None: ...
+
+
 @lru_cache
-def get_settings(settings_type: type[ComponentSettings] = Settings):
+def _get_settings(settings_type: type[ComponentSettings] = Settings) -> ComponentSettings:
     """Load only the validation required by the calling component."""
     return settings_type()
+
+
+# lru_cache's return annotation does not preserve the class-to-instance relation.
+# Describe that relation without changing its runtime cache or cache_clear API.
+get_settings = cast(_SettingsFactory, _get_settings)

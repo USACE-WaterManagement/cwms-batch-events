@@ -59,15 +59,19 @@ def verify_jwt_by_api(token: str) -> dict:
 
 
 def verify_jwt_by_saved_key(token: str) -> dict:
-    if settings.auth_environment not in ISSUER:
-        raise ValueError(f"Invalid AUTH_ENVIRONMENT: '{settings.auth_environment}'. Must be one of {list(ISSUER.keys())}")
+    auth_environment = settings.auth_environment
+    if auth_environment is None or auth_environment not in ISSUER:
+        raise ValueError(
+            f"Invalid AUTH_ENVIRONMENT: '{auth_environment}'. "
+            f"Must be one of {list(ISSUER.keys())}"
+        )
 
     key = get_public_pem()
     payload = jwt.decode(
         token,
         key,
         algorithms=["RS256"],
-        issuer=ISSUER[settings.auth_environment],
+        issuer=ISSUER[auth_environment],
         options={"verify_aud": False},
     )
     return payload
