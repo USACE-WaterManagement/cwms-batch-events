@@ -97,12 +97,13 @@ export const ScriptForm = ({
   onCancelEdit,
 }: ScriptFormProps) => {
   const [form, setForm] = useState<ScriptFormData>({
+    configVersion: 2,
     name: script?.name ?? "",
     description: script?.description ?? "",
     active: script?.active ?? true,
     repoPath: script?.repoPath ?? "",
-    executionType: script?.executionType ?? "github_file",
-    runtime: script?.runtime ?? "python",
+    executionType: script?.executionType === "command" ? "command" : "github_file",
+    runtime: script?.runtime === "java" || script?.runtime === "shell" ? script.runtime : "python",
     commandArgs: script?.commandArgs ?? [],
     roles: script?.roles ?? [],
   });

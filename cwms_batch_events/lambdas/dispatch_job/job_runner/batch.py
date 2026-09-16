@@ -1,5 +1,5 @@
 import logging
-from cwms_batch_events.core.execution import command_for_payload
+from cwms_batch_events.core.execution import command_for_payload, skips_repository_checkout
 from cwms_batch_events.core.models import JobMessage
 from cwms_batch_events.core.job_correlation import runner_environment
 from cwms_batch_events.lambdas.dispatch_job.utils import OFFICES
@@ -30,7 +30,7 @@ class BatchJobRunner:
         tags = {"Office": office, "BatchEventsJobId": str(message.job_id)}
         if message.request_id:
             tags["BatchEventsRequestId"] = message.request_id
-        if message.payload.execution_type == "command":
+        if skips_repository_checkout(message.payload):
             environment.append({"name": "SKIP_GIT_CLONE", "value": "true"})
 
         response = self.batch.submit_job(
