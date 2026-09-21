@@ -146,6 +146,10 @@ export const ScriptsWorkspace = ({ office }: ScriptsWorkspaceProps) => {
           <ScriptsList
             scripts={scripts.data}
             selectScript={onSelect}
+            editScript={scriptId => {
+              onSelect(scriptId);
+              onEdit();
+            }}
             selectedScriptId={selectedScriptId}
             jobs={jobs.isError ? [] : jobs.data ?? []}
             jobsUpdatedAt={jobs.dataUpdatedAt}
