@@ -36,7 +36,9 @@ export const ScriptJobRuns = ({ script, selectedJobId, onSelectJob }: {
   onSelectJob: (id: string | undefined) => void;
 }) => {
   const jobs = useJobsList();
-  const runs = jobs.data?.filter(job => job.scriptId === script.id && job.office === script.office);
+  const runs = jobs.data?.filter(job => job.scriptId === script.id && job.office === script.office)
+    .sort((a, b) => new Date(b.createdTime).getTime() - new Date(a.createdTime).getTime());
+  const displayedJobId = selectedJobId ?? runs?.[0]?.id;
   return <div className="space-y-4 p-4">
     <div className="flex flex-wrap items-center justify-between gap-2">
       <H3>Your runs for {script.name}</H3>
@@ -48,8 +50,8 @@ export const ScriptJobRuns = ({ script, selectedJobId, onSelectJob }: {
     {!jobs.isError && runs?.length === 0 && <p>No runs yet. Open Run script to submit this script.</p>}
     {runs && runs.length > 0 && <ul className="max-h-64 space-y-2 overflow-y-auto">
       {runs.map(job => <li key={job.id}>
-        <button type="button" aria-pressed={selectedJobId === job.id} onClick={() => onSelectJob(job.id)}
-          className={`flex w-full flex-wrap justify-between gap-2 rounded border p-3 text-left hover:bg-blue-50 ${selectedJobId === job.id ? "border-blue-600 bg-blue-50" : "border-gray-300"}`}>
+        <button type="button" aria-pressed={displayedJobId === job.id} onClick={() => onSelectJob(job.id)}
+          className={`flex w-full flex-wrap justify-between gap-2 rounded border p-3 text-left hover:bg-blue-50 ${displayedJobId === job.id ? "border-blue-600 bg-blue-50" : "border-gray-300"}`}>
           <span>{new Date(job.createdTime).toLocaleString()}</span><span className="inline-flex items-center gap-2 font-semibold">
             {(job.jobStatus === "Running" || job.jobStatus === "Pending") && <span aria-hidden="true"><LoadingSpinner /></span>}
             {jobStatusLabel(job)}
@@ -57,8 +59,8 @@ export const ScriptJobRuns = ({ script, selectedJobId, onSelectJob }: {
         </button>
       </li>)}
     </ul>}
-    {selectedJobId && <section aria-label="Selected job run" className="min-w-0 border-t border-gray-200 pt-4">
-      <JobDetailFull key={selectedJobId} jobId={selectedJobId} />
+    {displayedJobId && <section aria-label="Selected job run" className="min-w-0 border-t border-gray-200 pt-4">
+      <JobDetailFull key={displayedJobId} jobId={displayedJobId} />
     </section>}
   </div>;
 };

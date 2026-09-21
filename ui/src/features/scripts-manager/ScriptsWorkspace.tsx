@@ -49,7 +49,7 @@ export const ScriptsWorkspace = ({ office }: ScriptsWorkspaceProps) => {
 
   const onSelect = (scriptId: string, tab = 0, jobId?: string) => {
     setPanelMode("view");
-    if (jobId || scriptId !== selectedScriptId) setSelectedJobId(jobId);
+    if (tab === 2 || scriptId !== selectedScriptId) setSelectedJobId(jobId);
     setSelectedScriptId(scriptId);
     showTab(tab);
   };
