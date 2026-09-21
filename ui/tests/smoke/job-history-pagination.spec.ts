@@ -15,6 +15,8 @@ test("job history requests pages and lets All scroll with the document", async (
       const limit = Number(url.searchParams.get("limit") ?? jobs.length);
       return route.fulfill({ json: jobs.slice(offset, offset + limit), headers: { "X-Total-Count": String(jobs.length) } });
     }
+    if (url.pathname.endsWith("/jobs/job-1")) return route.fulfill({ json: jobs[0] });
+    if (url.pathname.endsWith("/logs/page")) return route.fulfill({ json: { logs: "History output" } });
     return route.fulfill({ json: [] });
   });
   await page.setViewportSize({ width: 1280, height: 800 });
@@ -23,6 +25,8 @@ test("job history requests pages and lets All scroll with the document", async (
   const results = page.getByRole("region", { name: "Job history results" });
   const rows = results.getByRole("button", { name: /History script/ });
   await expect(rows).toHaveCount(10);
+  await expect(results.getByRole("link", { name: /^Open History script/ })).toHaveCount(10);
+  await expect(results.getByRole("link", { name: /^Open History script 1 run/ })).toBeVisible();
   expect(requests).toContain("?limit=10&offset=0");
   await expect(page.getByRole("button", { name: "Previous", exact: true })).toBeDisabled();
   await expect(results).toHaveCSS("overflow-y", "auto");
@@ -54,4 +58,7 @@ test("job history requests pages and lets All scroll with the document", async (
   await rows.first().click();
   await expect(results.getByRole("link", { name: "Details", exact: true }).first()).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await results.getByRole("link", { name: /^Open History script 1 run/ }).click();
+  await expect(page).toHaveURL(/\/events\/jobs\/job-1$/);
+  await expect(page.getByLabel("Job output")).toHaveValue("History output");
 });

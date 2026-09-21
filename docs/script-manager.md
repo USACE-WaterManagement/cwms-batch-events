@@ -1,12 +1,14 @@
 # Run jobs in Scripts Manager
 
 1. Sign in, open **Scripts Manager**, and select your office.
-2. Select a script row to open **Details**. Use **Edit** to change and save its settings.
-3. Select **Run job** at the end of the row to open that script's **Run job** tab.
+2. Select a script row to open read-only **Details**, or select the row's **Edit** button
+   to open **Details** with the edit form ready. Changes are applied only when saved.
+3. Select **Run script** at the end of the row to open that script's **Run script** tab.
 4. Review the saved file or executable and arguments, then select **Submit job** once.
-5. The new run opens in **Job runs**. Its status updates until it finishes, then output loads.
-6. Use **View job runs** on a row to return to that script's runs. Select a run to inspect it;
-   **Refresh** reloads the list. **Job History** shows your runs across all scripts.
+5. The new run opens in **Run history**. Its status updates until it finishes, then output loads.
+6. Use **Runs** on a row to return to that script's runs. Select **Open** on a run to inspect it;
+   **Refresh** reloads the list. **Job History** shows your runs across all scripts, with an
+   **Open** link on each entry that goes directly to its details and output.
 
 The Groundwork tabs keep details, submission, and run output in the selected script's workspace.
 Each row groups the script name, runtime, active state, and full path. Actions appear beside

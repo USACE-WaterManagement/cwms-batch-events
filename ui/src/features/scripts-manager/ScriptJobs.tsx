@@ -55,6 +55,7 @@ export const ScriptJobRuns = ({ script, selectedJobId, onSelectJob }: {
           <span>{new Date(job.createdTime).toLocaleString()}</span><span className="inline-flex items-center gap-2 font-semibold">
             {(job.jobStatus === "Running" || job.jobStatus === "Pending") && <span aria-hidden="true"><LoadingSpinner /></span>}
             {jobStatusLabel(job)}
+            <span className="rounded border border-blue-300 bg-white px-3 py-1 font-medium text-blue-700">Open</span>
           </span>
         </button>
       </li>)}

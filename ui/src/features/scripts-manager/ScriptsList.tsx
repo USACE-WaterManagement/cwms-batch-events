@@ -1,4 +1,4 @@
-import { FaCircleCheck, FaCircleXmark, FaPlay, FaClockRotateLeft } from "react-icons/fa6";
+import { FaCircleCheck, FaCircleXmark, FaPlay, FaClockRotateLeft, FaPen } from "react-icons/fa6";
 import type { Script } from "../scripts-manager/types";
 import type { JobDetails } from "../jobs-list/useJobDetails";
 import { ScriptRunIndicators } from "./ScriptRunIndicators";
@@ -19,6 +19,7 @@ const ActiveIcon = ({ isActive }: ActiveIconProps) => {
 interface ScriptsListProps {
   scripts: Script[];
   selectScript: (scriptId: string, tab?: number, jobId?: string) => void;
+  editScript: (scriptId: string) => void;
   jobs: JobDetails[];
   jobsUpdatedAt: number;
   selectedScriptId?: string;
@@ -28,6 +29,7 @@ interface ScriptsListProps {
 export const ScriptsList = ({
   scripts,
   selectScript,
+  editScript,
   selectedScriptId,
   jobs,
   jobsUpdatedAt,
@@ -86,6 +88,10 @@ export const ScriptsList = ({
                   <button type="button" onClick={() => selectScript(script.id, 2)}
                     className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:border-blue-400 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
                     <FaClockRotateLeft aria-hidden="true" /> Runs
+                  </button>
+                  <button type="button" aria-label={`Edit ${script.name}`} onClick={() => editScript(script.id)}
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:border-blue-400 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
+                    <FaPen aria-hidden="true" /> Edit
                   </button>
                 </div>
               </td>

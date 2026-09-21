@@ -61,6 +61,15 @@ test("run from a script row, inspect its runs, and switch Groundwork tabs", asyn
   const row = page.locator("tr").filter({ hasText: script.name });
   await row.click();
   await expect(page.getByRole("tab", { name: "Details", exact: true })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByLabel("Name", { exact: true })).toHaveCount(0);
+  await row.getByRole("button", { name: `Edit ${script.name}`, exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("tab", { name: "Details", exact: true })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByLabel("Name", { exact: true })).toHaveValue(script.name);
+  expect(posts).toBe(0);
+  await row.getByText(script.name, { exact: true }).click();
+  await expect(page.getByLabel("Name", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Edit", exact: true })).toBeVisible();
   await capture("onboarding-scripts-manager");
   await row.getByRole("button", { name: "Runs", exact: true }).click();
   await expect(page.getByRole("tab", { name: "Run history", exact: true })).toHaveAttribute("aria-selected", "true");
@@ -81,6 +90,8 @@ test("run from a script row, inspect its runs, and switch Groundwork tabs", asyn
   await expect(page).toHaveURL(/\/events\/scripts-manager$/);
   expect(posts).toBe(1);
   await expect(page.getByRole("list").filter({ has: page.getByRole("button", { name: /Completed/ }) }).getByRole("button")).toHaveCount(1);
+  await page.getByRole("tabpanel").getByRole("button", { name: /Completed Open/ }).click();
+  await expect(page.getByRole("region", { name: "Selected job run" })).toContainText(job.id);
   await capture("onboarding-job-runs");
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("tab", { name: "Run history", exact: true }).scrollIntoViewIfNeeded();
