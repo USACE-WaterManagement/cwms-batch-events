@@ -3,6 +3,7 @@ from tests.factories import make_job_record
 
 def test_job_dispatch_uses_saved_command_snapshot(client, job_db, job_queue):
     job = make_job_record(
+        config_version=2,
         execution_type="command",
         runtime="java",
         repo_path="java",
@@ -15,6 +16,7 @@ def test_job_dispatch_uses_saved_command_snapshot(client, job_db, job_queue):
     )
     assert response.status_code == 200
     options = job_queue.create_job_message.call_args.args[3]
+    assert options.config_version == 2
     assert options.execution_type == "command"
     assert options.runtime == "java"
     assert options.repo_path == "java"

@@ -64,7 +64,7 @@ export const ScriptsList = ({
                   <span className="font-semibold text-gray-900">{script.name}</span>
                   <ScriptRunIndicators
                     jobs={jobs.filter(job => job.scriptId === script.id && job.office === script.office)}
-                    now={jobsUpdatedAt} scriptName={script.name}
+                    scriptName={script.name}
                     onSelectRun={jobId => selectScript(script.id, 2, jobId)} />
                 </div>
                 <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-600">

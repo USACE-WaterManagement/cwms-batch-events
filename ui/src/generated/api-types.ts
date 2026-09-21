@@ -191,17 +191,20 @@ export interface components {
         /** JobRecord */
         JobRecord: {
             /**
+             * Configversion
+             * @default 1
+             */
+            configVersion: number;
+            /**
              * Executiontype
              * @default github_file
-             * @enum {string}
              */
-            executionType: "github_file" | "command";
+            executionType: string | null;
             /**
              * Runtime
              * @default python
-             * @enum {string}
              */
-            runtime: "python" | "java" | "shell";
+            runtime: string;
             /** Repopath */
             repoPath: string;
             /** Commandargs */
@@ -263,6 +266,12 @@ export interface components {
         /** ScriptCreate */
         ScriptCreate: {
             /**
+             * Configversion
+             * @default 2
+             * @constant
+             */
+            configVersion: 2;
+            /**
              * Executiontype
              * @default github_file
              * @enum {string}
@@ -303,17 +312,20 @@ export interface components {
         /** ScriptRead */
         ScriptRead: {
             /**
+             * Configversion
+             * @default 1
+             */
+            configVersion: number;
+            /**
              * Executiontype
              * @default github_file
-             * @enum {string}
              */
-            executionType: "github_file" | "command";
+            executionType: string | null;
             /**
              * Runtime
              * @default python
-             * @enum {string}
              */
-            runtime: "python" | "java" | "shell";
+            runtime: string;
             /** Repopath */
             repoPath: string;
             /** Commandargs */
@@ -374,6 +386,12 @@ export interface components {
         };
         /** ScriptUpdate */
         ScriptUpdate: {
+            /**
+             * Configversion
+             * @default 2
+             * @constant
+             */
+            configVersion: 2;
             /**
              * Executiontype
              * @default github_file

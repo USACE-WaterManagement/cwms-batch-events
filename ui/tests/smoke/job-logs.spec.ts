@@ -45,16 +45,26 @@ test("polls incrementally at the selected interval, pauses, and stops on complet
   await page.clock.runFor(4900);
   expect(state.requests).toHaveLength(2);
   await page.clock.runFor(200);
-  await expect.poll(() => state.requests.length).toBe(3);
+  await expect(page.getByLabel("Job output")).toHaveValue("line 1\nline 2\nline 3");
   await page.getByLabel("Update interval").selectOption("0");
   await page.clock.runFor(15000);
   expect(state.requests).toHaveLength(3);
   state.status = "Completed";
-  await page.clock.runFor(5100);
+  // Let each response render before advancing the clock again. React Query
+  // schedules the next interval after the previous request has settled.
+  await expect(async () => {
+    await page.clock.runFor(1000);
+    await expect(page.getByLabel("Update interval")).toBeDisabled({ timeout: 100 });
+  }).toPass({ timeout: 10000 });
   await expect(page.getByLabel("Job output")).toHaveValue("line 1\nline 2\nline 3\nline 4");
   expect(state.requests[3]).toBe("cursor-3");
   await expect(page.getByLabel("Update interval")).toBeDisabled();
-  await page.clock.runFor(30000);
+  for (let count = 5; count <= 7; count++) {
+    await page.clock.runFor(5100);
+    await expect(page.getByLabel("Job output")).toHaveValue(
+      Array.from({ length: count }, (_, index) => `line ${index + 1}`).join("\n"),
+    );
+  }
   expect(state.requests).toHaveLength(7);
   await expect(page.getByLabel("Job output")).toHaveValue("line 1\nline 2\nline 3\nline 4\nline 5\nline 6\nline 7");
   await page.clock.runFor(60000);

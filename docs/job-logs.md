@@ -42,9 +42,11 @@ Malformed cursors return 400; other AWS failures remain errors.
 
 ## Shared run attribution
 
-Apply V1_01_15 before deploying this API version. It adds a display-name
+Apply V1_01_16 before deploying this API version. It adds a display-name
 snapshot, trigger metadata, and an index for office history queries. No
 ownership backfill is required: existing jobs already have an office.
+See the [existing-database rollout plan](office-history-upgrade.md) for identity
+handling, migration ordering, verification, rollback and the retention follow-up.
 
 New runs capture a readable name from verified token claims, falling back to
 the CDA username for API-key callers. Raw usernames remain internal audit

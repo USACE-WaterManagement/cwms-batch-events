@@ -46,6 +46,7 @@ class JobModel(Base):
     run_trigger: Mapped[str] = mapped_column(default="unknown", server_default="unknown")
     office: Mapped[str]
     repo_path: Mapped[str]
+    config_version: Mapped[int] = mapped_column(default=1, server_default="1")
     runtime: Mapped[str] = mapped_column(default="python", server_default="python")
     command_args: Mapped[list[str]] = mapped_column(
         ARRAY(String), default=list, server_default="{}"
@@ -98,6 +99,7 @@ class ScriptModel(Base):
     slug: Mapped[str]
     description: Mapped[str]
     repo_path: Mapped[str]
+    config_version: Mapped[int] = mapped_column(default=1, server_default="1")
     runtime: Mapped[str] = mapped_column(default="python", server_default="python")
     command_args: Mapped[list[str]] = mapped_column(
         ARRAY(String), default=list, server_default="{}"

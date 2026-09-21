@@ -1,10 +1,40 @@
+"""Version boundary for saved configurations and immutable queued execution snapshots."""
 from pathlib import PurePosixPath
+from typing import Literal
 
-from cwms_batch_events.core.models import ExecutionOptions
+from cwms_batch_events.core.models import ExecutionOptions, ExecutionRecord
 
 
-def command_for_payload(payload) -> list[str]:
-    options = ExecutionOptions.model_validate(payload.model_dump(by_alias=False))
+class UnsupportedConfigVersion(ValueError):
+    def __init__(self, version):
+        super().__init__(f"Unsupported script configuration schema version {version}. Supported versions: 1, 2.")
+
+
+def execution_for_config(config) -> ExecutionRecord:
+    """Validate without changing the saved record. Missing versions predate versioning."""
+    version = getattr(config, "config_version", 1)
+    if type(version) is not int or version not in (1, 2):
+        raise UnsupportedConfigVersion(version)
+    if version == 2:
+        return ExecutionOptions.model_validate(config, from_attributes=True)
+
+    path = config.repo_path
+    if not isinstance(path, str) or not path.strip() or "\x00" in path:
+        raise ValueError("A legacy Python script path without NUL characters is required")
+    # Before 3c830a4, both runners always used Python, ignored execution_type,
+    # and had no runtime/command_args. Do not apply v2 path normalization here.
+    return ExecutionRecord(config_version=1, repo_path=path)
+
+
+def command_for_v1(options: ExecutionRecord, runner: Literal["batch", "local"]):
+    # Reproduce 3c830a4^ exactly: AWS received argv; Docker received a string
+    # (split by the Docker SDK). Even duplicate slashes and dot segments matter.
+    if runner == "local":
+        return f"python /jobs/{options.repo_path}"
+    return ["python", f"/jobs/{options.repo_path}"]
+
+
+def command_for_v2(options: ExecutionOptions) -> list[str]:
     if options.execution_type == "command":
         return [options.repo_path, *options.command_args]
 
@@ -13,3 +43,14 @@ def command_for_payload(payload) -> list[str]:
         raise ValueError("Repository paths must stay within /jobs")
     prefix = {"python": ["python"], "java": ["java", "-jar"], "shell": ["bash"]}
     return [*prefix[options.runtime], f"/jobs/{path}", *options.command_args]
+
+
+def command_for_payload(payload, *, runner: Literal["batch", "local"] = "batch") -> list[str] | str:
+    options = execution_for_config(payload)
+    if options.config_version == 1:
+        return command_for_v1(options, runner)
+    return command_for_v2(options)
+
+
+def skips_repository_checkout(payload) -> bool:
+    return execution_for_config(payload).execution_type == "command"

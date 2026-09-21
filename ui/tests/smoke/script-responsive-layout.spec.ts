@@ -66,7 +66,8 @@ for (const { width, largeText } of [
     await page.getByRole("tab", { name: "Details", exact: true }).click();
     await fits(page.locator(".script-view-field, .script-view-field > div"));
     await row.getByRole("button", { name: `View active run for ${script.name}` }).click();
-    await expect(page.getByRole("region", { name: "Selected job run" })).toContainText(job.username);
+    await expect(page.getByRole("region", { name: "Selected job run" })).toContainText("Name unavailable");
+    await expect(page.getByRole("region", { name: "Selected job run" })).not.toContainText(job.username);
     await fits(page.locator(".script-workspace-panel, .job-detail-fields, .job-detail-fields > span"));
     // The global header has separate responsive tests. At enlarged root text
     // size, check this workspace's bounds independently of the header.

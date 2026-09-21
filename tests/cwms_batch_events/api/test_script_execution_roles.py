@@ -30,6 +30,7 @@ def test_catalog_and_submission_agree_on_execution_access(
     client, job_queue, monkeypatch, script_roles, user_roles, active, allowed
 ):
     script = ScriptModel(**make_script_read(
+        config_version=2,
         roles=script_roles, active=active, execution_type="command",
         repo_path="bash", command_args=["-lc", "printf 'TZ=%s\\n' \"$TZ\""],
     ).model_dump(by_alias=False))

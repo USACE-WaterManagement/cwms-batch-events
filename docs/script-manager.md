@@ -27,13 +27,15 @@ On a phone, scroll the script list to choose a script, then scroll down to its t
 
 </details>
 
-Script rows show a spinner for queued or running office jobs and a warning for the most recent
-failure within the past 24 hours. Click either indicator to open that exact run in **Job runs**.
+Script rows show the status of the newest submitted run in the selected office. A spinner indicates that run is
+queued or running; a failure warning appears only if that latest run failed, regardless of age.
+A newer successful run clears the warning even if an older run failed more recently.
+Click an indicator to open that run. **Runs** opens the latest run by default; select an older
+entry in **Run history** to inspect its details without changing the script's latest status.
 Running jobs also show spinners in the run list. The manager refreshes run status every five
 seconds while visible, including when a different tab is selected. A read failure stops polling;
 **Retry run status** resumes it. The indicators remain scoped to jobs in the selected office.
 
-![Running and queued spinners alongside a clickable recent-failure warning](../ui/public/about/script-run-indicators.png)
 
 Both history views share runs within the user's CWMS offices and show the submitter's readable
 name. Manual and Scheduled badges identify recorded triggers; historical or unmarked runs
