@@ -27,13 +27,15 @@ On a phone, scroll the script list to choose a script, then scroll down to its t
 
 </details>
 
-Script rows show a spinner for your queued or running jobs and a warning for your most recent
-failure within the past 24 hours. Click either indicator to open that exact run in **Job runs**.
+Script rows show the status of your newest submitted run. A spinner indicates that run is
+queued or running; a failure warning appears only if that latest run failed, regardless of age.
+A newer successful run clears the warning even if an older run failed more recently.
+Click an indicator to open that run. **Runs** opens the latest run by default; select an older
+entry in **Run history** to inspect its details without changing the script's latest status.
 Running jobs also show spinners in the run list. The manager refreshes run status every five
 seconds while visible, including when a different tab is selected. A read failure stops polling;
 **Retry run status** resumes it. The indicators remain scoped to your jobs in the selected office.
 
-![Running and queued spinners alongside a clickable recent-failure warning](../ui/public/about/script-run-indicators.png)
 
 Both history views contain jobs submitted by the signed-in username. Existing `/events/jobs`
 and `/events/jobs/{jobId}` links continue to work. **Submit Job** remains available for users

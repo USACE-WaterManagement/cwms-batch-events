@@ -125,56 +125,62 @@ test("selected run shares Starting and Running status with the run list without 
   }
 });
 
-test("script indicators open the exact active or recent failed run", async ({ page }) => {
+
+test("latest run controls the badge and default history selection", async ({ page }) => {
   await page.clock.install({ time: now });
-  const runs = [
-    job,
-    { ...job, id: "older-failure", jobStatus: "Failed", endTime: "2026-09-14T17:40:00Z" },
-    { ...job, id: "latest-failure", jobStatus: "Failed", createdTime: "2026-09-12T00:00:00Z", endTime: "2026-09-14T17:55:00Z" },
-    { ...job, id: "queued", scriptId: "queued-script", jobStatus: "Pending" },
-    { ...job, id: "expired-failure", scriptId: "old-script", jobStatus: "Failed", endTime: "2026-09-13T17:59:00Z" },
-    { ...job, id: "wrong-office", scriptId: "old-script", office: "LRH", jobStatus: "Failed", endTime: "2026-09-14T17:59:00Z" },
-    { ...job, id: "wrong-script", scriptId: "other-id", scriptName: script.name, jobStatus: "Failed", endTime: "2026-09-14T17:59:00Z" },
-  ];
+  const oldFailure = { ...job, id: "old-failure", jobStatus: "Failed", createdTime: "2026-09-12T12:00:00Z", endTime: "2026-09-14T17:59:00Z" };
+  const latest = { ...job, id: "latest", jobStatus: "Completed", endTime: "2026-09-14T17:40:00Z" };
   await page.route("**/api/**", route => {
     const path = new URL(route.request().url()).pathname;
     if (path.endsWith("/admin-offices")) return route.fulfill({ json: ["SWT"] });
     if (path.endsWith("/job-runners/default")) return route.fulfill({ json: { id: "runner", slug: "batch" } });
-    if (path.endsWith("/scripts")) return route.fulfill({ json: [script, { ...script, id: "queued-script", name: "Queued report" }, { ...script, id: "old-script", name: "Old report" }] });
-    if (path.endsWith("/jobs")) return route.fulfill({ json: runs });
-    if (path.endsWith("/logs/page")) return route.fulfill({ json: { logs: "Example failed run output", reset: true } });
-    const requested = runs.find(run => path.endsWith(`/jobs/${run.id}`));
-    if (requested) return route.fulfill({ json: requested });
+    if (path.endsWith("/scripts")) return route.fulfill({ json: [script] });
+    if (path.endsWith("/jobs")) return route.fulfill({ json: [oldFailure, latest] });
+    if (path.endsWith(`/jobs/${latest.id}`)) return route.fulfill({ json: latest });
+    if (path.endsWith("/jobs/old-failure")) return route.fulfill({ json: oldFailure });
+    if (path.endsWith("/logs/page")) return route.fulfill({ json: { logs: "Run output" } });
     return route.fulfill({ json: [] });
   });
   await openManager(page);
-  const active = page.getByRole("button", { name: `View active run for ${script.name}`, exact: true });
-  const warning = page.getByRole("button", { name: `View recent failed run for ${script.name}`, exact: true });
-  await expect(active).toContainText("Running");
-  await expect(active.locator(".animate-spin")).toHaveCount(1);
-  await expect(warning).toBeVisible();
-  await expect(page.getByRole("button", { name: "View active run for Queued report", exact: true })).toContainText("Queued");
-  await expect(page.getByRole("button", { name: "View recent failed run for Old report", exact: true })).toHaveCount(0);
-  await active.click();
-  await expect(page.getByRole("tab", { name: "Run history", exact: true })).toHaveAttribute("aria-selected", "true");
-  await expect(page.getByRole("region", { name: "Selected job run" })).toContainText("running");
-  await expect(page.getByRole("tabpanel").getByRole("button", { name: /Running/ }).locator(".animate-spin")).toHaveCount(1);
-  await warning.focus();
-  await page.keyboard.press("Enter");
-  await expect(page.getByRole("region", { name: "Selected job run" })).toContainText("latest-failure");
-  await expect(page.getByRole("textbox", { name: "Job output" })).toHaveValue("Example failed run output");
-  await expect(page.getByRole("tab", { name: "Run history", exact: true })).toHaveAttribute("aria-selected", "true");
-  if (process.env.PR_SCREENSHOT_DIR) {
-    await mkdir(process.env.PR_SCREENSHOT_DIR, { recursive: true });
-    await page.screenshot({ path: join(process.env.PR_SCREENSHOT_DIR, "script-run-indicators.png"), fullPage: true });
-  }
-  await page.setViewportSize({ width: 390, height: 844 });
-  await expect(active).toBeVisible();
-  await expect(warning).toBeVisible();
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  const row = page.getByRole("row").filter({ hasText: script.name });
+  const warning = row.getByRole("button", { name: /View latest failed run/ });
+  await expect(warning).toHaveCount(0);
+  await expect(row).toContainText("Latest run: Completed");
+  await row.getByRole("button", { name: "Runs", exact: true }).click();
+  const selected = page.getByRole("region", { name: "Selected job run" });
+  await expect(selected).toContainText("latest");
+  await page.getByRole("tabpanel").getByRole("button", { name: /Failed/ }).click();
+  await expect(selected).toContainText("old-failure");
+  await expect(warning).toHaveCount(0);
+  await row.getByRole("button", { name: "Runs", exact: true }).click();
+  await expect(selected).toContainText("latest");
+  // A new submission supersedes the selected run only in default latest mode.
+  latest.id = "newest";
+  latest.jobStatus = "Pending";
+  await page.clock.runFor(5100);
+  await expect(row.getByRole("button", { name: /View active run/ })).toContainText("Queued");
+  await expect(selected).toContainText("newest");
 });
 
-test("indicators refresh, expire after 24 hours, and stop polling on read failure", async ({ page }) => {
+test("latest failure remains visible beyond 24 hours", async ({ page }) => {
+  await page.clock.install({ time: now });
+  const latest = { ...job, id: "old-latest", jobStatus: "Failed", createdTime: "2026-09-10T12:00:00Z", endTime: "2026-09-10T13:00:00Z" };
+  await page.route("**/api/**", route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/admin-offices")) return route.fulfill({ json: ["SWT"] });
+    if (path.endsWith("/job-runners/default")) return route.fulfill({ json: { id: "runner", slug: "batch" } });
+    if (path.endsWith("/scripts")) return route.fulfill({ json: [script] });
+    if (path.endsWith("/jobs")) return route.fulfill({ json: [latest] });
+    if (path.endsWith("/jobs/old-latest")) return route.fulfill({ json: latest });
+    if (path.endsWith("/logs/page")) return route.fulfill({ json: { logs: "Failure output" } });
+    return route.fulfill({ json: [] });
+  });
+  await openManager(page);
+  await page.getByRole("button", { name: /View latest failed run/ }).click();
+  await expect(page.getByRole("region", { name: "Selected job run" })).toContainText("old-latest");
+});
+
+test("latest indicators refresh and stop polling on read failure", async ({ page }) => {
   await page.clock.install({ time: now });
   let status = "Pending";
   let failed = false;
@@ -189,16 +195,16 @@ test("indicators refresh, expire after 24 hours, and stop polling on read failur
       if (failed) return route.fulfill({ status: 500, json: { detail: "Unavailable" } });
       return route.fulfill({ json: [
         { ...job, jobStatus: status },
-        { ...job, id: "expiring-failure", jobStatus: "Failed", endTime: "2026-09-13T18:00:05Z" },
+        { ...job, id: "expiring-failure", createdTime: "2026-09-12T12:00:00Z", jobStatus: "Failed", endTime: "2026-09-13T18:00:05Z" },
       ] });
     }
     return route.fulfill({ json: [] });
   });
   await openManager(page);
   const active = page.getByRole("button", { name: `View active run for ${script.name}`, exact: true });
-  const warning = page.getByRole("button", { name: `View recent failed run for ${script.name}`, exact: true });
+  const warning = page.getByRole("button", { name: `View latest failed run for ${script.name}`, exact: true });
   await expect(active).toContainText("Queued");
-  await expect(warning).toBeVisible();
+  await expect(warning).toHaveCount(0);
   status = "Running";
   await page.clock.fastForward(6000);
   await expect(active).toContainText("Running");

@@ -49,6 +49,8 @@ test("run from a script row, inspect its runs, and switch Groundwork tabs", asyn
       return route.fulfill({ json: posts ? [job, { ...job, id: "job-other", scriptId: second.id, scriptName: second.name }] : [] });
     }
     if (path.endsWith("/jobs/job-env")) return route.fulfill({ json: job });
+    if (path.endsWith("/jobs/job-other")) return route.fulfill({ json: { ...job, id: "job-other", scriptId: second.id, scriptName: second.name } });
+    if (path.endsWith("/jobs/job-other/logs/page")) return route.fulfill({ json: { logs: "Daily report output", reset: true } });
     if (path.endsWith("/jobs/job-env/logs/page")) return route.fulfill({ json: { logs: "TZ=America/Chicago\n", reset: true } });
     return route.fulfill({ json: [] });
   });
@@ -91,7 +93,7 @@ test("run from a script row, inspect its runs, and switch Groundwork tabs", asyn
   await page.getByRole("link", { name: "Scripts Manager", exact: true }).click();
   await page.locator("tr").filter({ hasText: second.name }).getByRole("button", { name: "Runs" }).click();
   await expect(page.getByRole("heading", { name: `Your runs for ${second.name}` })).toBeVisible();
-  await expect(page.getByRole("region", { name: "Selected job run" })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Selected job run" })).toContainText("job-other");
   await expect(page.locator("tr").filter({ hasText: inactive.name }).getByRole("button", { name: "Run script", exact: true })).toBeDisabled();
   await row.getByRole("button", { name: "Run script", exact: true }).click();
   await page.getByRole("tab", { name: "Details", exact: true }).click();
