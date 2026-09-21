@@ -58,6 +58,7 @@ export const ScriptJobRuns = ({ script, selectedJobId, onSelectJob }: {
             <RunTriggerBadge job={job} />
             {(job.jobStatus === "Running" || job.jobStatus === "Pending") && <span aria-hidden="true"><LoadingSpinner /></span>}
             {jobStatusLabel(job)}
+            <span className="rounded border border-blue-300 bg-white px-3 py-1 font-medium text-blue-700">Open</span>
           </span>
         </button>
       </li>)}

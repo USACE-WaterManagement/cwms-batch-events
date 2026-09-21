@@ -12,6 +12,7 @@ import { useRememberedOffice } from "../shared/hooks/useRememberedOffice";
 import { useRepositoryFiles, useRepositoryStatus } from "../features/scripts-manager/useRepositoryFiles";
 import { WarningIndicator } from "../components/WarningIndicator";
 import useAdminOffices from "../features/scripts-manager/useAdminOffices";
+import { EnvironmentBadge } from "../components/EnvironmentBadge";
 
 const primaryLinks = [
   { id: "jobs", text: "Job History", href: "/jobs" },
@@ -99,7 +100,9 @@ function RootShell({ children }: { children: ReactNode }) {
 
   return (
     <SiteWrapper links={navLinks}
-      title="CWMS Batch Events"
+      title={<span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1 py-1">
+        <span>CWMS Batch Events</span><EnvironmentBadge />
+      </span>}
       missionText="Support USACE water management teams with shared tools to run district jobs and track their results."
       aboutText="CWMS Batch Events lets authorized district users submit jobs, review job history and logs, and manage registered scripts. For access or job support, contact your district Batch Events administrator."
       usaceLinks={[
