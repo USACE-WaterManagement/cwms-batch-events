@@ -16,7 +16,7 @@ const JobDetailFull = ({ jobId }: JobDetailFullProps) => {
   return (
     <>
       <JobDetail job={data} />
-      <JobLogs key={jobId} jobId={jobId} status={data.jobStatus} batchStatus={data.batchStatus} />
+      <JobLogs key={jobId} jobId={jobId} status={data.jobStatus} batchStatus={data.batchStatus} endTime={data.endTime} />
     </>
   );
 };

@@ -1,10 +1,13 @@
 import { expect, test, type Page } from "@playwright/test";
+import { mkdir } from "node:fs/promises";
+import { join } from "node:path";
 
-async function viewer(page: Page, initialStatus = "Running") {
+async function viewer(page: Page, initialStatus = "Running", available = true, live = true, endTime?: string) {
   const state = {
     status: initialStatus, requests: [] as (string | null)[], failure: 0,
-    live: true, available: true, more: false, reset: false,
+    live, available, more: false, reset: false,
     message: null as string | null,
+    output: undefined as string | undefined,
   };
   await page.clock.install();
   await page.route("**/api/**", route => {
@@ -13,7 +16,7 @@ async function viewer(page: Page, initialStatus = "Running") {
       state.requests.push(url.searchParams.get("cursor"));
       if (state.failure) return route.fulfill({ status: state.failure, json: { detail: "Invalid log cursor. Refresh the logs." } });
       return route.fulfill({ json: {
-        logs: state.available ? `line ${state.requests.length}` : "",
+        logs: state.available ? state.output ?? `line ${state.requests.length}` : "",
         nextCursor: `cursor-${state.requests.length}`, hasMore: state.more,
         reset: state.reset, available: state.available, supportsLive: state.live,
         message: state.message,
@@ -21,7 +24,7 @@ async function viewer(page: Page, initialStatus = "Running") {
     }
     if (url.pathname.endsWith("/jobs/log-job")) return route.fulfill({ json: {
       id: "log-job", scriptName: "Log polling test", username: "dev-user", office: "SWT",
-      jobStatus: state.status, createdTime: "2026-09-14T12:00:00Z", repoPath: "run.py",
+      jobStatus: state.status, createdTime: "2026-09-14T12:00:00Z", repoPath: "run.py", endTime,
     } });
     return route.fulfill({ json: [] });
   });
@@ -54,13 +57,16 @@ test("polls incrementally at the selected interval, pauses, and stops on complet
   await expect(page.getByLabel("Job output")).toHaveValue("line 1\nline 2\nline 3\nline 4");
   expect(state.requests[3]).toBe("cursor-3");
   await expect(page.getByLabel("Update interval")).toBeDisabled();
-  await page.clock.runFor(30000);
-  expect(state.requests).toHaveLength(7);
-  await expect(page.getByLabel("Job output")).toHaveValue("line 1\nline 2\nline 3\nline 4\nline 5\nline 6\nline 7");
+  for (let count = 5; count <= 10; count++) {
+    await page.clock.runFor(5100);
+    await expect(page.getByLabel("Job output")).toHaveValue(Array.from({ length: count }, (_, i) => `line ${i + 1}`).join("\n"));
+  }
+  expect(state.requests).toHaveLength(10);
+  await expect(page.getByLabel("Job output")).toHaveValue(Array.from({ length: 10 }, (_, i) => `line ${i + 1}`).join("\n"));
   await page.clock.runFor(60000);
-  expect(state.requests).toHaveLength(7);
+  expect(state.requests).toHaveLength(10);
   await page.getByRole("button", { name: "Refresh logs" }).click();
-  await expect.poll(() => state.requests.length).toBe(8);
+  await expect.poll(() => state.requests.length).toBe(11);
 });
 
 test("completed and failed jobs load once; pagination requires explicit action", async ({ page }) => {
@@ -175,4 +181,74 @@ test("completion catch-up stops after an error", async ({ page }) => {
   const stopped = state.requests.length;
   await page.clock.runFor(60000);
   expect(state.requests).toHaveLength(stopped);
+});
+
+for (const live of [true, false]) {
+  test(`newly opened terminal job catches delayed output (live=${live})`, async ({ page }) => {
+    const state = await viewer(page, "Completed", false, live);
+    await expect.poll(() => state.requests.length).toBe(1);
+    await expect(page.getByText("Checking for final output...")).toBeVisible();
+    for (let count = 2; count <= 5; count++) {
+      await page.clock.runFor(5100);
+      await expect.poll(() => state.requests.length).toBe(count);
+      await expect(page.getByRole("button", { name: "Refresh logs" })).toBeEnabled();
+    }
+    expect(state.requests).toHaveLength(5);
+    state.available = true;
+    state.reset = !live;
+    await page.clock.runFor(5100);
+    await expect(page.getByLabel("Job output")).toHaveValue("line 6");
+    if (live) {
+      await page.clock.runFor(5100);
+      await expect(page.getByLabel("Job output")).toHaveValue("line 6\nline 7");
+    }
+    await page.clock.runFor(60000);
+    expect(state.requests).toHaveLength(live ? 7 : 6);
+    await expect(page.getByText("Automatic updates stopped.")).toBeVisible();
+  });
+}
+
+test("missing final logs stop retrying after a bounded catch-up", async ({ page }) => {
+  const state = await viewer(page, "Failed", false);
+  await expect.poll(() => state.requests.length).toBe(1);
+  await page.clock.runFor(90000);
+  expect(state.requests).toHaveLength(7);
+  await expect(page.getByText("Automatic updates stopped.")).toBeVisible();
+});
+
+test("resizing output grows its panel and keeps the last line and padding reachable", async ({ page }) => {
+  const state = await viewer(page, "Completed");
+  state.output = Array.from({ length: 80 }, (_, i) => `Processing report record ${i + 1} of 80`).join("\n") + "\nReport complete. All 80 records processed.";
+  state.reset = true;
+  await page.getByRole("button", { name: "Refresh logs" }).click();
+  await expect(page.getByLabel("Job output")).toHaveValue(state.output);
+  await page.setViewportSize({ width: 1360, height: 1100 });
+  const output = page.getByLabel("Job output");
+  const panel = page.getByRole("region", { name: "Job logs", exact: true });
+  const before = await panel.boundingBox();
+  await output.scrollIntoViewIfNeeded();
+  const box = (await output.boundingBox())!;
+  await page.mouse.move(box.x + box.width - 4, box.y + box.height - 4);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width - 4, box.y + box.height + 180, { steps: 12 });
+  await page.mouse.up();
+  const after = (await panel.boundingBox())!;
+  const resized = (await output.boundingBox())!;
+  expect(after.height).toBeGreaterThan(before!.height + 100);
+  expect(after.y + after.height).toBeGreaterThan(resized.y + resized.height + 12);
+  await output.evaluate(el => { el.scrollTop = el.scrollHeight; });
+  expect(await output.evaluate(el => el.scrollHeight > el.clientHeight && Math.abs(el.scrollHeight - el.clientHeight - el.scrollTop) < 2)).toBe(true);
+  if (process.env.PR_SCREENSHOT_DIR) {
+    await mkdir(process.env.PR_SCREENSHOT_DIR, { recursive: true });
+    await page.screenshot({ path: join(process.env.PR_SCREENSHOT_DIR, "resized-job-output.png"), fullPage: true });
+  }
+});
+
+test("recently completed jobs catch up even when their first page has partial output", async ({ page }) => {
+  const state = await viewer(page, "Completed", true, true, new Date().toISOString());
+  await expect(page.getByLabel("Job output")).toHaveValue("line 1");
+  await expect(page.getByText("Checking for final output...")).toBeVisible();
+  await page.clock.runFor(5100);
+  await expect(page.getByLabel("Job output")).toHaveValue("line 1\nline 2");
+  expect(state.requests).toEqual([null, "cursor-1"]);
 });

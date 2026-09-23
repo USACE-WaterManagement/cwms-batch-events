@@ -26,8 +26,9 @@ from tests.factories import make_script_read, make_user
         (["CWMS Users"], {"SWT": ["CWMS Users"]}, False, False),
     ],
 )
+@pytest.mark.parametrize("custom", [False, True])
 def test_catalog_and_submission_agree_on_execution_access(
-    client, job_queue, monkeypatch, script_roles, user_roles, active, allowed
+    client, job_queue, monkeypatch, script_roles, user_roles, active, allowed, custom
 ):
     script = ScriptModel(**make_script_read(
         config_version=2,
@@ -45,11 +46,14 @@ def test_catalog_and_submission_agree_on_execution_access(
     catalog = client.get("/scripts/catalog")
     assert catalog.status_code == 200
     assert len(catalog.json()) == int(allowed)
-    response = client.post("/jobs", json={"scriptId": str(script.id)})
+    payload = {"scriptId": str(script.id)}
+    if custom:
+        payload["commandArgs"] = ["--date", "2026-09-01"]
+    response = client.post("/jobs", json=payload)
     assert response.status_code == (200 if allowed else 403)
     if allowed:
         assert response.json()["repoPath"] == "bash"
-        assert response.json()["commandArgs"] == script.command_args
+        assert response.json()["commandArgs"] == (payload["commandArgs"] if custom else script.command_args)
         session.add.assert_called_once()
         session.commit.assert_called_once()
         job_queue.send_job_message.assert_called_once()

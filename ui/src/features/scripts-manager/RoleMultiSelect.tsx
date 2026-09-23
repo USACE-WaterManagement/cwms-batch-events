@@ -36,6 +36,7 @@ export const RoleMultiSelect = ({
 
   return (
     <div className="min-w-0 space-y-2">
+      <p className="text-sm text-gray-700">Adding a role restricts who can run this script: users must have office access and at least one selected CDA role in that office. It does not assign roles to users or give the script CDA credentials.</p>
       <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
         <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-3 py-1 text-xs font-medium text-gray-600">
           <span>Selected roles</span>
@@ -76,7 +77,7 @@ export const RoleMultiSelect = ({
             </div>
             <Button type="button" aria-label="Add role" disabled={!pendingRole}
               onClick={() => { addRole(pendingRole); setPendingRole(""); }}>
-              <MdAdd aria-hidden /> Add
+              <MdAdd aria-hidden /> Add role
             </Button>
           </div>
         )}

@@ -5,6 +5,19 @@
    to open **Details** with the edit form ready. Changes are applied only when saved.
 3. Select **Run script** at the end of the row to open that script's **Run script** tab.
 4. Review the saved file or executable and arguments, then select **Submit job** once.
+
+To override arguments for one job, select **Custom run** in the **Run script** tab.
+The same form is available on **Submit Job** for users without script admin rights.
+Enter one argument per line, then choose **Submit custom run**. Spaces and empty
+argument lines are preserved; clearing the field removes all arguments for that
+run. The saved script is unchanged. **Cancel custom run** restores its defaults.
+Legacy scripts must be edited and saved in the current format before using custom
+arguments; ordinary submissions continue to use their existing behavior.
+
+Adding an execution role restricts this script to users who have office access
+and at least one selected CDA role in that office. It does not grant roles to
+users or credentials to the script. Leaving the list empty requires office access
+only.
 5. The new run opens in **Run history**. Its status updates until it finishes, then output loads.
 6. Use **Runs** on a row to return to that script's runs. Select **Open** on a run to inspect it;
    **Refresh** reloads the list. **Job History** shows your runs across all scripts, with an
