@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { ScriptVersionHelp } from "./CommandModal";
 
 export function ScriptVersionNotice({ version }: { version: number }) {
   const description = version === 1
@@ -11,6 +11,6 @@ export function ScriptVersionNotice({ version }: { version: number }) {
   return <div className="rounded border border-blue-200 bg-blue-50 p-3 text-sm" role="note" aria-label="Script configuration version">
     <p className="font-semibold">Script configuration version {version}</p>
     <p>{description}</p>
-    <Link to="/help/script-versions" target="_blank" rel="noopener noreferrer" className="text-blue-700 underline">Script version help (new tab)</Link>
+    <div className="mt-3"><ScriptVersionHelp /></div>
   </div>;
 }

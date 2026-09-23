@@ -4,6 +4,7 @@ import { Button, Text } from "@usace/groundwork";
 import type { Script } from "../scripts-manager/types";
 import { savedCommandPreview, supportsScriptVersion } from "./commandArguments";
 import { ScriptVersionNotice } from "./ScriptVersionNotice";
+import { ArgumentValues } from "./CommandSummary";
 
 export const RoleList = ({ roles }: { roles: string[] }) => {
   if (roles.length) {
@@ -58,6 +59,9 @@ export const ScriptView = ({ script, onEdit }: ScriptViewProps) => {
               {savedCommandPreview(script)}
             </pre>
           </ViewField>
+          {[2, 3].includes(script.configVersion ?? 1) && script.commandMode !== "shell" && <ViewField label="Arguments">
+            <ArgumentValues args={script.commandArgs ?? []} />
+          </ViewField>}
           <ViewField label="Roles">
             <RoleList roles={script.roles} />
           </ViewField>

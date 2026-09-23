@@ -117,7 +117,9 @@ test("run from a script row, inspect its runs, and switch Groundwork tabs", asyn
   await page.getByLabel("Description", { exact: true }).fill(script.description);
   await page.getByLabel("Source", { exact: true }).selectOption("command");
   await page.getByLabel("Executable", { exact: true }).fill("bash");
+  await page.getByRole("button", { name: "Add arguments", exact: true }).click();
   await page.getByLabel("Arguments", { exact: true }).fill(formatArguments(script.commandArgs));
+  await page.getByRole("button", { name: "Apply arguments", exact: true }).click();
   await expect(page.getByRole("dialog").getByText("No additional CDA role required. Office access is required.")).toBeVisible();
   await capture("onboarding-script-form");
   await page.getByRole("button", { name: "Cancel", exact: true }).click();

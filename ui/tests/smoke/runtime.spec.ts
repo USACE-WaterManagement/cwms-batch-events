@@ -36,9 +36,11 @@ test("registers and edits an installed Java command with separate arguments", as
   await page.getByLabel("Name", { exact: true }).fill("Synthetic Java");
   await page.getByLabel("Source", { exact: true }).selectOption("command");
   await page.getByLabel("Executable", { exact: true }).fill("java");
+  await page.getByRole("button", { name: "Add arguments", exact: true }).click();
   await page
     .getByLabel("Arguments", { exact: true })
     .fill('-jar /opt/report.jar "two words"   ');
+  await page.getByRole("button", { name: "Apply arguments", exact: true }).click();
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Edit", exact: true }),
@@ -48,15 +50,19 @@ test("registers and edits an installed Java command with separate arguments", as
   expect(saved?.commandArgs).toEqual(["-jar", "/opt/report.jar", "two words"]);
   expect(saved?.jobRunners).toEqual(["runner-1"]);
   await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await page.getByRole("button", { name: "Edit arguments", exact: true }).click();
   await expect(page.getByLabel("Arguments", { exact: true })).toHaveValue(
     "-jar /opt/report.jar 'two words'",
   );
+  await page.getByRole("button", { name: "Apply arguments", exact: true }).click();
   await page.getByLabel("Source", { exact: true }).selectOption("github_file");
   await page.getByLabel("Runtime", { exact: true }).selectOption("java");
   await page
     .getByLabel("JAR Path", { exact: true })
     .fill("java-artifacts/BuildWSmetadataViaCDA.jar");
+  await page.getByRole("button", { name: "Edit arguments", exact: true }).click();
   await page.getByLabel("Arguments", { exact: true }).fill('"two words"');
+  await page.getByRole("button", { name: "Apply arguments", exact: true }).click();
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Edit", exact: true }),

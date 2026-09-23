@@ -164,7 +164,8 @@ def main():
         assert upgraded.json()["commandArgs"] == v2["commandArgs"]
         assert client.get(f"/jobs/{v2_job['id']}").json()["configVersion"] == 2
         stored = next(row for row in client.get("/scripts?office=SWT").json() if row["id"] == script_id)
-        assert stored["configVersion"] == 2 and stored["commandArgs"] == v2["commandArgs"]
+        assert stored["configVersion"] == 3 and stored["commandArgs"] == v2["commandArgs"]
+        assert client.post("/jobs", json={"scriptId": script_id}).json()["configVersion"] == 3
         shell = "printf 'first\\n' && false || printf 'fallback\\n'   "
         custom = client.post("/jobs", json={"scriptId": script_id, "upgradeToVersion": 3,
                                             "commandMode": "shell", "shellCommand": shell})

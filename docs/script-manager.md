@@ -26,6 +26,9 @@ only.
    **Open** link on each entry that goes directly to its details and output.
 
 The Groundwork tabs keep details, submission, and run output in the selected script's workspace.
+In the edit form, **Add arguments** or **Edit arguments** opens the command editor modal.
+Review the numbered values and command preview, then **Apply arguments** to update the
+form. Cancel or close discards the modal draft; **Save** persists the script changes.
 Each row groups the script name, runtime, active state, and full path. Actions appear beside
 that information when space permits and below it on smaller screens. The selected script
 appears beside the list on wide screens and below it on narrower screens. Long paths and

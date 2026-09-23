@@ -127,10 +127,14 @@ class PostgresJobDatabase:
             raise PermissionError("Not authorized to run requested script")
 
         options = execution_for_config(script)
+        upgraded = None
         if payload.upgrade_to_version is not None:
+            if script.office not in user.admin_offices:
+                raise PermissionError("Script administrator access is required to upgrade the saved configuration")
             options = upgrade_execution(options, payload.upgrade_to_version)
+            upgraded = options.model_copy(deep=True)
         if payload.command_mode is not None or payload.shell_command is not None:
-            if options.config_version != 3:
+            if options.config_version < 3:
                 raise ValueError("Upgrade to version 3 before changing command mode")
             changes = options.model_dump(by_alias=False)
             if payload.command_mode is not None:
@@ -166,6 +170,12 @@ class PostgresJobDatabase:
         job.shell_command = options.shell_command
         job.job_runner_id = get_runner_id()
 
+        # Persist only the schema conversion, never custom-run overrides.
+        # Validate the entire request before touching the saved registration.
+        if upgraded is not None:
+            for field, value in upgraded.model_dump(by_alias=False).items():
+                setattr(script, field, value)
+            script.updated_time = datetime.now()
         self.db.add(job)
         self.db.commit()
         self.db.refresh(job)

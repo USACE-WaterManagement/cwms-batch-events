@@ -52,7 +52,7 @@ test("UI adapts to legacy and unknown versions without a version selector", asyn
   await expect(page.getByRole("button", { name: "Save", exact: true })).toHaveCount(0);
 });
 
-test("v2 run offers an upgrade; shell chains use a v3 snapshot without saving the script", async ({ page }) => {
+test("v2 run offers a saved version upgrade and a custom shell snapshot", async ({ page }) => {
   const script = { id: "v2-report", configVersion: 2, name: "Daily report", office: "SWT", active: true,
     roles: [], executionType: "github_file", runtime: "python", repoPath: "python/report.py",
     commandArgs: ["--date", "today"], description: "Generate and upload a reservoir report.",
@@ -63,6 +63,7 @@ test("v2 run offers an upgrade; shell chains use a v3 snapshot without saving th
     const path = new URL(route.request().url()).pathname;
     const method = route.request().method();
     if (path.includes("/scripts") && method !== "GET") scriptWrites.push(path);
+    if (path.endsWith("/admin-offices")) return route.fulfill({ json: ["SWT"] });
     if (path.endsWith("/scripts/catalog")) return route.fulfill({ json: [script] });
     if (path.endsWith("/jobs") && method === "POST") {
       posts.push(route.request().postDataJSON());
@@ -83,7 +84,7 @@ test("v2 run offers an upgrade; shell chains use a v3 snapshot without saving th
   await page.getByRole("combobox").first().selectOption("SWT");
   await page.getByRole("combobox").last().selectOption(script.id);
   await page.getByRole("button", { name: "Submit job", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Upgrade this run to version 3?" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Run and upgrade to version 3" })).toBeVisible();
   expect(posts).toEqual([]);
   await capture("version-upgrade-prompt");
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
@@ -100,7 +101,7 @@ test("v2 run offers an upgrade; shell chains use a v3 snapshot without saving th
   await capture("bash-command-chain");
   await page.getByRole("button", { name: "Submit custom run", exact: true }).click();
   await expect(page.getByRole("button", { name: "Run version 2", exact: true })).toBeDisabled();
-  await page.getByRole("button", { name: "Upgrade this run", exact: true }).click();
+  await page.getByRole("button", { name: "Run and upgrade version", exact: true }).click();
   await expect(page).toHaveURL(/\/jobs\/v3-job$/);
   expect(posts).toEqual([{ scriptId: script.id, upgradeToVersion: 3, commandMode: "shell", shellCommand: command }]);
   expect(scriptWrites).toEqual([]);

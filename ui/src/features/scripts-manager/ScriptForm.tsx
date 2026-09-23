@@ -17,7 +17,8 @@ import { allRoles } from "./utils";
 import { RepositoryPathPicker } from "./RepositoryPathPicker";
 import { FieldHelp } from "./FieldHelp";
 import { Link } from "@tanstack/react-router";
-import { CommandEditor } from "./CommandEditor";
+import { CommandSettings } from "./CommandSettings";
+import { ScriptVersionHelp } from "./CommandModal";
 import { CURRENT_SCRIPT_VERSION, savedCommandPreview, supportsScriptVersion } from "./commandArguments";
 import { ScriptVersionNotice } from "./ScriptVersionNotice";
 
@@ -112,8 +113,7 @@ export const ScriptForm = ({
     roles: script?.roles ?? [],
   });
 
-  const [commandValid, setCommandValid] = useState(true);
-  const handleSubmit = () => { if (commandValid) onSave({ ...form, repoPath: form.repoPath.trim() }); };
+  const handleSubmit = () => { onSave({ ...form, repoPath: form.repoPath.trim() }); };
 
   const update = <K extends keyof typeof form>(
     key: K,
@@ -138,7 +138,8 @@ export const ScriptForm = ({
     >
       <div className="script-form-layout flex flex-col gap-y-2">
         {script && (script.configVersion ?? 1) < CURRENT_SCRIPT_VERSION && <div className="rounded border border-blue-300 bg-blue-50 p-3 text-sm">
-          Saving upgrades this script from version {script.configVersion ?? 1} to version {CURRENT_SCRIPT_VERSION}. Review the command preview before saving. Existing jobs keep their original version. <Link to="/help/script-versions" target="_blank" rel="noopener noreferrer" className="underline">About script versions (new tab)</Link>
+          Saving upgrades this script from version {script.configVersion ?? 1} to version {CURRENT_SCRIPT_VERSION}. Review the command preview before saving. Existing jobs keep their original version.
+          <div className="mt-2"><ScriptVersionHelp /></div>
           <p className="mt-2 font-semibold">Before upgrade</p>
           <pre className="whitespace-pre-wrap break-all">{savedCommandPreview(script)}</pre>
           {(script.configVersion ?? 1) === 1 && <p>Version 1 ignores saved runtime and separate arguments. Review these fields below because version 3 uses them.</p>}
@@ -230,7 +231,7 @@ export const ScriptForm = ({
             </FormRow>
           )}
           <div className="my-3 rounded-lg border border-gray-300 bg-white p-3">
-            <CommandEditor value={form} onChange={setForm} onValidityChange={setCommandValid} disabled={isPending} />
+            <CommandSettings value={form} onChange={setForm} disabled={isPending} />
           </div>
           <FormRow>
             <InputLabel htmlFor="roles">Roles (optional)</InputLabel>
@@ -269,7 +270,7 @@ export const ScriptForm = ({
           </div>
           {script && <DeleteConfirm onDelete={() => onDelete(script?.id)} />}
           <div className="ml-auto flex justify-between gap-3">
-            <Button type="submit" disabled={isPending || !commandValid}>
+            <Button type="submit" disabled={isPending}>
               Save
             </Button>
             <Button type="button" disabled={isPending} onClick={onCancelEdit}>

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { formatArguments, parseArguments } from "./commandArguments";
+import { ArgumentValues } from "./CommandSummary";
 
 export function ArgumentsEditor({ id, label = "Arguments", initialArgs, disabled, onChange, onValidityChange }: {
   id: string; label?: string; initialArgs: string[]; disabled?: boolean;
@@ -19,8 +20,8 @@ export function ArgumentsEditor({ id, label = "Arguments", initialArgs, disabled
         catch { onValidityChange(false); }
       }} />
     <p id={`${id}-help`} className="text-sm text-gray-600">Separate arguments with spaces. Quote a value containing spaces. Trailing spaces are ignored; use <code>''</code> for an empty argument.</p>
-    {error ? <p role="alert" className="text-sm text-red-700">{error}</p> : <div id={`${id}-preview`} className="flex min-w-0 flex-wrap gap-1" aria-label="Parsed arguments">
-      {args.length ? args.map((argument, index) => <code key={index} className="max-w-full whitespace-pre-wrap break-all rounded bg-gray-100 px-2 py-1 text-xs">{index + 1}: {JSON.stringify(argument)}</code>)
+    {error ? <p role="alert" className="text-sm text-red-700">{error}</p> : <div id={`${id}-preview`}>
+      {args.length ? <ArgumentValues args={args} />
         : <span className="text-sm text-gray-500">No arguments</span>}
     </div>}
   </div>;

@@ -52,8 +52,10 @@ test("browse files, field help, responsive footer, and help navigation", async (
   await page.getByLabel("Source",{exact:true}).selectOption("command");
   await page.getByLabel("Name",{exact:true}).fill("Upload job status");
   await page.getByLabel("Executable",{exact:true}).fill("bash");
+  await page.getByRole("button",{name:"Add arguments",exact:true}).click();
   await page.getByLabel("Command mode",{exact:true}).selectOption("shell");
   await page.getByLabel("Bash command",{exact:true}).fill("printf 'Job completed\\n' > /tmp/job-status.txt && cwms-cli blob upload --input-file /tmp/job-status.txt --blob-id JOB-STATUS --media-type text/plain --office SWT");
+  await page.getByRole("button",{name:"Apply arguments",exact:true}).click();
   await capture("installed-command");
   await page.getByRole("button",{name:"Help with Source",exact:true}).click();
   await expect(page.getByRole("region",{name:"Source help"})).toBeVisible();

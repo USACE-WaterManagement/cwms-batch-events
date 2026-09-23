@@ -48,10 +48,12 @@ New registrations and web edits use **v3** (`configVersion: 3` in the API).
 Clients may omit the version on POST/PUT or explicitly submit v2; they cannot create v1 registrations.
 Saving an older script in the web app upgrades its registration after review.
 Ordinary reads and runs preserve its version. Submitting a v2 script in the web app
-offers **Upgrade this run** or **Run version 2**, with a link to Help → Script versions.
-The upgrade sends `upgradeToVersion: 3` and copies the existing arguments unchanged
-into the job snapshot. It does not update the saved script or reinterpret its arguments
-as shell syntax. V1 must first be reviewed and saved by an administrator.
+offers **Run and upgrade version** or **Run version 2**, with a link to Help → Script versions.
+The upgrade sends `upgradeToVersion: 3` and requires script-admin access for the office.
+The saved registration upgrade and new job are committed together after validation.
+Future runs use v3; the existing argument array remains unchanged and is not reinterpreted
+as shell syntax. Custom arguments or commands affect only the new job snapshot.
+V1 must first be reviewed and saved by an administrator.
 
 The UI adapts to the saved configuration version without a version selector.
 Details and submission explain the available features, and upgrade forms show

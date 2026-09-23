@@ -71,7 +71,9 @@ def command_for_payload(payload, *, runner: Literal["batch", "local"] = "batch")
     options = execution_for_config(payload)
     if options.config_version == 1:
         return command_for_v1(options, runner)
-    if options.config_version == 3 and options.command_mode == "shell":
+    # Validation above rejects unknown schemas; supported future schemas can
+    # inherit Bash mode without another version-specific dispatch branch.
+    if options.config_version >= 3 and options.command_mode == "shell":
         return ["bash", "-c", options.shell_command]
     return command_for_v2(options)
 

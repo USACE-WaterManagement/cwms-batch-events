@@ -1,4 +1,4 @@
-import { Button, H3, Modal } from "@usace/groundwork";
+import { Button, H3 } from "@usace/groundwork";
 import { Link } from "@tanstack/react-router";
 import useExecuteScript from "../script-picker/useExecuteScript";
 import useJobsList from "../jobs-list/useJobsList";
@@ -11,12 +11,16 @@ import { useState } from "react";
 import { CommandEditor } from "./CommandEditor";
 import { savedCommandPreview, CURRENT_SCRIPT_VERSION, supportsScriptVersion } from "./commandArguments";
 import { ScriptVersionNotice } from "./ScriptVersionNotice";
+import { CommandModal, ScriptVersionHelp } from "./CommandModal";
+import useAdminOffices from "./useAdminOffices";
 
 export const ScriptRunJob = ({ script, onSubmitted }: {
   script: Script;
   onSubmitted?: (job: JobDetails) => void;
 }) => {
   const run = useExecuteScript(onSubmitted);
+  const adminOffices = useAdminOffices();
+  const canUpgrade = adminOffices.data?.includes(script.office) ?? false;
   const [custom, setCustom] = useState(false);
   const initialCommand: ScriptFormData = { ...script, configVersion: CURRENT_SCRIPT_VERSION,
     executionType: script.executionType === "command" ? "command" : "github_file",
@@ -50,7 +54,6 @@ export const ScriptRunJob = ({ script, onSubmitted }: {
       <p className="text-sm text-gray-600">These changes apply only to this run. The saved script stays unchanged.</p>
     </div>}
     {version === 1 && <p className="text-sm text-gray-600">To use custom arguments, a script administrator must edit and save this legacy script in Scripts Manager first.</p>}
-    <Link to="/help/script-versions" target="_blank" rel="noopener noreferrer" className="text-sm text-blue-700 underline">About script versions and commands (new tab)</Link>
     {!script.active && <p role="status">This script is inactive. Enable it in Details before running a job.</p>}
     <div className="flex flex-wrap gap-3">
     <Button disabled={!supportsScriptVersion(version) || !script.active || run.isPending || (custom && !commandValid)} onClick={() => version === 2 ? setUpgradeOpen(true) : submit(false)}>
@@ -61,19 +64,23 @@ export const ScriptRunJob = ({ script, onSubmitted }: {
     }}>{custom ? "Cancel custom run" : "Custom run"}</Button>
     </div>
     {run.isError && <p role="alert" className="text-red-700">Job could not be submitted: {run.error.message}</p>}
-    <Modal opened={upgradeOpen} onClose={() => setUpgradeOpen(false)} dialogTitle="Upgrade this run to version 3?">
-      <div className="space-y-4">
-        <p>This script uses version 2. Version 3 adds Bash command mode. Upgrading this run preserves your arguments and leaves the saved script unchanged.</p>
-        <p>To upgrade the saved script, an administrator can review and save it in Scripts Manager.</p>
-        <Link to="/help/script-versions" target="_blank" rel="noopener noreferrer" className="text-blue-700 underline">Read about script versions (new tab)</Link>
-        {custom && command.commandMode === "shell" && <p>Bash command mode requires version 3.</p>}
-        <div className="flex flex-wrap gap-3">
-          <Button onClick={() => submit(true)}>Upgrade this run</Button>
-          <Button disabled={custom && command.commandMode === "shell"} onClick={() => submit(false)}>Run version 2</Button>
-          <Button onClick={() => setUpgradeOpen(false)}>Cancel</Button>
-        </div>
+    <CommandModal opened={upgradeOpen} onClose={() => setUpgradeOpen(false)} title="Run and upgrade to version 3" footer={<>
+      <button type="button" className="rounded-lg px-4 py-2 font-medium text-slate-600 hover:bg-slate-200" onClick={() => setUpgradeOpen(false)}>Cancel</button>
+      <button type="button" className="rounded-lg border border-slate-300 bg-white px-4 py-2 font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50" disabled={custom && command.commandMode === "shell"} onClick={() => submit(false)}>Run version 2</button>
+      <Button disabled={!canUpgrade} onClick={() => submit(true)}>Run and upgrade version</Button>
+    </>}>
+      <div className="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
+        <span className="rounded bg-white px-3 py-2 font-semibold text-slate-600">Version 2</span>
+        <span aria-hidden="true" className="text-2xl text-blue-600">→</span>
+        <span className="rounded bg-blue-700 px-3 py-2 font-semibold text-white">Version 3</span>
       </div>
-    </Modal>
+      <div><p className="font-semibold text-slate-900">Upgrade {script.name} and start the job</p>
+        <p className="mt-2 text-slate-600">The saved script will use version 3 for future runs. Its existing arguments stay unchanged. Version 3 adds Bash commands with success and failure chains.</p></div>
+      <p className="rounded-lg bg-slate-100 p-3 text-sm text-slate-600">Custom arguments or commands apply only to this job. Previously submitted jobs keep their original settings.</p>
+      {!canUpgrade && <p role="status" className="text-sm text-amber-800">A script administrator for {script.office} must upgrade the saved version. You can still run version 2 with its existing capabilities.</p>}
+      {custom && command.commandMode === "shell" && <p className="text-sm font-semibold text-blue-800">This Bash command requires version 3.</p>}
+      <ScriptVersionHelp />
+    </CommandModal>
   </div>;
 };
 
