@@ -18,7 +18,8 @@ import { RepositoryPathPicker } from "./RepositoryPathPicker";
 import { FieldHelp } from "./FieldHelp";
 import { Link } from "@tanstack/react-router";
 import { CommandEditor } from "./CommandEditor";
-import { CURRENT_SCRIPT_VERSION } from "./commandArguments";
+import { CURRENT_SCRIPT_VERSION, savedCommandPreview, supportsScriptVersion } from "./commandArguments";
+import { ScriptVersionNotice } from "./ScriptVersionNotice";
 
 const fieldHelp: Record<string, React.ReactNode> = {
   name: "A descriptive name for this job. Its slug is generated from the name when you create it.",
@@ -121,6 +122,11 @@ export const ScriptForm = ({
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
+  if (script && !supportsScriptVersion(script.configVersion ?? 1)) return <div className="space-y-4 p-4">
+    <ScriptVersionNotice version={script.configVersion ?? 1} />
+    <Button type="button" onClick={onCancelEdit}>Cancel</Button>
+  </div>;
+
   return (
     <form
       className="script-form"
@@ -133,6 +139,9 @@ export const ScriptForm = ({
       <div className="script-form-layout flex flex-col gap-y-2">
         {script && (script.configVersion ?? 1) < CURRENT_SCRIPT_VERSION && <div className="rounded border border-blue-300 bg-blue-50 p-3 text-sm">
           Saving upgrades this script from version {script.configVersion ?? 1} to version {CURRENT_SCRIPT_VERSION}. Review the command preview before saving. Existing jobs keep their original version. <Link to="/help/script-versions" target="_blank" rel="noopener noreferrer" className="underline">About script versions (new tab)</Link>
+          <p className="mt-2 font-semibold">Before upgrade</p>
+          <pre className="whitespace-pre-wrap break-all">{savedCommandPreview(script)}</pre>
+          {(script.configVersion ?? 1) === 1 && <p>Version 1 ignores saved runtime and separate arguments. Review these fields below because version 3 uses them.</p>}
         </div>}
         <div className="script-form-fields">
         <Fieldset disabled={isPending} className="flex min-w-0 flex-col gap-1">

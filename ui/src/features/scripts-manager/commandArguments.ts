@@ -2,6 +2,7 @@ import parse from "shell-quote/parse.js";
 import type { Script } from "./types";
 
 export const CURRENT_SCRIPT_VERSION = 3;
+export const supportsScriptVersion = (version: number) => [1, 2, 3].includes(version);
 // Single quotes keep every saved value literal, including glob characters.
 export const formatArguments = (args: string[]) => args.map(argument =>
   /^[a-zA-Z0-9_./:-]+$/.test(argument) ? argument : "'" + argument.replace(/'/g, "'\\''") + "'",
@@ -27,10 +28,20 @@ export function parseArguments(text: string): string[] {
   return tokens as string[];
 }
 
-export function commandPreview(script: Pick<Script, "executionType" | "repoPath" | "runtime" | "commandArgs">): string {
-  const target = script.repoPath.trim();
+export function commandPreview(script: Pick<Script, "executionType" | "repoPath" | "runtime" | "commandArgs">, trimTarget = true): string {
+  const target = trimTarget ? script.repoPath.trim() : script.repoPath;
   const prefix = script.executionType === "command" ? [target]
     : script.runtime === "java" ? ["java", "-jar", `/jobs/${target.replace(/^\/jobs\//, "")}`]
     : [script.runtime === "shell" ? "bash" : "python", `/jobs/${target.replace(/^\/jobs\//, "")}`];
   return formatArguments([...prefix, ...(script.commandArgs ?? [])]);
+}
+
+export function savedCommandPreview(script: Script): string {
+  const version = script.configVersion ?? 1;
+  if (version === 1) {
+    return `AWS Batch: ${formatArguments(["python", `/jobs/${script.repoPath}`])}\nLocal Docker command text: python /jobs/${script.repoPath}`;
+  }
+  if (version === 2) return commandPreview(script, false);
+  if (version === 3) return script.commandMode === "shell" ? script.shellCommand ?? "" : commandPreview(script, false);
+  return "Preview unavailable for this configuration version.";
 }

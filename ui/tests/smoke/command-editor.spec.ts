@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
-import { formatArguments, parseArguments } from "../../src/features/scripts-manager/commandArguments";
+import { formatArguments, parseArguments, savedCommandPreview } from "../../src/features/scripts-manager/commandArguments";
+import type { Script } from "../../src/features/scripts-manager/types";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -10,6 +11,45 @@ test("argument parsing preserves quoted values and ignores unquoted trailing whi
   for (const text of ['"unfinished', "trailing\\", "--date today && echo done", "--date today || echo failed", "$HOME", "*.txt"]) {
     expect(() => parseArguments(text)).toThrow();
   }
+});
+
+test("saved previews respect historical and literal command semantics", () => {
+  const script = { repoPath: "/jobs/report.py", executionType: "command", runtime: "java", commandArgs: ["ignored"] } as Script;
+  expect(savedCommandPreview(script)).toBe("AWS Batch: python /jobs//jobs/report.py\nLocal Docker command text: python /jobs//jobs/report.py");
+  expect(savedCommandPreview({ ...script, configVersion: 2, repoPath: "echo " })).toBe("'echo ' ignored");
+  expect(savedCommandPreview({ ...script, configVersion: 3, commandMode: "shell", shellCommand: "echo first && echo second" })).toBe("echo first && echo second");
+  expect(savedCommandPreview({ ...script, configVersion: 99 })).toContain("unavailable");
+});
+
+test("UI adapts to legacy and unknown versions without a version selector", async ({ page }) => {
+  const scripts = [1, 2, 3, 99].map(configVersion => ({ id: `version-${configVersion}`, configVersion,
+    name: `Report version ${configVersion}`, office: "SWT", roles: [], active: true,
+    repoPath: "python/report.py", runtime: "java", executionType: "command", commandArgs: ["--date", "today"] }));
+  await page.route("**/api/**", route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/admin-offices")) return route.fulfill({ json: ["SWT"] });
+    if (path.endsWith("/scripts") || path.endsWith("/scripts/catalog")) return route.fulfill({ json: scripts });
+    return route.fulfill({ json: [] });
+  });
+  await page.goto("/events/submit");
+  await page.getByRole("button", { name: "Login", exact: true }).first().click();
+  await page.getByRole("combobox").first().selectOption("SWT");
+  await page.getByRole("combobox").last().selectOption("version-1");
+  await expect(page.getByRole("note")).toContainText("Historical Python execution");
+  await expect(page.getByRole("button", { name: "Custom run", exact: true })).toBeDisabled();
+  await expect(page.getByText(/AWS Batch: python \/jobs\/python\/report.py/)).toBeVisible();
+  await page.getByRole("combobox").last().selectOption("version-99");
+  await expect(page.getByRole("button", { name: "Submit job", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Custom run", exact: true })).toBeDisabled();
+  await expect(page.getByRole("note")).toContainText("does not support");
+  await page.getByRole("combobox").last().selectOption("version-2");
+  await page.getByRole("button", { name: "Custom run", exact: true }).click();
+  await expect(page.getByRole("option", { name: "Bash command (requires version 3 upgrade)", exact: true })).toBeAttached();
+  await expect(page.getByRole("combobox", { name: /version/i })).toHaveCount(0);
+  await page.getByRole("link", { name: "Scripts Manager", exact: true }).click();
+  await page.locator("tr").filter({ hasText: "Report version 99" }).getByRole("button", { name: "Edit Report version 99", exact: true }).click();
+  await expect(page.getByRole("note")).toContainText("does not support");
+  await expect(page.getByRole("button", { name: "Save", exact: true })).toHaveCount(0);
 });
 
 test("v2 run offers an upgrade; shell chains use a v3 snapshot without saving the script", async ({ page }) => {

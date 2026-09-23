@@ -3,9 +3,9 @@ import { ArgumentsEditor } from "./ArgumentsEditor";
 import { commandPreview } from "./commandArguments";
 import type { ScriptFormData } from "./types";
 
-export function CommandEditor({ value, onChange, onValidityChange, disabled, argumentsAvailable = true, label = "Arguments" }: {
+export function CommandEditor({ value, onChange, onValidityChange, disabled, argumentsAvailable = true, shellRequiresUpgrade = false, label = "Arguments" }: {
   value: ScriptFormData; onChange: (value: ScriptFormData) => void;
-  onValidityChange: (valid: boolean) => void; disabled?: boolean; argumentsAvailable?: boolean; label?: string;
+  onValidityChange: (valid: boolean) => void; disabled?: boolean; argumentsAvailable?: boolean; shellRequiresUpgrade?: boolean; label?: string;
 }) {
   const id = useId();
   const savedArguments = useRef(value.commandArgs ?? []);
@@ -24,7 +24,7 @@ export function CommandEditor({ value, onChange, onValidityChange, disabled, arg
         onValidityChange(!nextShell || !!shellText.trim());
       }}>
       <option value="arguments" disabled={!argumentsAvailable}>Executable with arguments{!argumentsAvailable ? " (no saved executable)" : ""}</option>
-      <option value="shell">Bash command (supports && and ||)</option>
+      <option value="shell">Bash command ({shellRequiresUpgrade ? "requires version 3 upgrade" : "supports && and ||"})</option>
     </select>
     {shell ? <>
       <label htmlFor={`${id}-shell`} className="block font-semibold">Bash command</label>

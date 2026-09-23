@@ -53,6 +53,12 @@ The upgrade sends `upgradeToVersion: 3` and copies the existing arguments unchan
 into the job snapshot. It does not update the saved script or reinterpret its arguments
 as shell syntax. V1 must first be reviewed and saved by an administrator.
 
+The UI adapts to the saved configuration version without a version selector.
+Details and submission explain the available features, and upgrade forms show
+the previous command beside the new editor's preview. Unknown versions remain
+readable but cannot be edited or run by this UI. Configuration versions are
+separate from application releases; saved revision history is not included.
+
 Flyway migration `V1_01_15` adds `config_version INTEGER NOT NULL DEFAULT 1`
 to both scripts and jobs. All existing unversioned rows are classified as v1,
 including rows saved between the registered-runtime release and this migration.

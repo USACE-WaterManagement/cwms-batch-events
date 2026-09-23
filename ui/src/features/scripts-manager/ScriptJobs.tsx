@@ -9,7 +9,8 @@ import LoadingSpinner from "../../shared/components/LoadingSpinner";
 import { jobStatusLabel } from "../jobs-list/jobStatus";
 import { useState } from "react";
 import { CommandEditor } from "./CommandEditor";
-import { commandPreview, CURRENT_SCRIPT_VERSION } from "./commandArguments";
+import { savedCommandPreview, CURRENT_SCRIPT_VERSION, supportsScriptVersion } from "./commandArguments";
+import { ScriptVersionNotice } from "./ScriptVersionNotice";
 
 export const ScriptRunJob = ({ script, onSubmitted }: {
   script: Script;
@@ -37,24 +38,25 @@ export const ScriptRunJob = ({ script, onSubmitted }: {
   return <div className="space-y-4 p-4">
     <H3>Run {script.name}</H3>
     <p>{script.description}</p>
+    <ScriptVersionNotice version={version} />
     <dl className="space-y-2 text-sm">
       <div><dt className="font-semibold">{script.executionType === "command" ? "Executable" : "File"}</dt><dd className="break-all">{script.repoPath}</dd></div>
-      <div><dt className="font-semibold">Saved command · version {version}</dt><dd><pre className="whitespace-pre-wrap break-all">{script.commandMode === "shell" ? script.shellCommand : commandPreview(script)}</pre></dd></div>
+      <div><dt className="font-semibold">Saved command · version {version}</dt><dd><pre className="whitespace-pre-wrap break-all">{savedCommandPreview(script)}</pre></dd></div>
       <div><dt className="font-semibold">Execution roles</dt><dd>{script.roles.length ? script.roles.join(", ") : "No additional CDA role required. Office access is required."}</dd></div>
     </dl>
     <p className="text-sm text-gray-600">Submit job uses the saved settings. Custom run lets you change arguments for one run without saving changes to the script.</p>
     {custom && <div className="space-y-2 rounded border border-blue-300 bg-blue-50 p-3">
-      <CommandEditor value={command} onChange={setCommand} onValidityChange={setCommandValid} disabled={run.isPending} argumentsAvailable={!!script.repoPath.trim()} label="Arguments for this run" />
+      <CommandEditor value={command} onChange={setCommand} onValidityChange={setCommandValid} disabled={run.isPending} argumentsAvailable={!!script.repoPath.trim()} shellRequiresUpgrade={version === 2} label="Arguments for this run" />
       <p className="text-sm text-gray-600">These changes apply only to this run. The saved script stays unchanged.</p>
     </div>}
     {version === 1 && <p className="text-sm text-gray-600">To use custom arguments, a script administrator must edit and save this legacy script in Scripts Manager first.</p>}
     <Link to="/help/script-versions" target="_blank" rel="noopener noreferrer" className="text-sm text-blue-700 underline">About script versions and commands (new tab)</Link>
     {!script.active && <p role="status">This script is inactive. Enable it in Details before running a job.</p>}
     <div className="flex flex-wrap gap-3">
-    <Button disabled={!script.active || run.isPending || (custom && !commandValid)} onClick={() => version === 2 ? setUpgradeOpen(true) : submit(false)}>
+    <Button disabled={!supportsScriptVersion(version) || !script.active || run.isPending || (custom && !commandValid)} onClick={() => version === 2 ? setUpgradeOpen(true) : submit(false)}>
       {run.isPending ? "Submitting..." : custom ? "Submit custom run" : "Submit job"}
     </Button>
-    <Button disabled={!script.active || run.isPending || version < 2} onClick={() => {
+    <Button disabled={!supportsScriptVersion(version) || !script.active || run.isPending || version < 2} onClick={() => {
       setCustom(!custom); setCommand(initialCommand); setCommandValid(true); run.reset();
     }}>{custom ? "Cancel custom run" : "Custom run"}</Button>
     </div>
