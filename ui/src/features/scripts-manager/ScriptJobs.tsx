@@ -7,12 +7,16 @@ import type { JobDetails } from "../jobs-list/useJobDetails";
 import type { Script } from "./types";
 import LoadingSpinner from "../../shared/components/LoadingSpinner";
 import { jobStatusLabel } from "../jobs-list/jobStatus";
+import { useId, useState } from "react";
 
 export const ScriptRunJob = ({ script, onSubmitted }: {
   script: Script;
-  onSubmitted: (job: JobDetails) => void;
+  onSubmitted?: (job: JobDetails) => void;
 }) => {
   const run = useExecuteScript(onSubmitted);
+  const [custom, setCustom] = useState(false);
+  const [argumentsText, setArgumentsText] = useState((script.commandArgs ?? []).join("\n"));
+  const argumentsId = useId();
   return <div className="space-y-4 p-4">
     <H3>Run {script.name}</H3>
     <p>{script.description}</p>
@@ -21,11 +25,26 @@ export const ScriptRunJob = ({ script, onSubmitted }: {
       <div><dt className="font-semibold">Arguments</dt><dd><pre className="whitespace-pre-wrap break-words">{script.commandArgs?.join("\n") || "None"}</pre></dd></div>
       <div><dt className="font-semibold">Execution roles</dt><dd>{script.roles.length ? script.roles.join(", ") : "No additional CDA role required. Office access is required."}</dd></div>
     </dl>
-    <p className="text-sm text-gray-600">Runs the saved script settings. Open Details to edit them before submitting.</p>
+    <p className="text-sm text-gray-600">Submit job uses the saved settings. Custom run lets you change arguments for one run without saving changes to the script.</p>
+    {custom && <div className="space-y-2 rounded border border-blue-300 bg-blue-50 p-3">
+      <label htmlFor={argumentsId} className="block font-semibold">Arguments for this run</label>
+      <p id={`${argumentsId}-help`} className="text-sm">One argument per line. Spaces are preserved. Clear all lines to run without arguments. These replace the saved arguments for this run only.</p>
+      <textarea id={argumentsId} aria-describedby={`${argumentsId}-help`} rows={5}
+        className="block w-full resize-y rounded border border-gray-400 bg-white p-2 font-mono text-sm"
+        disabled={run.isPending} value={argumentsText} onChange={event => setArgumentsText(event.target.value)} />
+    </div>}
+    {script.configVersion !== 2 && <p className="text-sm text-gray-600">To use custom arguments, a script administrator must edit and save this legacy script in Scripts Manager first.</p>}
     {!script.active && <p role="status">This script is inactive. Enable it in Details before running a job.</p>}
-    <Button disabled={!script.active || run.isPending} onClick={() => run.mutate({ scriptId: script.id })}>
-      {run.isPending ? "Submitting..." : "Submit job"}
+    <div className="flex flex-wrap gap-3">
+    <Button disabled={!script.active || run.isPending} onClick={() => run.mutate({ scriptId: script.id,
+      ...(custom ? { commandArgs: argumentsText === "" ? [] : argumentsText.split("\n") } : {}),
+    })}>
+      {run.isPending ? "Submitting..." : custom ? "Submit custom run" : "Submit job"}
     </Button>
+    <Button disabled={!script.active || run.isPending || script.configVersion !== 2} onClick={() => {
+      setCustom(!custom); setArgumentsText((script.commandArgs ?? []).join("\n")); run.reset();
+    }}>{custom ? "Cancel custom run" : "Custom run"}</Button>
+    </div>
     {run.isError && <p role="alert" className="text-red-700">Job could not be submitted: {run.error.message}</p>}
   </div>;
 };

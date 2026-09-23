@@ -344,7 +344,7 @@ const OnboardingPane = ({ user }: { user?: ApplicationInfo["user"] }) => {
               Successful submission opens the new run in <strong>Job runs</strong>. To change inputs,
               use <strong>Details → Edit</strong> and save before submitting.</p>
             <p>Users who do not administer scripts can continue to use <strong>Submit Job</strong>{" "}
-              to choose an active script from their permitted catalog and select <strong>Execute</strong>.</p>
+              to choose an active script from their permitted catalog and select <strong>Submit job</strong>, or use <strong>Custom run</strong> to override arguments for one run.</p>
           </OnboardingSubstep>
         </ol>
       </OnboardingStep>

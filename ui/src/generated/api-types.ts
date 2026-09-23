@@ -363,6 +363,8 @@ export interface components {
         };
         /** ScriptRunRequest */
         ScriptRunRequest: {
+            /** Arguments for this run only. Omit or use null for saved arguments; [] clears them. Requires a version 2 script. */
+            commandArgs?: string[] | null;
             /**
              * Scriptid
              * Format: uuid

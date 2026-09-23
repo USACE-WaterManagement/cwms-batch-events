@@ -144,6 +144,17 @@ class OfficeCatalogs(CamelModel):
 
 class ScriptRunRequest(CamelModel):
     script_id: UUID
+    command_args: list[str] | None = Field(
+        default=None,
+        description="Arguments for this run only. Omit or use null for saved arguments; [] clears them. Requires a version 2 script.",
+    )
+
+    @field_validator("command_args")
+    @classmethod
+    def valid_arguments(cls, values):
+        if values is not None and any("\x00" in value for value in values):
+            raise ValueError("Command arguments cannot contain NUL characters")
+        return values
 
 
 class ScriptRunOptions(ExecutionRecord):

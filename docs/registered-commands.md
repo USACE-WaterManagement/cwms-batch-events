@@ -35,6 +35,12 @@ The second line is one argument. Bash runs the upload only if file creation succ
 
 Configuration version, runtime, path, and arguments are copied into the job record and queue message when submitted, so later script edits do not change an already submitted job. Version 2 uses the same command construction for local Docker execution and AWS Batch.
 
+For a one-time override, `POST /jobs` accepts `commandArgs` alongside `scriptId`.
+Omitting `commandArgs` or sending `null` uses the saved arguments; `[]` runs without
+arguments. The override replaces the entire argument array on the job snapshot
+and does not update the script. Execution permissions and the saved executable,
+runtime, and path still apply. Custom arguments require configuration version 2.
+
 ## Configuration versions
 
 New registrations and explicit edits use **v2** (`configVersion: 2` in the API).

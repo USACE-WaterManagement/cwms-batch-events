@@ -1,31 +1,6 @@
-import { Button } from "@usace/groundwork";
-import useExecuteScript from "./useExecuteScript";
+import { ScriptRunJob } from "../scripts-manager/ScriptJobs";
+import type { Script } from "../scripts-manager/types";
 
-interface ScriptExecutorProps {
-  scriptId: string;
-}
-
-const ScriptExecutor = ({ scriptId }: ScriptExecutorProps) => {
-  const { mutate, isPending, isError, error } = useExecuteScript();
-
-  const handleExecute = () => {
-    mutate({ scriptId });
-  };
-
-  return (
-    <div>
-      <Button onClick={handleExecute} disabled={isPending} className="w-24">
-        {isPending ? "Submitting..." : "Execute"}
-      </Button>
-      {isError && (
-        <div className="mt-4">
-          <span>
-            <p>Script failed. Error: {error.message}</p>
-          </span>
-        </div>
-      )}
-    </div>
-  );
-};
+const ScriptExecutor = ({ script }: { script: Script }) => <ScriptRunJob script={script} />;
 
 export default ScriptExecutor;

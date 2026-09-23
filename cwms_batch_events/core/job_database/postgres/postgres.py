@@ -126,6 +126,10 @@ class PostgresJobDatabase:
             raise PermissionError("Not authorized to run requested script")
 
         options = execution_for_config(script)
+        if payload.command_args is not None:
+            if options.config_version != 2:
+                raise ValueError("Custom arguments require a version 2 script")
+            options.command_args = list(payload.command_args)
 
         job = JobModel()
         job.id = uuid.uuid4()
