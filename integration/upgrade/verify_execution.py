@@ -23,6 +23,17 @@ def main():
             current = split_command(current) if isinstance(current, str) else current
             assert current == historical
             cases.append((historical, current))
+    shell_cases = []
+    for runner in ("batch", "local"):
+        for script, expected, exit_code in [
+            ("printf first && printf second   ", "firstsecond", 0),
+            ("false && printf skipped || printf fallback   ", "fallback", 0),
+            ("printf '%s' 'two words' && false", "two words", 1),
+        ]:
+            command = command_for_payload(SimpleNamespace(config_version=3,
+                repo_path="", execution_type="command", command_mode="shell",
+                shell_command=script), runner=runner)
+            shell_cases.append((command, expected, exit_code))
     # Fixtures and processes exist only in this disposable container. No office
     # repositories, production images, credentials, or host mounts are involved.
     code = '''
@@ -39,7 +50,11 @@ for historical, current in CASES:
     after = subprocess.run(current, capture_output=True, text=True, check=True)
     assert before.stdout == after.stdout and before.stdout.startswith("legacy-ok"), (historical, current)
 print(f"PASS: {len(CASES)} historical command executions match v1")
-'''.replace("CASES", repr(cases))
+for command, expected, exit_code in SHELL_COMMANDS:
+    result = subprocess.run(command, capture_output=True, text=True)
+    assert (result.stdout, result.returncode) == (expected, exit_code)
+print("PASS: Bash chains, fallback, quotes, trailing spaces, and exit status")
+'''.replace("CASES", repr(cases)).replace("SHELL_COMMANDS", repr(shell_cases))
     subprocess.run(["docker", "run", "--rm", "--network=none", "-i", "python:3.13-slim", "python", "-"],
                    input=code, text=True, check=True)
 

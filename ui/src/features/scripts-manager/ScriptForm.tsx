@@ -17,6 +17,8 @@ import { allRoles } from "./utils";
 import { RepositoryPathPicker } from "./RepositoryPathPicker";
 import { FieldHelp } from "./FieldHelp";
 import { Link } from "@tanstack/react-router";
+import { CommandEditor } from "./CommandEditor";
+import { CURRENT_SCRIPT_VERSION } from "./commandArguments";
 
 const fieldHelp: Record<string, React.ReactNode> = {
   name: "A descriptive name for this job. Its slug is generated from the name when you create it.",
@@ -39,16 +41,15 @@ const fieldHelp: Record<string, React.ReactNode> = {
         <p>Runs an executable already available in the container, such as <code>cwmscli</code>, <code>java</code>, or <code>bash</code>. Skips repository checkout, artifact downloads, and district dependency installation.</p>
         <div className="space-y-2 rounded-md border border-blue-200 bg-blue-50 p-3 text-blue-950">
           <p className="font-semibold">Example: JAR already in the container</p>
-          <p>Executable: <code className="font-mono font-semibold">java</code><br />Arguments (one per line):</p>
-          <pre className="whitespace-pre-wrap break-all rounded bg-white p-2 font-mono text-blue-950"><code>{"-jar\n/opt/reports/report.jar"}</code></pre>
+          <p>Executable: <code className="font-mono font-semibold">java</code><br />Arguments:</p>
+          <pre className="whitespace-pre-wrap break-all rounded bg-white p-2 font-mono text-blue-950"><code>-jar /opt/reports/report.jar</code></pre>
           <p>Replace this example path with an existing JAR in the image or a mounted directory. Use the repository source for SWT’s downloaded release JAR.</p>
         </div>
       </section>
-      <p>Arguments are passed literally. To run shell operations such as <code>&amp;&amp;</code>, use <code>bash</code> with <code>-c</code> on the first argument line and the complete shell command on the next.</p>
+      <p>Quote arguments that contain spaces. For shell operations such as <code>&amp;&amp;</code> or <code>||</code>, select Bash command mode and enter the complete command.</p>
     </div>
   ),
   runtime: "Choose Python for .py files, Bash for .sh files, or Java JAR for a built .jar file. The runtime determines how the file is invoked and the default browser filter.",
-  commandArgs: "Enter one argument per line. Spaces within each line are preserved. For the installed java command, put -jar on one line and the JAR path on the next.",
   roles: "Optional. Leave empty to let users with office access run this script without an additional CDA role. Select roles to restrict execution to users with at least one of those roles in this office. These roles do not grant the script CDA credentials.",
 };
 
@@ -97,7 +98,7 @@ export const ScriptForm = ({
   onCancelEdit,
 }: ScriptFormProps) => {
   const [form, setForm] = useState<ScriptFormData>({
-    configVersion: 2,
+    configVersion: CURRENT_SCRIPT_VERSION,
     name: script?.name ?? "",
     description: script?.description ?? "",
     active: script?.active ?? true,
@@ -105,10 +106,13 @@ export const ScriptForm = ({
     executionType: script?.executionType === "command" ? "command" : "github_file",
     runtime: script?.runtime === "java" || script?.runtime === "shell" ? script.runtime : "python",
     commandArgs: script?.commandArgs ?? [],
+    commandMode: script?.commandMode === "shell" ? "shell" : "arguments",
+    shellCommand: script?.shellCommand ?? null,
     roles: script?.roles ?? [],
   });
 
-  const handleSubmit = () => onSave(form);
+  const [commandValid, setCommandValid] = useState(true);
+  const handleSubmit = () => { if (commandValid) onSave({ ...form, repoPath: form.repoPath.trim() }); };
 
   const update = <K extends keyof typeof form>(
     key: K,
@@ -127,6 +131,9 @@ export const ScriptForm = ({
       }}
     >
       <div className="script-form-layout flex flex-col gap-y-2">
+        {script && (script.configVersion ?? 1) < CURRENT_SCRIPT_VERSION && <div className="rounded border border-blue-300 bg-blue-50 p-3 text-sm">
+          Saving upgrades this script from version {script.configVersion ?? 1} to version {CURRENT_SCRIPT_VERSION}. Review the command preview before saving. Existing jobs keep their original version. <Link to="/help/script-versions" target="_blank" rel="noopener noreferrer" className="underline">About script versions (new tab)</Link>
+        </div>}
         <div className="script-form-fields">
         <Fieldset disabled={isPending} className="flex min-w-0 flex-col gap-1">
           {script && <ViewField label="Id">{script.id}</ViewField>}
@@ -154,7 +161,7 @@ export const ScriptForm = ({
               }
             />
           </FormRow>
-          <FormRow>
+          {form.commandMode !== "shell" && <FormRow>
             <InputLabel htmlFor="repoPath">
               {form.executionType === "command"
                 ? "Executable"
@@ -175,7 +182,7 @@ export const ScriptForm = ({
               value={form.repoPath}
               onChange={(path) => update("repoPath", path)}
             />}
-          </FormRow>
+          </FormRow>}
           <FormRow>
             <InputLabel htmlFor="executionType">Source</InputLabel>
             <select
@@ -193,7 +200,7 @@ export const ScriptForm = ({
               <option value="command">Installed command</option>
             </select>
           </FormRow>
-          {form.executionType !== "command" && (
+          {form.commandMode !== "shell" && form.executionType !== "command" && (
             <FormRow>
               <InputLabel htmlFor="runtime">Runtime</InputLabel>
               <select
@@ -213,23 +220,9 @@ export const ScriptForm = ({
               </select>
             </FormRow>
           )}
-          <FormRow>
-            <InputLabel htmlFor="commandArgs">Arguments</InputLabel>
-            <div>
-              <textarea
-                id="commandArgs"
-                className="w-full rounded border p-2"
-                rows={2}
-                value={(form.commandArgs ?? []).join("\n")}
-                onChange={(e) =>
-                  update(
-                    "commandArgs",
-                    e.target.value === "" ? [] : e.target.value.split("\n"),
-                  )
-                }
-              />
-            </div>
-          </FormRow>
+          <div className="my-3 rounded-lg border border-gray-300 bg-white p-3">
+            <CommandEditor value={form} onChange={setForm} onValidityChange={setCommandValid} disabled={isPending} />
+          </div>
           <FormRow>
             <InputLabel htmlFor="roles">Roles (optional)</InputLabel>
             <RoleMultiSelect
@@ -267,7 +260,7 @@ export const ScriptForm = ({
           </div>
           {script && <DeleteConfirm onDelete={() => onDelete(script?.id)} />}
           <div className="ml-auto flex justify-between gap-3">
-            <Button type="submit" disabled={isPending}>
+            <Button type="submit" disabled={isPending || !commandValid}>
               Save
             </Button>
             <Button type="button" disabled={isPending} onClick={onCancelEdit}>

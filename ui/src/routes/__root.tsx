@@ -28,6 +28,7 @@ const publicAboutLinks = [
 const helpLinks = [
   { id: "onboarding", text: "Onboarding", href: "/help/onboarding" },
   { id: "script-files", text: "Script setup", href: "/help/script-files" },
+  { id: "script-versions", text: "Script versions", href: "/help/script-versions" },
 ];
 
 const authenticatedAboutLinks = [

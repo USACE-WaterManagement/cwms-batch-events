@@ -4,18 +4,49 @@
  */
 
 export interface paths {
-    "/jobs/{job_id}/logs/page": {
+    "/about/application": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /**
-         * Get Log Page
-         * @description Read a bounded log page. Pass nextCursor to retrieve subsequent output.
-         */
-        get: operations["get_log_page_jobs__job_id__logs_page_get"];
+        /** Get Application Info */
+        get: operations["get_application_info_about_application_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/about/schema": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Schema Info */
+        get: operations["get_schema_info_about_schema_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/job-runners/default": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Default Job Runner */
+        get: operations["get_default_job_runner_job_runners_default_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -76,6 +107,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/jobs/{job_id}/logs/page": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Log Page
+         * @description Read a bounded log page. Pass nextCursor to retrieve subsequent output.
+         */
+        get: operations["get_log_page_jobs__job_id__logs_page_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/repository-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Repository Status */
+        get: operations["repository_status_repository_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/repository-files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Repository Files */
+        get: operations["repository_files_repository_files_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/scripts/{script_id}": {
         parameters: {
             query?: never;
@@ -94,7 +179,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/scripts/": {
+    "/scripts": {
         parameters: {
             query?: never;
             header?: never;
@@ -102,10 +187,10 @@ export interface paths {
             cookie?: never;
         };
         /** Get Scripts For Office Endpoint */
-        get: operations["get_scripts_for_office_endpoint_scripts__get"];
+        get: operations["get_scripts_for_office_endpoint_scripts_get"];
         put?: never;
         /** Post Script */
-        post: operations["post_script_scripts__post"];
+        post: operations["post_script_scripts_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -121,6 +206,31 @@ export interface paths {
         };
         /** Get User Scripts Catalog */
         get: operations["get_user_scripts_catalog_scripts_catalog_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/server-logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Server Logs
+         * @description Read up to 200 events, oldest first, within a maximum 24-hour window.
+         *
+         *     Pass nextCursor and the returned startTime/endTime for the next page,
+         *     including after empty pages. Only the server-configured group/prefix is read.
+         *     Named levels filter the canonical JSON level field in CloudWatch before
+         *     pagination. ALL includes historical text. UNKNOWN scans each bounded page.
+         */
+        get: operations["get_server_logs_server_logs_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -150,11 +260,47 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** ApplicationInfo */
+        ApplicationInfo: {
+            /** Name */
+            name: string;
+            /** Apiversion */
+            apiVersion: string;
+            /** Environment */
+            environment: string;
+            /** Buildrevision */
+            buildRevision: string;
+            /** Buildtime */
+            buildTime: string | null;
+            /** Authenticationenvironment */
+            authenticationEnvironment: string;
+            /** Jobrunner */
+            jobRunner: string;
+            /** Rootpath */
+            rootPath: string;
+            user: components["schemas"]["UserAccess"];
+        };
+        /** DefaultJobRunner */
+        DefaultJobRunner: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Slug */
+            slug: string;
+        };
+        /** HTTPValidationError */
+        HTTPValidationError: {
+            /** Detail */
+            detail?: components["schemas"]["ValidationError"][];
+        };
         /** JobLogPage */
         JobLogPage: {
-            message?: string | null;
             /** Logs */
             logs: string;
+            /** Message */
+            message?: string | null;
             /** Nextcursor */
             nextCursor?: string | null;
             /**
@@ -177,11 +323,6 @@ export interface components {
              * @default true
              */
             supportsLive: boolean;
-        };
-        /** HTTPValidationError */
-        HTTPValidationError: {
-            /** Detail */
-            detail?: components["schemas"]["ValidationError"][];
         };
         /** JobLogs */
         JobLogs: {
@@ -209,6 +350,13 @@ export interface components {
             repoPath: string;
             /** Commandargs */
             commandArgs?: string[];
+            /**
+             * Commandmode
+             * @default arguments
+             */
+            commandMode: string;
+            /** Shellcommand */
+            shellCommand?: string | null;
             /**
              * Id
              * Format: uuid
@@ -255,14 +403,28 @@ export interface components {
          * @enum {string}
          */
         JobStatus: "Failed" | "Pending" | "Running" | "Completed";
+        /** SchemaInfo */
+        SchemaInfo: {
+            /** Name */
+            name: string;
+            /** Version */
+            version: string;
+            /** Description */
+            description: string;
+            /**
+             * Installedon
+             * Format: date-time
+             */
+            installedOn: string;
+        };
         /** ScriptCreate */
         ScriptCreate: {
             /**
              * Configversion
-             * @default 2
-             * @constant
+             * @default 3
+             * @enum {integer}
              */
-            configVersion: 2;
+            configVersion: 2 | 3;
             /**
              * Executiontype
              * @default github_file
@@ -279,6 +441,14 @@ export interface components {
             repoPath: string;
             /** Commandargs */
             commandArgs?: string[];
+            /**
+             * Commandmode
+             * @default arguments
+             * @enum {string}
+             */
+            commandMode: "arguments" | "shell";
+            /** Shellcommand */
+            shellCommand?: string | null;
             /** Name */
             name: string;
             /** Description */
@@ -322,6 +492,13 @@ export interface components {
             repoPath: string;
             /** Commandargs */
             commandArgs?: string[];
+            /**
+             * Commandmode
+             * @default arguments
+             */
+            commandMode: string;
+            /** Shellcommand */
+            shellCommand?: string | null;
             /** Name */
             name: string;
             /** Description */
@@ -363,22 +540,31 @@ export interface components {
         };
         /** ScriptRunRequest */
         ScriptRunRequest: {
-            /** Arguments for this run only. Omit or use null for saved arguments; [] clears them. Requires a version 2 script. */
-            commandArgs?: string[] | null;
             /**
              * Scriptid
              * Format: uuid
              */
             scriptId: string;
+            /** Upgradetoversion */
+            upgradeToVersion?: 3 | null;
+            /** Commandmode */
+            commandMode?: ("arguments" | "shell") | null;
+            /** Shellcommand */
+            shellCommand?: string | null;
+            /**
+             * Commandargs
+             * @description Arguments for this run only. Omit or use null for saved arguments; [] clears them. Requires version 2 or later.
+             */
+            commandArgs?: string[] | null;
         };
         /** ScriptUpdate */
         ScriptUpdate: {
             /**
              * Configversion
-             * @default 2
-             * @constant
+             * @default 3
+             * @enum {integer}
              */
-            configVersion: 2;
+            configVersion: 2 | 3;
             /**
              * Executiontype
              * @default github_file
@@ -395,6 +581,14 @@ export interface components {
             repoPath: string;
             /** Commandargs */
             commandArgs?: string[];
+            /**
+             * Commandmode
+             * @default arguments
+             * @enum {string}
+             */
+            commandMode: "arguments" | "shell";
+            /** Shellcommand */
+            shellCommand?: string | null;
             /** Name */
             name: string;
             /** Description */
@@ -415,6 +609,57 @@ export interface components {
              */
             jobRunners: string[];
         };
+        /** ServerLogEntry */
+        ServerLogEntry: {
+            /** Eventid */
+            eventId: string;
+            /** Timestamp */
+            timestamp: number;
+            /** Ingestiontime */
+            ingestionTime?: number | null;
+            /** Logstreamname */
+            logStreamName: string;
+            /** Level */
+            level: string;
+            /** Message */
+            message: string;
+            /** Fields */
+            fields?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** ServerLogPage */
+        ServerLogPage: {
+            /** Entries */
+            entries: components["schemas"]["ServerLogEntry"][];
+            /** Nextcursor */
+            nextCursor?: string | null;
+            /** Starttime */
+            startTime: number;
+            /** Endtime */
+            endTime: number;
+            /** Loggroup */
+            logGroup: string;
+            /**
+             * Level
+             * @default ALL
+             * @enum {string}
+             */
+            level: "ALL" | "TRACE" | "DEBUG" | "INFO" | "WARNING" | "ERROR" | "CRITICAL" | "UNKNOWN";
+        };
+        /** UserAccess */
+        UserAccess: {
+            /** Username */
+            username: string;
+            /** Offices */
+            offices: string[];
+            /** Adminoffices */
+            adminOffices: string[];
+            /** Roles */
+            roles: {
+                [key: string]: string[];
+            };
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -423,6 +668,10 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+            /** Input */
+            input?: unknown;
+            /** Context */
+            ctx?: Record<string, never>;
         };
     };
     responses: never;
@@ -433,15 +682,11 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    get_log_page_jobs__job_id__logs_page_get: {
+    get_application_info_about_application_get: {
         parameters: {
-            query?: {
-                cursor?: string | null;
-            };
+            query?: never;
             header?: never;
-            path: {
-                job_id: string;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -452,16 +697,47 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JobLogPage"];
+                    "application/json": components["schemas"]["ApplicationInfo"];
                 };
             };
-            /** @description Validation Error */
-            422: {
+        };
+    };
+    get_schema_info_about_schema_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["SchemaInfo"];
+                };
+            };
+        };
+    };
+    get_default_job_runner_job_runners_default_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DefaultJobRunner"];
                 };
             };
         };
@@ -597,6 +873,90 @@ export interface operations {
             };
         };
     };
+    get_log_page_jobs__job_id__logs_page_get: {
+        parameters: {
+            query?: {
+                cursor?: string | null;
+            };
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobLogPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    repository_status_repository_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    repository_files_repository_files_get: {
+        parameters: {
+            query: {
+                office: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     put_script_scripts__script_id__put: {
         parameters: {
             query?: never;
@@ -661,7 +1021,7 @@ export interface operations {
             };
         };
     };
-    get_scripts_for_office_endpoint_scripts__get: {
+    get_scripts_for_office_endpoint_scripts_get: {
         parameters: {
             query: {
                 office: string;
@@ -692,7 +1052,7 @@ export interface operations {
             };
         };
     };
-    post_script_scripts__post: {
+    post_script_scripts_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -741,6 +1101,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ScriptRead"][];
+                };
+            };
+        };
+    };
+    get_server_logs_server_logs_get: {
+        parameters: {
+            query?: {
+                cursor?: string | null;
+                start_time?: number | null;
+                end_time?: number | null;
+                /** @description CloudWatch JSON level; ALL includes historical text. UNKNOWN scans a bounded page for unclassified entries. */
+                level?: "ALL" | "TRACE" | "DEBUG" | "INFO" | "WARNING" | "ERROR" | "CRITICAL" | "UNKNOWN";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServerLogPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

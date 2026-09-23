@@ -49,3 +49,24 @@ def test_legacy_custom_run_is_rejected_without_modifying_script(client, job_queu
     assert script.config_version == 1
     session.add.assert_not_called()
     job_queue.send_job_message.assert_not_called()
+
+
+@pytest.mark.parametrize("override", [
+    {"commandMode": "shell", "shellCommand": "echo test"},
+    {"upgradeToVersion": 3, "commandMode": "shell", "shellCommand": " "},
+    {"upgradeToVersion": 3, "commandMode": "shell", "shellCommand": "echo\x00test"},
+    {"upgradeToVersion": 3, "commandMode": "shell", "shellCommand": "echo test", "commandArgs": []},
+    {"upgradeToVersion": 3, "shellCommand": "echo test"},
+    {"upgradeToVersion": 4},
+])
+def test_invalid_shell_override_does_not_create_or_dispatch_job(client, job_queue, override):
+    script = ScriptModel(**make_script_read(config_version=2, office="SWT", roles=[]).model_dump(by_alias=False))
+    session = MagicMock()
+    session.get_one.return_value = script
+    app.dependency_overrides[get_job_database] = lambda: PostgresJobDatabase(session)
+    response = client.post("/jobs", json={"scriptId": str(script.id), **override})
+    assert response.status_code == 422
+    session.add.assert_not_called()
+    job_queue.send_job_message.assert_not_called()
+    assert script.config_version == 2
+    assert script.shell_command is None

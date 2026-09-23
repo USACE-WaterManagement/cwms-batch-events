@@ -19,6 +19,7 @@ import { Route as AboutScriptFilesRouteImport } from './routes/about_.script-fil
 import { Route as AboutVersionRouteImport } from './routes/about_.version'
 import { Route as HelpOnboardingRouteImport } from './routes/help_.onboarding'
 import { Route as HelpScriptFilesRouteImport } from './routes/help_.script-files'
+import { Route as HelpScriptVersionsRouteImport } from './routes/help_.script-versions'
 import { Route as JobsIndexRouteImport } from './routes/jobs/index'
 import { Route as JobsJobIdRouteImport } from './routes/jobs/$jobId'
 
@@ -72,6 +73,11 @@ const HelpScriptFilesRoute = HelpScriptFilesRouteImport.update({
   path: '/help/script-files',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HelpScriptVersionsRoute = HelpScriptVersionsRouteImport.update({
+  id: '/help_/script-versions',
+  path: '/help/script-versions',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const JobsIndexRoute = JobsIndexRouteImport.update({
   id: '/jobs/',
   path: '/jobs/',
@@ -94,6 +100,7 @@ export interface FileRoutesByFullPath {
   '/about/version': typeof AboutVersionRoute
   '/help/onboarding': typeof HelpOnboardingRoute
   '/help/script-files': typeof HelpScriptFilesRoute
+  '/help/script-versions': typeof HelpScriptVersionsRoute
   '/jobs/$jobId': typeof JobsJobIdRoute
   '/jobs/': typeof JobsIndexRoute
 }
@@ -108,6 +115,7 @@ export interface FileRoutesByTo {
   '/about/version': typeof AboutVersionRoute
   '/help/onboarding': typeof HelpOnboardingRoute
   '/help/script-files': typeof HelpScriptFilesRoute
+  '/help/script-versions': typeof HelpScriptVersionsRoute
   '/jobs/$jobId': typeof JobsJobIdRoute
   '/jobs': typeof JobsIndexRoute
 }
@@ -123,6 +131,7 @@ export interface FileRoutesById {
   '/about_/version': typeof AboutVersionRoute
   '/help_/onboarding': typeof HelpOnboardingRoute
   '/help_/script-files': typeof HelpScriptFilesRoute
+  '/help_/script-versions': typeof HelpScriptVersionsRoute
   '/jobs/$jobId': typeof JobsJobIdRoute
   '/jobs/': typeof JobsIndexRoute
 }
@@ -139,6 +148,7 @@ export interface FileRouteTypes {
     | '/about/version'
     | '/help/onboarding'
     | '/help/script-files'
+    | '/help/script-versions'
     | '/jobs/$jobId'
     | '/jobs/'
   fileRoutesByTo: FileRoutesByTo
@@ -153,6 +163,7 @@ export interface FileRouteTypes {
     | '/about/version'
     | '/help/onboarding'
     | '/help/script-files'
+    | '/help/script-versions'
     | '/jobs/$jobId'
     | '/jobs'
   id:
@@ -167,6 +178,7 @@ export interface FileRouteTypes {
     | '/about_/version'
     | '/help_/onboarding'
     | '/help_/script-files'
+    | '/help_/script-versions'
     | '/jobs/$jobId'
     | '/jobs/'
   fileRoutesById: FileRoutesById
@@ -182,6 +194,7 @@ export interface RootRouteChildren {
   AboutVersionRoute: typeof AboutVersionRoute
   HelpOnboardingRoute: typeof HelpOnboardingRoute
   HelpScriptFilesRoute: typeof HelpScriptFilesRoute
+  HelpScriptVersionsRoute: typeof HelpScriptVersionsRoute
   JobsJobIdRoute: typeof JobsJobIdRoute
   JobsIndexRoute: typeof JobsIndexRoute
 }
@@ -258,6 +271,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HelpScriptFilesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/help_/script-versions': {
+      id: '/help_/script-versions'
+      path: '/help/script-versions'
+      fullPath: '/help/script-versions'
+      preLoaderRoute: typeof HelpScriptVersionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/jobs/': {
       id: '/jobs/'
       path: '/jobs'
@@ -286,6 +306,7 @@ const rootRouteChildren: RootRouteChildren = {
   AboutVersionRoute: AboutVersionRoute,
   HelpOnboardingRoute: HelpOnboardingRoute,
   HelpScriptFilesRoute: HelpScriptFilesRoute,
+  HelpScriptVersionsRoute: HelpScriptVersionsRoute,
   JobsJobIdRoute: JobsJobIdRoute,
   JobsIndexRoute: JobsIndexRoute,
 }

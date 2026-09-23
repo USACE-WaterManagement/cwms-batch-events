@@ -2,6 +2,7 @@ import dayjs from "dayjs";
 import { ViewField } from "./ViewField";
 import { Button, Text } from "@usace/groundwork";
 import type { Script } from "../scripts-manager/types";
+import { commandPreview } from "./commandArguments";
 
 export const RoleList = ({ roles }: { roles: string[] }) => {
   if (roles.length) {
@@ -50,9 +51,9 @@ export const ScriptView = ({ script, onEdit }: ScriptViewProps) => {
               ? script.repoPath
               : script.runtime}
           </ViewField>
-          <ViewField label="Arguments">
+          <ViewField label={`Command (version ${script.configVersion ?? 1})`}>
             <pre className="whitespace-pre-wrap">
-              {(script.commandArgs ?? []).join("\n")}
+              {script.commandMode === "shell" ? script.shellCommand : commandPreview(script)}
             </pre>
           </ViewField>
           <ViewField label="Roles">

@@ -52,13 +52,14 @@ test("browse files, field help, responsive footer, and help navigation", async (
   await page.getByLabel("Source",{exact:true}).selectOption("command");
   await page.getByLabel("Name",{exact:true}).fill("Upload job status");
   await page.getByLabel("Executable",{exact:true}).fill("bash");
-  await page.getByLabel("Arguments",{exact:true}).fill("-lc\nprintf 'Job completed\\n' > /tmp/job-status.txt && cwms-cli blob upload --input-file /tmp/job-status.txt --blob-id JOB-STATUS --media-type text/plain --office SWT");
+  await page.getByLabel("Command mode",{exact:true}).selectOption("shell");
+  await page.getByLabel("Bash command",{exact:true}).fill("printf 'Job completed\\n' > /tmp/job-status.txt && cwms-cli blob upload --input-file /tmp/job-status.txt --blob-id JOB-STATUS --media-type text/plain --office SWT");
   await capture("installed-command");
-  await page.getByRole("button",{name:"Help with Arguments",exact:true}).click();
-  await expect(page.getByRole("region",{name:"Arguments help"})).toBeVisible();
+  await page.getByRole("button",{name:"Help with Source",exact:true}).click();
+  await expect(page.getByRole("region",{name:"Source help"})).toBeVisible();
   await capture("field-help");
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("region",{name:"Arguments help"})).toBeHidden();
+  await expect(page.getByRole("region",{name:"Source help"})).toBeHidden();
   await page.getByLabel("Role to add").selectOption("RDL Reviewer");
   await page.getByRole("button",{name:"Add role",exact:true}).click();
   await page.setViewportSize({width:390,height:700});

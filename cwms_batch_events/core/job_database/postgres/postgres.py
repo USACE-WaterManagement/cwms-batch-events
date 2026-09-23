@@ -8,7 +8,7 @@ import uuid
 
 from cwms_batch_events.core.auth.user.models import User
 from cwms_batch_events.core.batch_details import STATUS_MAP, log_stream
-from cwms_batch_events.core.execution import execution_for_config
+from cwms_batch_events.core.execution import execution_for_config, upgrade_execution
 from cwms_batch_events.core.job_database.postgres.models import (
     JobModel,
     JobRunnerModel,
@@ -21,6 +21,7 @@ from cwms_batch_events.core.models import (
     ScriptRead,
     ScriptRunRequest,
     ScriptUpdate,
+    ExecutionOptions,
 )
 from cwms_batch_events.core.utils import get_runner_id
 
@@ -126,9 +127,26 @@ class PostgresJobDatabase:
             raise PermissionError("Not authorized to run requested script")
 
         options = execution_for_config(script)
+        if payload.upgrade_to_version is not None:
+            options = upgrade_execution(options, payload.upgrade_to_version)
+        if payload.command_mode is not None or payload.shell_command is not None:
+            if options.config_version != 3:
+                raise ValueError("Upgrade to version 3 before changing command mode")
+            changes = options.model_dump(by_alias=False)
+            if payload.command_mode is not None:
+                changes["command_mode"] = payload.command_mode
+                if payload.command_mode == "arguments":
+                    changes["shell_command"] = None
+            if payload.shell_command is not None:
+                changes["shell_command"] = payload.shell_command
+            if changes["command_mode"] == "shell":
+                changes["command_args"] = []
+            options = ExecutionOptions(**changes)
         if payload.command_args is not None:
-            if options.config_version != 2:
+            if options.config_version < 2:
                 raise ValueError("Custom arguments require a version 2 script")
+            if options.command_mode == "shell":
+                raise ValueError("Use shellCommand to customize a shell run")
             options.command_args = list(payload.command_args)
 
         job = JobModel()
@@ -144,6 +162,8 @@ class PostgresJobDatabase:
         job.execution_type = options.execution_type
         job.runtime = options.runtime
         job.command_args = list(options.command_args)
+        job.command_mode = options.command_mode
+        job.shell_command = options.shell_command
         job.job_runner_id = get_runner_id()
 
         self.db.add(job)
@@ -242,6 +262,8 @@ class PostgresJobDatabase:
                 script.execution_type = payload.execution_type
                 script.runtime = payload.runtime
                 script.command_args = payload.command_args
+                script.command_mode = payload.command_mode
+                script.shell_command = payload.shell_command
                 script.active = payload.active
                 script.roles = payload.roles
 
