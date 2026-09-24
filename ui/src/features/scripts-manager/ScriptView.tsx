@@ -71,6 +71,16 @@ export const ScriptView = ({ script, onEdit }: ScriptViewProps) => {
           {[2, 3].includes(script.configVersion ?? 1) && script.commandMode !== "shell" && <ViewField label="Arguments">
             <ArgumentValues args={script.commandArgs ?? []} />
           </ViewField>}
+          <ViewField label="Schedule">
+            {script.scheduleEnabled
+              ? script.scheduleType === "hourly"
+                ? `Every hour at minute ${script.scheduleMinute}`
+                : script.scheduleCron
+              : "Disabled"}
+          </ViewField>
+          <ViewField label="Timezone">
+            {script.scheduleTimezone ?? "UTC"}
+          </ViewField>
           <ViewField label="Roles">
             <RoleList roles={script.roles} />
           </ViewField>

@@ -4,8 +4,10 @@ from typing import Literal
 from enum import Enum
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_validator
 from cwms_batch_events.core.display_names import readable_name
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from pydantic.alias_generators import to_camel
 from uuid import UUID
+from cwms_batch_events.core.schedules import validate_cron
 
 
 class CamelModel(BaseModel):
@@ -233,6 +235,19 @@ class BindExternalJobIdRequest(BaseModel):
     external_job_id: str
 
 
+def _validate_schedule_timezone(value: str | None) -> str:
+    timezone_name = (value or "UTC").strip()
+    if not timezone_name:
+        raise ValueError("scheduleTimezone is required")
+    try:
+        ZoneInfo(timezone_name)
+    except ZoneInfoNotFoundError as exc:
+        raise ValueError(
+            f"scheduleTimezone is not a valid timezone: {timezone_name}"
+        ) from exc
+    return timezone_name
+
+
 class ScriptBase(CamelModel):
     name: str
     description: str
@@ -240,6 +255,56 @@ class ScriptBase(CamelModel):
     active: bool = True
     roles: list[str] = []
     job_runners: list[UUID] = []
+    schedule_enabled: bool = False
+    schedule_type: str = "manual"
+    schedule_minute: int | None = None
+    schedule_cron: str | None = None
+    schedule_timezone: str = "UTC"
+
+    @field_validator("schedule_type")
+    def validate_schedule_type(cls, value: str) -> str:
+        if value not in {"manual", "hourly", "cron"}:
+            raise ValueError("scheduleType must be one of: manual, hourly, cron")
+        return value
+
+    @field_validator("schedule_minute")
+    def validate_schedule_minute(cls, value: int | None) -> int | None:
+        if value is not None and not 0 <= value <= 59:
+            raise ValueError("scheduleMinute must be between 0 and 59")
+        return value
+
+    @field_validator("schedule_cron")
+    def validate_schedule_cron(cls, value: str | None) -> str | None:
+        if value is None or not value.strip():
+            return None
+
+        return validate_cron(value)
+
+    @field_validator("schedule_timezone")
+    def validate_schedule_timezone(cls, value: str | None) -> str:
+        return _validate_schedule_timezone(value)
+
+    @model_validator(mode="after")
+    def validate_enabled_schedule(self):
+        if not self.schedule_enabled:
+            return self
+
+        if self.schedule_type == "manual":
+            raise ValueError(
+                "scheduleType must be hourly or cron when scheduleEnabled is true"
+            )
+
+        if self.schedule_type == "hourly" and self.schedule_minute is None:
+            raise ValueError(
+                "scheduleMinute is required when scheduleEnabled is true and scheduleType is hourly"
+            )
+
+        if self.schedule_type == "cron" and not self.schedule_cron:
+            raise ValueError(
+                "scheduleCron is required when scheduleEnabled is true and scheduleType is cron"
+            )
+
+        return self
 
 
 class ScriptCreate(ScriptBase, ExecutionOptions):

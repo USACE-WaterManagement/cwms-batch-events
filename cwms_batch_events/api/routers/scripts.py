@@ -91,6 +91,19 @@ def put_script(
         )
 
 
+@router.get("/scheduled")
+def get_scheduled_scripts(
+    user: User = Depends(get_current_user),
+    job_db: JobDatabase = Depends(get_job_database),
+) -> list[ScriptRead]:
+    # The existing catalog applies active/office/role authorization first.
+    return [
+        script
+        for script in job_db.retrieve_script_catalog(user.roles)
+        if script.schedule_enabled and script.schedule_type in {"hourly", "cron"}
+    ]
+
+
 @router.get("/catalog")
 def get_user_scripts_catalog(
     user: User = Depends(get_current_user),

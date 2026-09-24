@@ -277,6 +277,11 @@ class PostgresJobDatabase:
                 script.command_args = payload.command_args
                 script.command_mode = payload.command_mode
                 script.shell_command = payload.shell_command
+                script.schedule_enabled = payload.schedule_enabled
+                script.schedule_type = payload.schedule_type
+                script.schedule_minute = payload.schedule_minute
+                script.schedule_cron = payload.schedule_cron
+                script.schedule_timezone = payload.schedule_timezone
                 script.active = payload.active
                 script.roles = payload.roles
 

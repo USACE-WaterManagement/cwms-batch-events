@@ -109,6 +109,15 @@ class ScriptModel(Base):
     execution_type: Mapped[str]
     command_mode: Mapped[str] = mapped_column(default="arguments", server_default="arguments")
     shell_command: Mapped[str | None]
+    schedule_enabled: Mapped[bool] = mapped_column(
+        default=False, server_default="false"
+    )
+    schedule_type: Mapped[str] = mapped_column(
+        default="manual", server_default="manual"
+    )
+    schedule_minute: Mapped[int | None]
+    schedule_cron: Mapped[str | None]
+    schedule_timezone: Mapped[str] = mapped_column(default="UTC", server_default="UTC")
     active: Mapped[bool]
     roles: Mapped[list[str]] = mapped_column(ARRAY(String))
     created_time: Mapped[datetime.datetime] = mapped_column(
