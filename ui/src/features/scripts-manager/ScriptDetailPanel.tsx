@@ -56,6 +56,6 @@ export const ScriptDetailPanel = ({
   }
 
   return (
-    <section className="min-w-0 p-4 rounded-xl bg-gray-200">{innerComponent}</section>
+    <section className="min-w-0 pt-4">{innerComponent}</section>
   );
 };

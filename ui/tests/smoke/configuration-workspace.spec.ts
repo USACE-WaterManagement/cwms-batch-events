@@ -84,8 +84,8 @@ test("save marks missing fields and sections, keeps drafts, and preserves an old
   await expect(page.locator("[data-invalid-details=true]")).toBeVisible();
   await expect(page.getByLabel("Name", { exact: true })).toHaveAttribute("aria-invalid", "true");
   const nav = page.getByRole("navigation", { name: "Configuration sections" });
-  await expect(nav.getByRole("button", { name: /General/ })).toContainText("!");
-  await expect(nav.getByRole("button", { name: /Source & path/ })).toContainText("!");
+  await expect(nav.getByRole("button", { name: /General/ }).getByLabel("Needs attention")).toBeVisible();
+  await expect(nav.getByRole("button", { name: /Source & path/ }).getByLabel("Needs attention")).toBeVisible();
   expect(writes).toHaveLength(0);
   await page.getByLabel("Name", { exact: true }).fill("Corrected report");
   await nav.getByRole("button", { name: /Source & path/ }).click();

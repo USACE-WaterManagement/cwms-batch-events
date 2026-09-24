@@ -391,15 +391,18 @@ export const ScriptForm = ({
                 </div>
               </FormRow>
           {errorFor("scheduleTimezone")}
-              <FormRow>
-                <Label htmlFor="scheduleEnabled">Enable schedule</Label>
+              <label htmlFor="scheduleEnabled" className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 ${form.scheduleEnabled ? "border-blue-200 bg-blue-50" : "border-slate-200 bg-slate-50"}`}>
                 <input
                   id="scheduleEnabled"
+                  aria-label="Enable schedule"
                   type="checkbox"
+                  className="mt-0.5 size-5 shrink-0 cursor-pointer accent-blue-700"
                   checked={form.scheduleEnabled}
                   onChange={(e) => update("scheduleEnabled", e.target.checked)}
                 />
-              </FormRow>
+                <span><span className="block text-sm font-semibold text-slate-900">Enable schedule</span>
+                  <span className="mt-1 block text-sm leading-relaxed text-slate-600">Queue this script automatically at the times above.</span></span>
+              </label>
             </>
           )}
           </fieldset>
@@ -423,7 +426,7 @@ export const ScriptForm = ({
           </div>
         )}
         </div>
-        <div className="script-form-actions flex w-full flex-wrap items-center justify-between gap-3 bg-white">
+        <div className="script-form-actions mt-4 flex w-full flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
           <div className="flex items-center gap-2">
             <label className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 font-semibold ${form.active ? "border-green-600 bg-green-50 text-green-800" : "border-gray-300 bg-gray-100 text-gray-700"}`}>
               <input id="active" type="checkbox" checked={form.active} disabled={isPending}
