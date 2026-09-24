@@ -5,7 +5,7 @@ import { JobDetails } from "../jobs-list/useJobDetails";
 import { useNavigate } from "@tanstack/react-router";
 import { components } from "../../generated/api-types";
 
-export type ExecuteScriptPayload = Pick<components["schemas"]["ScriptRunRequest"], "scriptId">;
+export type ExecuteScriptPayload = Omit<components["schemas"]["ScriptRunRequest"], "runTrigger">;
 
 const useExecuteScript = (onSubmitted?: (job: JobDetails) => void) => {
   const auth = useAuth();
