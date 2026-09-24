@@ -103,7 +103,7 @@ test("v2 run offers a saved version upgrade and a custom shell snapshot", async 
   await expect(page.getByRole("button", { name: "Run version 2", exact: true })).toBeDisabled();
   await page.getByRole("button", { name: "Run and upgrade version", exact: true }).click();
   await expect(page).toHaveURL(/\/jobs\/v3-job$/);
-  expect(posts).toEqual([{ scriptId: script.id, upgradeToVersion: 3, commandMode: "shell", shellCommand: command }]);
+  expect(posts).toEqual([{ runTrigger: "manual", scriptId: script.id, upgradeToVersion: 3, commandMode: "shell", shellCommand: command }]);
   expect(scriptWrites).toEqual([]);
   expect(script.configVersion).toBe(2);
   await page.getByRole("link", { name: "Submit Job", exact: true }).click();
@@ -112,7 +112,7 @@ test("v2 run offers a saved version upgrade and a custom shell snapshot", async 
   await page.getByRole("button", { name: "Submit job", exact: true }).click();
   await page.getByRole("button", { name: "Run version 2", exact: true }).click();
   await expect.poll(() => posts.length).toBe(2);
-  expect(posts[1]).toEqual({ scriptId: script.id });
+  expect(posts[1]).toEqual({ runTrigger: "manual", scriptId: script.id });
   await page.goto("/events/help/script-versions");
   await expect(page.getByRole("heading", { name: "Script versions and commands" })).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
