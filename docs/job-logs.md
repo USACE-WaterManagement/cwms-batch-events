@@ -42,7 +42,7 @@ Malformed cursors return 400; other AWS failures remain errors.
 
 ## Shared run attribution
 
-Apply V1_01_16 before deploying this API version. It adds a display-name
+Apply V1_01_17 before deploying this API version. It adds a display-name
 snapshot, trigger metadata, and an index for office history queries. No
 ownership backfill is required: existing jobs already have an office.
 See the [existing-database rollout plan](office-history-upgrade.md) for identity

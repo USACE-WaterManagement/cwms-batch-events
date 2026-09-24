@@ -8,7 +8,7 @@ It does not transfer jobs to the person opening the page or to a script's curren
 office. Existing runs become visible to colleagues in their recorded office,
 including jobs whose script was deleted and whose `script_id` is now null.
 
-Preserve the raw username for internal audit. Migration `V1_01_16` adds a nullable
+Preserve the raw username for internal audit. Migration `V1_01_17` adds a nullable
 `display_name` snapshot, `run_trigger` defaulting to `unknown`, and the office/date/ID
 index. It does not rewrite identity, office, execution configuration, or timestamps.
 New submissions capture a safe readable name. Old jobs use a safe username when
@@ -27,7 +27,7 @@ and preserve the original username. This release performs no such backfill.
 ## Rollout checklist
 
 1. Back up the database and verify its migration history. `V1_01_15` is the already
-   merged script-configuration migration; the office-history migration is **1.01.16**.
+   merged script-configuration migration; the office-history migration is **1.01.17**.
    Do not replace or repair the checksum of the applied 1.01.15 migration. A test
    database that ran the earlier, unmerged office-history 1.01.15 needs a reviewed
    reconciliation or recreation before this release; do not apply a blind repair.
@@ -37,7 +37,7 @@ and preserve the original username. This release performs no such backfill.
    the viewer's office. Office filtering leaves them inaccessible until corrected.
    Review whether old script logs contain material inappropriate for office-wide
    access; attribution filtering does not redact arbitrary job output.
-3. Apply all pending migrations through 1.01.16 using the migration pipeline before
+3. Apply all pending migrations through 1.01.17 using the migration pipeline before
    updating application components. The additive fields support older application
    writes via nullable/default values. Schedule a maintenance window appropriate to
    table size: adding columns and building the office index can take database locks.
