@@ -5,6 +5,7 @@ test("server errors retry once, show one toast, and recover on explicit retry", 
   let recovered = false;
   await page.route("**/api/**", route => {
     const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/scheduler/status")) return route.fulfill({ json: { enabled: false, tasks: [], pendingDelivery: 0, needsAttention: 0, invalidSchedules: 0 } });
     if (path.endsWith("/admin-offices")) return route.fulfill({ json: ["SWT"] });
     if (path.endsWith("/job-runners/default")) return route.fulfill({ json: { id: "runner-1", slug: "batch" } });
     if (path.endsWith("/scripts")) {
@@ -33,6 +34,7 @@ test("client errors show the API detail without retrying and can be dismissed", 
   let requests = 0;
   await page.route("**/api/**", route => {
     const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/scheduler/status")) return route.fulfill({ json: { enabled: false, tasks: [], pendingDelivery: 0, needsAttention: 0, invalidSchedules: 0 } });
     if (path.endsWith("/admin-offices")) return route.fulfill({ json: ["SWT"] });
     if (path.endsWith("/job-runners/default")) return route.fulfill({ json: { id: "runner-1", slug: "batch" } });
     if (path.endsWith("/repository-files")) {
@@ -55,6 +57,7 @@ test("failed saves show a toast, retain the form, and are not automatically repe
   let saves = 0;
   await page.route("**/api/**", route => {
     const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/scheduler/status")) return route.fulfill({ json: { enabled: false, tasks: [], pendingDelivery: 0, needsAttention: 0, invalidSchedules: 0 } });
     if (path.endsWith("/admin-offices")) return route.fulfill({ json: ["SWT"] });
     if (path.endsWith("/job-runners/default")) return route.fulfill({ json: { id: "runner-1", slug: "batch" } });
     if (path.endsWith("/scripts") && route.request().method() === "POST") {

@@ -84,6 +84,7 @@ class Settings(LoggingSettings, StorageSettings, ExecutorSettings, RunnerSetting
     github_app_private_key: SecretStr = SecretStr("")
     github_repository_ref: str = ""
     repository_mock_mode: bool = False
+    scheduler_enabled: bool = True
     api_version: str = "local"
     app_key: str | None = None
     auth_environment: str | None = None

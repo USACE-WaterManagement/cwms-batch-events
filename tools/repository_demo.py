@@ -42,7 +42,7 @@ class DemoScripts:
             return [script for script in self.scripts.values() if script.active and
                     any(role in roles.get(script.office, []) for role in script.roles)]
 
-    def store_script(self, payload: ScriptCreate):
+    def store_script(self, payload: ScriptCreate, actor=None):
         with self.lock:
             now = datetime.now(timezone.utc)
             script = ScriptRead(**payload.model_dump(by_alias=False), id=uuid4(),
@@ -58,7 +58,7 @@ class DemoScripts:
             raise PermissionError("Office access is required")
         return script
 
-    def update_script(self, script_id, payload: ScriptUpdate, admin_offices):
+    def update_script(self, script_id, payload: ScriptUpdate, admin_offices, actor=None):
         with self.lock:
             script = self._allowed_script(script_id, admin_offices)
             updated = script.model_copy(update={**payload.model_dump(by_alias=False),

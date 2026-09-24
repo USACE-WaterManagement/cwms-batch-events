@@ -8,6 +8,7 @@ for (const warning of [
   let catalogRequests = 0;
   await page.route("**/api/**", route => {
     const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/scheduler/status")) return route.fulfill({ json: { enabled: false, tasks: [], pendingDelivery: 0, needsAttention: 0, invalidSchedules: 0 } });
     if (path.endsWith("/admin-offices")) return route.fulfill({ json: ["SWT"] });
     if (path.endsWith("/repository-status")) return route.fulfill({ json: { warnings: [warning], mock: false } });
     if (path.endsWith("/repository-files")) {

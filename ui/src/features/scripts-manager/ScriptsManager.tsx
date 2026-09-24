@@ -4,6 +4,7 @@ import { OfficeSelector } from "../../shared/components/OfficeSelector";
 import { ScriptsWorkspace } from "./ScriptsWorkspace";
 import { useRememberedOffice } from "../../shared/hooks/useRememberedOffice";
 import LoginPrompt from "../auth/LoginPrompt";
+import { SchedulerStatus } from "./SchedulerStatus";
 
 export const ScriptsManager = () => {
   const auth = useAuth();
@@ -28,6 +29,7 @@ export const ScriptsManager = () => {
   return (
     <>
       <OfficeSelector offices={data} value={office} onChange={setOffice} />
+      {office && <SchedulerStatus office={office} />}
       {office && <ScriptsWorkspace key={office} office={office} />}
     </>
   );

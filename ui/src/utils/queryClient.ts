@@ -8,11 +8,10 @@ const message = (error: unknown) => error instanceof SyntaxError
 
 export const queryClient = new QueryClient({
   queryCache: new QueryCache({
-    onError: (error, query) => notifyError({
-      id: query.queryHash,
-      message: message(error),
-      retry: () => query.fetch(),
-    }),
+    onError: (error, query) => {
+      if (query.meta?.inlineError) return;
+      notifyError({ id: query.queryHash, message: message(error), retry: () => query.fetch() });
+    },
     onSuccess: (data, query) => reportWarnings(query.queryHash, data, () => query.fetch()),
   }),
   mutationCache: new MutationCache({

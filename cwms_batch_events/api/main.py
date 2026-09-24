@@ -16,16 +16,18 @@ from cwms_batch_events.api.routers import (
     scripts,
     server_logs,
     users,
+    scheduler,
 )
 from cwms_batch_events.core.log_diagnostics import configure_log_diagnostics
 from cwms_batch_events.core.logging_config import configure_logging
 from cwms_batch_events.api.request_logging import RequestLoggingMiddleware
+from cwms_batch_events.core.maintenance import lifespan
 
 configure_logging(api=True)
 configure_log_diagnostics()
 logging.getLogger(__name__).info("API initialized", extra={"event": "api_initialized"})
 
-app = FastAPI(root_path=settings.fastapi_root_path)
+app = FastAPI(root_path=settings.fastapi_root_path, lifespan=lifespan)
 
 
 origins = r"http://localhost(:\d+)?"
@@ -48,3 +50,4 @@ app.include_router(repository_files.router)
 app.include_router(scripts.router)
 app.include_router(server_logs.router)
 app.include_router(users.router)
+app.include_router(scheduler.router)

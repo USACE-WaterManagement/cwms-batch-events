@@ -118,6 +118,10 @@ class JobRecord(ExecutionRecord):
     username: str
     display_name: str | None = None
     run_trigger: Literal["manual", "scheduled", "unknown"] = "unknown"
+    scheduled_for: datetime | None = None
+    schedule_timezone: str | None = None
+    schedule_author: str | None = None
+    dispatch_claimed_at: datetime | None = None
 
     @field_serializer("username")
     def public_username(self, value: str) -> str:
@@ -207,6 +211,7 @@ class ScriptRunOptions(ExecutionRecord):
 
 class JobSource(str, Enum):
     API = "api"
+    SCHEDULER = "scheduler"
 
 
 class JobRequestedBy(BaseModel):
@@ -319,6 +324,9 @@ class ScriptRead(ScriptBase, ExecutionRecord):
     office: str
     created_time: datetime
     updated_time: datetime
+    schedule_updated_name: str | None = None
+    schedule_updated_at: datetime | None = None
+    schedule_error: str | None = None
     job_runners: list[UUID] = []
 
     @field_validator("job_runners", mode="before")

@@ -11,6 +11,10 @@ test("saves timezone schedules and disables scheduling when switched to manual",
     const path = new URL(request.url()).pathname;
     if (path.endsWith("/admin-offices"))
       return route.fulfill({ json: ["SWT"] });
+    if (path.endsWith("/scheduler/status")) return route.fulfill({ json: {
+      enabled: true, tasks: [{ name: "schedules", healthy: true, lastSuccess: "2026-09-24T12:00:00Z" }, { name: "queue_delivery", healthy: true, lastSuccess: "2026-09-24T12:00:00Z" }],
+      pendingDelivery: 0, needsAttention: 0, invalidSchedules: 0,
+    } });
     if (path.endsWith("/job-runners/default"))
       return route.fulfill({ json: { id: "runner-1", slug: "batch" } });
     if (["POST", "PUT"].includes(request.method())) {
@@ -32,7 +36,8 @@ test("saves timezone schedules and disables scheduling when switched to manual",
     .first()
     .click();
   await page.getByRole("combobox").selectOption("SWT");
-  await page.getByRole("button", { name: "New +", exact: true }).click();
+  await expect(page.getByText("Scheduler is running", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Create first script", exact: true }).click();
   await page.getByLabel("Name", { exact: true }).fill("Synthetic Schedule");
   await page
     .getByLabel("GitHub Repo Path", { exact: true })

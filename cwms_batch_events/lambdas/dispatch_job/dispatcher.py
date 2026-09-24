@@ -104,6 +104,15 @@ def lambda_handler(event, context):
 
 
 def _dispatch_and_bind(message, headers):
+    if message.requested_by.source == "scheduler":
+        claim = requests.post(
+            f"{API_BASE_URL}/internal/jobs/{message.job_id}/claim-scheduled-dispatch",
+            headers=headers, timeout=10,
+        )
+        claim.raise_for_status()
+        if not claim.json()["claimed"]:
+            logger.info("Scheduled occurrence already claimed; suppressing duplicate dispatch", extra={"event": "scheduled_dispatch_duplicate", "job_id": message.job_id})
+            return
     logger.debug("Dispatching job", extra={"event": "job_dispatching"})
     try:
         external_job_id = dispatch_job(message)

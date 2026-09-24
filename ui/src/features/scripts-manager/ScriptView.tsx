@@ -38,6 +38,12 @@ interface ScriptViewProps {
   onEdit: () => void;
 }
 
+function scheduleDescription(script: Script): string {
+  if (!script.scheduleEnabled) return "Disabled";
+  if (script.scheduleType === "hourly") return `Every hour at minute ${script.scheduleMinute}`;
+  return script.scheduleCron || "Not configured";
+}
+
 export const ScriptView = ({ script, onEdit }: ScriptViewProps) => {
   if (script) {
     return (
@@ -72,15 +78,13 @@ export const ScriptView = ({ script, onEdit }: ScriptViewProps) => {
             <ArgumentValues args={script.commandArgs ?? []} />
           </ViewField>}
           <ViewField label="Schedule">
-            {script.scheduleEnabled
-              ? script.scheduleType === "hourly"
-                ? `Every hour at minute ${script.scheduleMinute}`
-                : script.scheduleCron
-              : "Disabled"}
+            {scheduleDescription(script)}
           </ViewField>
           <ViewField label="Timezone">
             {script.scheduleTimezone ?? "UTC"}
           </ViewField>
+          {script.scheduleUpdatedName && <ViewField label="Schedule configured by">{script.scheduleUpdatedName}</ViewField>}
+          {script.scheduleError && <p role="alert" className="text-amber-900">{script.scheduleError}</p>}
           <ViewField label="Roles">
             <RoleList roles={script.roles} />
           </ViewField>

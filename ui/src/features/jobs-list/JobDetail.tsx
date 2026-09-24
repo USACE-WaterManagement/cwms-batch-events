@@ -63,6 +63,11 @@ function JobDetail({ job }: JobDetailProps) {
         })}
       </div>
       {job.batchStatusReason && <p className="px-3 pb-3 text-sm text-gray-600">{job.batchStatusReason}</p>}
+      {job.scheduledFor && <div className="px-3 pb-3 text-sm">
+        <p><strong>Scheduled for:</strong> {new Date(job.scheduledFor).toLocaleString(undefined, { timeZone: job.scheduleTimezone || "UTC" })} ({job.scheduleTimezone || "UTC"})</p>
+        <p><strong>Schedule configured by:</strong> {job.scheduleAuthor || "Name unavailable"}</p>
+        {job.dispatchClaimedAt && !job.externalJobId && job.jobStatus === "Pending" && <p className="mt-2 text-amber-900">Dispatch was claimed, but an AWS job ID has not been recorded. If this persists, inspect dispatcher logs before rerunning.</p>}
+      </div>}
     </div>
   );
 }

@@ -60,7 +60,7 @@ def post_script(
 ):
     check_user_office_admin(user, payload.office)
     try:
-        return job_db.store_script(payload)
+        return job_db.store_script(payload, actor=user)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(e)
@@ -77,7 +77,7 @@ def put_script(
     job_db: JobDatabase = Depends(get_job_database),
 ):
     try:
-        return job_db.update_script(script_id, payload, user.admin_offices)
+        return job_db.update_script(script_id, payload, user.admin_offices, actor=user)
     except NoResultFound:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

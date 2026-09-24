@@ -23,6 +23,10 @@ import { CURRENT_SCRIPT_VERSION, savedCommandPreview, supportsScriptVersion } fr
 import { ScriptVersionNotice } from "./ScriptVersionNotice";
 
 const fieldHelp: Record<string, React.ReactNode> = {
+  scheduleType: "Batch Events queues enabled schedules automatically while the API is running. Disable any equivalent Airflow or legacy trigger before enabling this schedule.",
+  scheduleMinute: "Minute of each hour, from 0 through 59, in the selected timezone.",
+  scheduleCron: "Five numeric fields: minute, hour, day of month, month, and day of week. Supports lists, ranges, and steps.",
+  scheduleTimezone: "An IANA timezone such as America/Chicago. Missing daylight-saving times are skipped and repeated times run once.",
   name: "A descriptive name for this job. Its slug is generated from the name when you create it.",
   description: "Describe what this job does and when someone should run it.",
   repoPath: <>Enter a path relative to /jobs. Repository files are checked out there. With the Java artifact loader deployed, enabled pins in java/artifacts.json download release JARs into java-artifacts/ before the job runs. Enter those generated paths manually; Browse lists only files committed to GitHub. Files and directories cannot be created here. <Link to="/help/script-files" target="_blank" rel="noopener noreferrer">Script setup (new tab)</Link>. For an installed command, enter its executable; that mode skips checkout and artifact downloads.</>,

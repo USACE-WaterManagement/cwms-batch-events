@@ -5,6 +5,7 @@ const warning = { code: "example", message: "Repository browsing is unavailable.
 test("header controls and links fit desktop, tablet and phone widths", async ({ page }) => {
   await page.route("**/api/**", route => {
     const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/scheduler/status")) return route.fulfill({ json: { enabled: false, tasks: [], pendingDelivery: 0, needsAttention: 0, invalidSchedules: 0 } });
     if (path.endsWith("/admin-offices")) return route.fulfill({ json: ["SWT"] });
     if (path.endsWith("/repository-status")) return route.fulfill({ json: { warnings: [warning] } });
     if (path.endsWith("/repository-files")) return route.fulfill({ json: { repository: "USACE-WaterManagement/swt-wm-cwbi-jobs", ref: "cwbi-dev", paths: [], warnings: [warning] } });
@@ -48,6 +49,7 @@ for (const failure of ["server", "network", "client", "invalid-json"] as const) 
     let requests = 0;
     await page.route("**/api/**", route => {
       const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/scheduler/status")) return route.fulfill({ json: { enabled: false, tasks: [], pendingDelivery: 0, needsAttention: 0, invalidSchedules: 0 } });
       if (path.endsWith("/admin-offices")) return route.fulfill({ json: ["SWT"] });
       if (path.endsWith("/repository-status")) return route.fulfill({ json: { warnings: [] } });
       if (path.endsWith("/repository-files")) return route.fulfill({ json: { repository: "USACE-WaterManagement/swt-wm-cwbi-jobs", ref: "cwbi-dev", paths: [] } });
