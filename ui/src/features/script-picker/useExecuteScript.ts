@@ -15,9 +15,13 @@ const useExecuteScript = (onSubmitted?: (job: JobDetails) => void) => {
   return useMutation({
     mutationFn: (payload: ExecuteScriptPayload) =>
       executeScript(payload, auth.token),
-    onSuccess: (job: JobDetails) => {
+    onSuccess: (job: JobDetails, payload) => {
       queryClient.setQueryData(["job", job.id], job);
       void queryClient.invalidateQueries({ queryKey: ["jobs"] });
+      if (payload.upgradeToVersion) {
+        void queryClient.invalidateQueries({ queryKey: ["scripts"] });
+        void queryClient.invalidateQueries({ queryKey: ["catalog"] });
+      }
       if (onSubmitted) onSubmitted(job);
       else void navigate({ to: "/jobs/$jobId", params: { jobId: job.id } });
     },

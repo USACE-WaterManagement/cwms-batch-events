@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 test("custom arguments apply once, cancel restores defaults, and role help explains access", async ({ page }) => {
   const script = {
-    id: "report-script", configVersion: 2, name: "Daily reservoir report", slug: "daily-reservoir-report",
+    id: "report-script", configVersion: 3, name: "Daily reservoir report", slug: "daily-reservoir-report",
     description: "Build a report for the selected date range.", office: "SWT",
     executionType: "github_file", runtime: "python", repoPath: "python/daily_report.py",
     commandArgs: ["--start-date", "today", "--end-date", "today"], roles: [], active: true,
@@ -48,8 +48,8 @@ test("custom arguments apply once, cancel restores defaults, and role help expla
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   await row.getByRole("button", { name: "Run script", exact: true }).click();
   await page.getByRole("button", { name: "Custom run", exact: true }).click();
-  await expect(page.getByLabel("Arguments for this run")).toHaveValue(script.commandArgs.join("\n"));
-  await page.getByLabel("Arguments for this run").fill("--start-date\n2026-09-01\n--end-date\n2026-09-07");
+  await expect(page.getByLabel("Arguments for this run")).toHaveValue(script.commandArgs.join(" "));
+  await page.getByLabel("Arguments for this run").fill("--start-date 2026-09-01 --end-date 2026-09-07   ");
   await capture("custom-run");
   await page.getByRole("button", { name: "Submit custom run", exact: true }).click();
   await expect(page.getByRole("alert").filter({ hasText: "Job could not" })).toBeVisible();
@@ -57,7 +57,7 @@ test("custom arguments apply once, cancel restores defaults, and role help expla
   expect(submissions[0]).toEqual({ scriptId: script.id, commandArgs: ["--start-date", "2026-09-01", "--end-date", "2026-09-07"] });
   await page.getByRole("button", { name: "Cancel custom run" }).click();
   await page.getByRole("button", { name: "Custom run", exact: true }).click();
-  await expect(page.getByLabel("Arguments for this run")).toHaveValue(script.commandArgs.join("\n"));
+  await expect(page.getByLabel("Arguments for this run")).toHaveValue(script.commandArgs.join(" "));
   await page.getByLabel("Arguments for this run").fill("");
   reject = false;
   await page.getByRole("button", { name: "Submit custom run", exact: true }).click();
@@ -74,7 +74,7 @@ test("custom arguments apply once, cancel restores defaults, and role help expla
   await page.getByRole("link", { name: "Submit Job", exact: true }).click();
   await page.getByRole("combobox").last().selectOption(script.id);
   await page.getByRole("button", { name: "Custom run", exact: true }).click();
-  await page.getByLabel("Arguments for this run").fill("two words\n\n--literal");
+  await page.getByLabel("Arguments for this run").fill('"two words" \'\' --literal');
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.getByRole("button", { name: "Submit custom run", exact: true }).click();

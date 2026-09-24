@@ -8,9 +8,11 @@
 
 To override arguments for one job, select **Custom run** in the **Run script** tab.
 The same form is available on **Submit Job** for users without script admin rights.
-Enter one argument per line, then choose **Submit custom run**. Spaces and empty
-argument lines are preserved; clearing the field removes all arguments for that
-run. The saved script is unchanged. **Cancel custom run** restores its defaults.
+Enter space-separated arguments and quote values containing spaces, then choose
+**Submit custom run**. The numbered preview shows the parsed values. Unquoted
+trailing spaces are ignored; `''` supplies an empty argument. Clearing the field
+removes all arguments for that run. Choose **Bash command** for a complete command
+chain using `&&` or `||`. The saved script is unchanged. **Cancel custom run** restores its defaults.
 Legacy scripts must be edited and saved in the current format before using custom
 arguments; ordinary submissions continue to use their existing behavior.
 
@@ -24,6 +26,9 @@ only.
    **Open** link on each entry that goes directly to its details and output.
 
 The Groundwork tabs keep details, submission, and run output in the selected script's workspace.
+In the edit form, **Add arguments** or **Edit arguments** opens the command editor modal.
+Review the numbered values and command preview, then **Apply arguments** to update the
+form. Cancel or close discards the modal draft; **Save** persists the script changes.
 Each row groups the script name, runtime, active state, and full path. Actions appear beside
 that information when space permits and below it on smaller screens. The selected script
 appears beside the list on wide screens and below it on narrower screens. Long paths and
@@ -71,11 +76,10 @@ Jobs that call CDA still need appropriate credentials in their execution environ
 
 ## Bash without a CDA call
 
-Register an **Installed command**, executable `bash`, with no roles selected. To inspect
-the runner's time zone, enter these two arguments on separate lines:
+Register an **Installed command**, choose **Bash command**, and leave roles empty.
+To inspect the runner's time zone, enter:
 
 ```text
--lc
 printf 'TZ=%s\n' "$TZ"
 ```
 

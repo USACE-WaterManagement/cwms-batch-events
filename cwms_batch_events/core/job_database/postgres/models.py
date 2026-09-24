@@ -50,6 +50,8 @@ class JobModel(Base):
         ARRAY(String), default=list, server_default="{}"
     )
     execution_type: Mapped[str | None]
+    command_mode: Mapped[str] = mapped_column(default="arguments", server_default="arguments")
+    shell_command: Mapped[str | None]
     created_time: Mapped[datetime.datetime] = mapped_column(
         server_default=func.current_timestamp()
     )
@@ -103,6 +105,8 @@ class ScriptModel(Base):
         ARRAY(String), default=list, server_default="{}"
     )
     execution_type: Mapped[str]
+    command_mode: Mapped[str] = mapped_column(default="arguments", server_default="arguments")
+    shell_command: Mapped[str | None]
     active: Mapped[bool]
     roles: Mapped[list[str]] = mapped_column(ARRAY(String))
     created_time: Mapped[datetime.datetime] = mapped_column(

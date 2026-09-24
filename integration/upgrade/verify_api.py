@@ -74,13 +74,13 @@ def main():
                 after = connection.execute(text("SELECT * FROM events.scripts ORDER BY id")).all()
                 assert before == after, "Reads and runs must not rewrite legacy registrations"
                 assert connection.scalar(text("SELECT count(*) FROM events.jobs WHERE config_version = 1")) == 6
-            # PUT is a current-schema write. Omitted version defaults to v2;
+            # PUT is a current-schema write. Omitted version defaults to v3;
             # pending jobs keep the v1 path/version even after the script changes.
             script_id = "10000000-0000-0000-0000-000000000002"
             edit = dict(name="Edited legacy", description="Current schema", repoPath="python/run_hourly.py")
             response = client.put(f"/scripts/{script_id}", json=edit)
             assert response.status_code == 200, response.text
-            assert response.json()["configVersion"] == 2
+            assert response.json()["configVersion"] == 3
             old_job = client.get(f"/jobs/{queue.messages[1].job_id}").json()
             assert old_job["configVersion"] == 1 and old_job["repoPath"] == "/python/run_hourly.py"
             assert command_for_payload(queue.messages[1].payload) == ["python", "/jobs//python/run_hourly.py"]
@@ -92,7 +92,7 @@ def main():
             roles=["CWMS Users"], jobRunners=["58600a09-f18e-42c5-9d3c-df52ebe409f9"])
         response = client.post("/scripts", json=payload)
         assert response.status_code == 200, response.text
-        assert response.json()["configVersion"] == 2
+        assert response.json()["configVersion"] == 3
         script_id = response.json()["id"]
         payload.update(runtime="shell", repoPath="bin/report.sh")
         assert client.put(f"/scripts/{script_id}", json=payload).status_code == 200
@@ -100,7 +100,7 @@ def main():
         assert response.status_code == 200, response.text
         assert len(queue.messages) == 1
         assert queue.messages[0].payload.runtime == "shell"
-        assert queue.messages[0].payload.config_version == 2
+        assert queue.messages[0].payload.config_version == 3
         assert queue.messages[0].payload.command_args == ["two words"]
         assert client.get(f"/jobs/{response.json()['id']}").status_code == 200
         job_id = UUID(response.json()["id"])
@@ -154,6 +154,27 @@ def main():
             invalid = payload | dict(executionType="github_file", repoPath=path)
             assert client.put(f"/scripts/{script_id}", json=invalid).status_code == 422
         assert client.post("/scripts", json=payload | dict(configVersion=1)).status_code == 422
+        # Exercise persisted v2-to-v3 upgrades and shell snapshots against the DB.
+        v2 = payload | dict(configVersion=2, commandArgs=["two words", "space ", ""])
+        assert client.put(f"/scripts/{script_id}", json=v2).status_code == 200
+        v2_job = client.post("/jobs", json={"scriptId": script_id}).json()
+        upgraded = client.post("/jobs", json={"scriptId": script_id, "upgradeToVersion": 3})
+        assert upgraded.status_code == 200, upgraded.text
+        assert upgraded.json()["configVersion"] == 3
+        assert upgraded.json()["commandArgs"] == v2["commandArgs"]
+        assert client.get(f"/jobs/{v2_job['id']}").json()["configVersion"] == 2
+        stored = next(row for row in client.get("/scripts?office=SWT").json() if row["id"] == script_id)
+        assert stored["configVersion"] == 3 and stored["commandArgs"] == v2["commandArgs"]
+        assert client.post("/jobs", json={"scriptId": script_id}).json()["configVersion"] == 3
+        shell = "printf 'first\\n' && false || printf 'fallback\\n'   "
+        custom = client.post("/jobs", json={"scriptId": script_id, "upgradeToVersion": 3,
+                                            "commandMode": "shell", "shellCommand": shell})
+        assert custom.status_code == 200, custom.text
+        assert client.get(f"/jobs/{custom.json()['id']}").json()["shellCommand"] == shell
+        assert command_for_payload(queue.messages[-1].payload) == ["bash", "-c", shell]
+        saved_shell = payload | dict(configVersion=3, commandMode="shell", shellCommand=shell, commandArgs=[])
+        assert client.put(f"/scripts/{script_id}", json=saved_shell).status_code == 200
+        assert client.post("/jobs", json={"scriptId": script_id}).json()["shellCommand"] == shell
         with engine.begin() as connection:
             connection.execute(text("UPDATE events.scripts SET config_version = 99 WHERE id = :id"), {"id": script_id})
             count = connection.scalar(text("SELECT count(*) FROM events.jobs"))

@@ -9,7 +9,7 @@ Script administrators can select a district repository file or an installed comm
 | District GitHub repository | Bash | `bin/report.sh` | `bash /jobs/bin/report.sh` |
 | Installed command | `cwms-cli` | `blob`, `upload`, `--help` | `cwms-cli blob upload --help` |
 
-Enter one argument per line in the form. The API stores `commandArgs` as an array, preserving spaces and literal shell characters. Commands execute directly; shell expressions require an explicit `bash` executable with `-lc` and the expression as separate arguments. The runtime selector applies to repository files; an installed command supplies its executable directly.
+Enter space-separated arguments, quoting values containing spaces (for example, `--name "Daily report"`). The editor previews each parsed value. Unquoted trailing spaces are ignored; quoted spaces and empty arguments (`''`) are preserved. The API still stores `commandArgs` as an array. Select **Bash command** mode for `&&`, `||`, pipes, redirection, or variable expansion. The complete expression runs as `bash -c`; argument mode passes values directly without shell expansion.
 
 Installed commands skip district repository checkout and repository Python dependency installation. Their executable and files, including any JAR, must be available in the container before execution.
 
@@ -22,16 +22,40 @@ In Scripts Manager, register the script with these values:
 | Office | `SWT` |
 | Name | Upload job status |
 | Source | Installed command |
-| Executable | `bash` |
+| Command mode | Bash command |
 
-Enter these two lines in **Arguments**:
+Enter this in **Bash command**:
 
-```text
--lc
-printf 'Job completed\n' > /tmp/job-status.txt && cwms-cli blob upload --input-file /tmp/job-status.txt --blob-id JOB-STATUS --media-type text/plain --office SWT
+```bash
+printf 'CWMS Batch Events chained upload example\n' > '/tmp/job status.txt' &&
+echo 'Generated file contents:' &&
+cat '/tmp/job status.txt' &&
+cwms-cli blob upload --input-file '/tmp/job status.txt' --blob-id "$DEMO_BLOB_ID" --media-type text/plain --office SWT
 ```
 
-The second line is one argument. Bash runs the upload only if file creation succeeds. The job environment supplies `CDA_API_ROOT` and `CDA_API_KEY` for the target CDA service. Use a unique blob ID for each output, or add `--overwrite` to replace an existing blob. Save the registration, select **Run job** on its row, then **Submit job** in the selected script. **Job runs** opens the result; **Job History** lists your runs across scripts.
+Bash runs each step only if the previous step succeeds. `cat` prints the file's
+contents exactly to the job log; `echo` adds a readable heading. The line breaks
+after `&&` are optional formatting: this is one Bash command, not separate argument
+rows. Paths containing spaces stay quoted.
+
+The job environment supplies `CDA_API_ROOT` and `CDA_API_KEY` for the target CDA
+service, and `DEMO_BLOB_ID` should be a unique test blob ID (for example,
+`BATCH-CHAIN-20260924-001`). You can replace `"$DEMO_BLOB_ID"` with that literal ID
+in the editor. Omit `--overwrite` to preserve an existing blob; add it only when
+replacement is intended. The runner needs both `cwms-cli` and `cwms-python`.
+See the [runnable local integration example](../integration/cwms_cli/README.md)
+for the tested package versions and the boundary of the local upload test.
+
+Save the registration, select **Run job** on its row, then **Submit job** in the
+selected script. **Job runs** opens the result; **Job History** lists your runs
+across scripts. With `||`, a successful fallback can make the whole job succeed;
+use `exit 1` in the fallback if the job must remain failed.
+
+For a longer workflow, keep a reviewed `.sh` file in the district repository and
+register it with runtime **Bash**. This gives the commands a natural home for
+comments and maintenance; the short inline chain above works well for a small
+create/print/upload task. `printf ... | tee file` can combine creation and logging,
+but a pipeline needs `set -o pipefail` to propagate a failure from `printf`.
 
 Configuration version, runtime, path, and arguments are copied into the job record and queue message when submitted, so later script edits do not change an already submitted job. Version 2 uses the same command construction for local Docker execution and AWS Batch.
 
@@ -39,20 +63,34 @@ For a one-time override, `POST /jobs` accepts `commandArgs` alongside `scriptId`
 Omitting `commandArgs` or sending `null` uses the saved arguments; `[]` runs without
 arguments. The override replaces the entire argument array on the job snapshot
 and does not update the script. Execution permissions and the saved executable,
-runtime, and path still apply. Custom arguments require configuration version 2.
+runtime, and path still apply. Custom arguments require configuration version 2 or later.
+For a v3 shell override, send `commandMode: "shell"` and `shellCommand` instead.
+Source still determines repository checkout and dependency setup in either command mode.
 
 ## Configuration versions
 
-New registrations and explicit edits use **v2** (`configVersion: 2` in the API).
-Clients may omit the version on POST/PUT; they cannot create v1 registrations.
-Saving a legacy script validates all execution fields against v2 and upgrades that
-registration to v2. Reading or running it never upgrades it.
+New registrations and web edits use **v3** (`configVersion: 3` in the API).
+Clients may omit the version on POST/PUT or explicitly submit v2; they cannot create v1 registrations.
+Saving an older script in the web app upgrades its registration after review.
+Ordinary reads and runs preserve its version. Submitting a v2 script in the web app
+offers **Run and upgrade version** or **Run version 2**, with a link to Help → Script versions.
+The upgrade sends `upgradeToVersion: 3` and requires script-admin access for the office.
+The saved registration upgrade and new job are committed together after validation.
+Future runs use v3; the existing argument array remains unchanged and is not reinterpreted
+as shell syntax. Custom arguments or commands affect only the new job snapshot.
+V1 must first be reviewed and saved by an administrator.
+
+The UI adapts to the saved configuration version without a version selector.
+Details and submission explain the available features, and upgrade forms show
+the previous command beside the new editor's preview. Unknown versions remain
+readable but cannot be edited or run by this UI. Configuration versions are
+separate from application releases; saved revision history is not included.
 
 Flyway migration `V1_01_15` adds `config_version INTEGER NOT NULL DEFAULT 1`
 to both scripts and jobs. All existing unversioned rows are classified as v1,
 including rows saved between the registered-runtime release and this migration.
 There is no reliable version marker in those rows. The application explicitly
-supplies v2 on new registrations and saves; the database default stays 1.
+supplies the selected version on registrations and saves; the database default stays 1.
 Queued messages without a configuration version also use v1. The queue envelope's
 `version` is independent of the script's `configVersion`.
 
@@ -79,6 +117,18 @@ Its path restrictions are not relaxed for legacy data. Unknown versions fail
 with an unsupported configuration schema error before a job is created or
 dispatched. Version-specific validation and command construction live in
 `core/execution.py`; future schemas should add an explicit handler there.
+
+V3 adds `commandMode` (`arguments` or `shell`) and `shellCommand`. Migration
+`V1_01_16` adds these fields to scripts and job snapshots, defaulting existing rows
+to argument mode without changing their versions. Shell mode requires a nonblank
+command and an empty argument array. Both runners receive the same `bash -c` argv.
+Adjacent version upgrades are registered in `EXECUTION_UPGRADES`; future versions
+must supply their own validated conversion rather than silently relabeling records.
+
+Deploy the schema migration first, then v3-capable runners, then the API and UI.
+Older runners cannot dispatch v3 snapshots. Already queued v1/v2 jobs retain their
+original command construction. Local Docker tests cover migrations and Bash behavior;
+deployment still needs the normal environment rollout checks.
 
 ## Repository browsing configuration
 
