@@ -26,11 +26,36 @@ In Scripts Manager, register the script with these values:
 
 Enter this in **Bash command**:
 
-```text
-printf 'Job completed\n' > /tmp/job-status.txt && cwms-cli blob upload --input-file /tmp/job-status.txt --blob-id JOB-STATUS --media-type text/plain --office SWT
+```bash
+printf 'CWMS Batch Events chained upload example\n' > '/tmp/job status.txt' &&
+echo 'Generated file contents:' &&
+cat '/tmp/job status.txt' &&
+cwms-cli blob upload --input-file '/tmp/job status.txt' --blob-id "$DEMO_BLOB_ID" --media-type text/plain --office SWT
 ```
 
-Bash runs the upload only if file creation succeeds. The job environment supplies `CDA_API_ROOT` and `CDA_API_KEY` for the target CDA service. Use a unique blob ID for each output, or add `--overwrite` to replace an existing blob. Save the registration, select **Run job** on its row, then **Submit job** in the selected script. **Job runs** opens the result; **Job History** lists your runs across scripts. With `||`, a successful fallback can make the whole job succeed; use `exit 1` in the fallback if the job must remain failed.
+Bash runs each step only if the previous step succeeds. `cat` prints the file's
+contents exactly to the job log; `echo` adds a readable heading. The line breaks
+after `&&` are optional formatting: this is one Bash command, not separate argument
+rows. Paths containing spaces stay quoted.
+
+The job environment supplies `CDA_API_ROOT` and `CDA_API_KEY` for the target CDA
+service, and `DEMO_BLOB_ID` should be a unique test blob ID (for example,
+`BATCH-CHAIN-20260924-001`). You can replace `"$DEMO_BLOB_ID"` with that literal ID
+in the editor. Omit `--overwrite` to preserve an existing blob; add it only when
+replacement is intended. The runner needs both `cwms-cli` and `cwms-python`.
+See the [runnable local integration example](../integration/cwms_cli/README.md)
+for the tested package versions and the boundary of the local upload test.
+
+Save the registration, select **Run job** on its row, then **Submit job** in the
+selected script. **Job runs** opens the result; **Job History** lists your runs
+across scripts. With `||`, a successful fallback can make the whole job succeed;
+use `exit 1` in the fallback if the job must remain failed.
+
+For a longer workflow, keep a reviewed `.sh` file in the district repository and
+register it with runtime **Bash**. This gives the commands a natural home for
+comments and maintenance; the short inline chain above works well for a small
+create/print/upload task. `printf ... | tee file` can combine creation and logging,
+but a pipeline needs `set -o pipefail` to propagate a failure from `printf`.
 
 Configuration version, runtime, path, and arguments are copied into the job record and queue message when submitted, so later script edits do not change an already submitted job. Version 2 uses the same command construction for local Docker execution and AWS Batch.
 
