@@ -13,7 +13,7 @@ The `&&` chain creates a text file, echoes a heading, prints the contents with
 Run from the repository root in PowerShell (Docker Desktop Linux containers):
 
 ```powershell
-docker run --rm --mount "type=bind,source=$PWD,target=/workspace,readonly" -w /workspace python:3.13-slim bash -c 'pip install --quiet cwms-cli==0.9.1 cwms-python==1.0.7 pydantic && python integration/cwms_cli/verify.py'
+docker run --rm --mount "type=bind,source=$PWD,target=/workspace,readonly" -w /workspace python:3.13-slim bash -c 'pip install --quiet cwms-cli==0.9.1 cwms-python==1.0.10 packaging==25.0 pydantic && python integration/cwms_cli/verify.py'
 ```
 
 This runs real Bash and the published cwms-cli executable. It uses the application's
@@ -29,6 +29,7 @@ This is not a live AWS job or CDA database persistence test. The receiver uses
 a dummy local API key and cannot verify CDA authorization, storage, or retrieval.
 
 Both Python packages are explicitly installed: cwms-cli 0.9.1 does not install
-cwms-python automatically. The test pins cwms-python 1.0.7 because published
-cwms-cli 0.9.1 incorrectly rejects 1.0.10 as older than 1.0.7 in its version
-check. This is a CLI dependency-check issue, independent of Bash chaining.
+cwms-python automatically. Install `packaging` too, as the runner image does.
+Without a version parser, cwms-cli 0.9.1 falls back to string comparison and
+incorrectly rejects 1.0.10 as older than 1.0.7. The latest pair passes this test
+with `packaging` installed; a cwms-python downgrade is not needed.
