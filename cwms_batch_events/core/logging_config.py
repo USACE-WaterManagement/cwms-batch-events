@@ -9,7 +9,9 @@ from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
 
-from cwms_batch_events.core.settings import settings
+from cwms_batch_events.core.settings import LoggingSettings, get_settings
+
+settings = get_settings(LoggingSettings)
 
 request_id: ContextVar[str | None] = ContextVar("request_id", default=None)
 log_context: ContextVar[dict] = ContextVar("log_context", default={})

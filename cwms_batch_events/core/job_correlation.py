@@ -2,7 +2,9 @@ import re
 from uuid import UUID
 
 from cwms_batch_events.core.logging_config import build_metadata
-from cwms_batch_events.core.settings import settings
+from cwms_batch_events.core.settings import LoggingSettings, get_settings
+
+settings = get_settings(LoggingSettings)
 
 
 def runner_environment(message) -> dict[str, str]:

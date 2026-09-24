@@ -8,7 +8,9 @@ import pytest
 from pydantic import SecretStr
 
 from cwms_batch_events.core import github_app
-from cwms_batch_events.core.settings import Settings, settings
+from cwms_batch_events.core.settings import Settings, get_settings
+
+settings = get_settings()
 
 
 @pytest.fixture(autouse=True)

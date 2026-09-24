@@ -1,7 +1,9 @@
 """Opt-in dev diagnostics. Never log output, cursor tokens, or credentials."""
 import logging
 
-from cwms_batch_events.core.settings import settings
+from cwms_batch_events.core.settings import LoggingSettings, get_settings
+
+settings = get_settings(LoggingSettings)
 
 logger = logging.getLogger("cwms_batch_events.job_log_timing")
 

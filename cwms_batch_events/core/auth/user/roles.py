@@ -4,7 +4,9 @@ import requests
 from pydantic import ValidationError
 
 from cwms_batch_events.core.models import CdaUserProfile
-from cwms_batch_events.core.settings import settings
+from cwms_batch_events.core.settings import get_settings
+
+settings = get_settings()
 
 CDA_API_ROOT = settings.cda_api_root
 CDA_REQUEST_TIMEOUT_SECONDS = 10

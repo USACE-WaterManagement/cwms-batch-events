@@ -15,7 +15,9 @@ from cwms_batch_events.api.dependencies import get_current_user, get_job_databas
 from cwms_batch_events.api.routers import repository_files, scripts, users
 from cwms_batch_events.core.auth.user.models import User
 from cwms_batch_events.core.models import ScriptCreate, ScriptRead, ScriptUpdate
-from cwms_batch_events.core.settings import settings
+from cwms_batch_events.core.settings import get_settings
+
+settings = get_settings()
 
 
 class DemoScripts:

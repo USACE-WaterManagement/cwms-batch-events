@@ -6,8 +6,11 @@ from typing import Any
 import uuid
 
 from cwms_batch_events.core.models import JobRecord, JobStatus, ScriptRunRequest
-from cwms_batch_events.core.settings import settings
+from cwms_batch_events.core.settings import DynamoSettings, get_settings
+
 from cwms_batch_events.core.utils import get_runner_id
+
+settings = get_settings(DynamoSettings)
 
 
 def dynamodb_item_to_python(item: Any) -> Any:

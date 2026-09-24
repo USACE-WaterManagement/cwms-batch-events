@@ -18,7 +18,7 @@ def test_s3_job_logger_reads_logs_from_bucket():
     with mock.patch(
         "cwms_batch_events.core.job_logger.s3.boto3.client",
         return_value=s3_client,
-    ), mock.patch("cwms_batch_events.core.job_logger.s3.S3_BUCKET", "bucket"):
+    ), mock.patch("cwms_batch_events.core.job_logger.s3.settings.s3_bucket", "bucket"):
         logger = S3JobLogger()
         logs = logger.get_logs_for_job(uuid4())
 
@@ -36,7 +36,7 @@ def test_s3_job_logger_reports_missing_logs():
     with mock.patch(
         "cwms_batch_events.core.job_logger.s3.boto3.client",
         return_value=s3_client,
-    ), mock.patch("cwms_batch_events.core.job_logger.s3.S3_BUCKET", "bucket"):
+    ), mock.patch("cwms_batch_events.core.job_logger.s3.settings.s3_bucket", "bucket"):
         logger = S3JobLogger()
 
     with pytest.raises(FileNotFoundError, match=f"No logs found for job {job_id}"):
@@ -50,7 +50,7 @@ def test_s3_job_logger_pushes_logs_to_bucket():
     with mock.patch(
         "cwms_batch_events.core.job_logger.s3.boto3.client",
         return_value=s3_client,
-    ), mock.patch("cwms_batch_events.core.job_logger.s3.S3_BUCKET", "bucket"):
+    ), mock.patch("cwms_batch_events.core.job_logger.s3.settings.s3_bucket", "bucket"):
         logger = S3JobLogger()
         logger.push_logs_for_job(job_id, "hello")
 
@@ -59,6 +59,12 @@ def test_s3_job_logger_pushes_logs_to_bucket():
         Key=f"logs/{job_id}.log",
         Body=b"hello",
     )
+
+
+def test_s3_job_logger_requires_s3_bucket():
+    with mock.patch("cwms_batch_events.core.job_logger.s3.settings.s3_bucket", None):
+        with pytest.raises(ValueError, match="S3_BUCKET must be configured for S3 logging"):
+            S3JobLogger()
 
 
 def test_cloudwatch_job_logger_get_job_details_requires_existing_job():

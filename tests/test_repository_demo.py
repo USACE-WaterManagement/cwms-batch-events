@@ -1,6 +1,8 @@
 from fastapi.testclient import TestClient
 
-from cwms_batch_events.core.settings import settings
+from cwms_batch_events.core.settings import get_settings
+
+settings = get_settings()
 from tools.repository_demo import create_demo
 
 

@@ -112,7 +112,9 @@ def test_cloudwatch_permissions_errors_are_not_silenced(source):
 
 
 def test_local_executor_reports_completion_only_logs():
-    with patch("cwms_batch_events.core.job_logger.s3.boto3.client"):
+    with patch("cwms_batch_events.core.job_logger.s3.boto3.client"), patch(
+        "cwms_batch_events.core.job_logger.s3.settings.s3_bucket", "logs"
+    ):
         logger = S3JobLogger()
     with patch.object(logger, "get_logs_for_job", side_effect=FileNotFoundError):
         page = logger.get_log_page(uuid4())

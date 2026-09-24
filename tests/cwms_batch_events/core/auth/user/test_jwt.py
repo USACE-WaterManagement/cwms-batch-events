@@ -40,6 +40,14 @@ def test_get_public_pem_raises_for_unknown_environment():
             get_public_pem()
 
 
+def test_get_public_pem_raises_when_auth_environment_missing():
+    with mock.patch(
+        "cwms_batch_events.core.auth.user.jwt.settings.auth_environment", None
+    ):
+        with pytest.raises(ValueError, match="AUTH_ENVIRONMENT is not configured"):
+            get_public_pem()
+
+
 def test_verify_jwt_routes_local_to_api_verification():
     with mock.patch(
         "cwms_batch_events.core.auth.user.jwt.settings.auth_environment", "LOCAL"
@@ -85,11 +93,12 @@ def test_verify_jwt_by_api_uses_jwks_client():
     jwt_decode.assert_called_once_with("token", signing_key, ["RS256"])
 
 
-def test_verify_jwt_by_saved_key_uses_saved_public_key_and_issuer():
-    mock_issuer = {"TEST": "https://keycloak.issuer.com"}
+@pytest.mark.parametrize("environment", ["TEST", "PROD"])
+def test_verify_jwt_by_saved_key_uses_saved_public_key_and_issuer(environment):
+    mock_issuer = {environment: "https://keycloak.issuer.com"}
 
     with mock.patch(
-        "cwms_batch_events.core.auth.user.jwt.settings.auth_environment", "TEST"
+        "cwms_batch_events.core.auth.user.jwt.settings.auth_environment", environment
     ), mock.patch(
         "cwms_batch_events.core.auth.user.jwt.get_public_pem",
         return_value="pem",
@@ -106,6 +115,21 @@ def test_verify_jwt_by_saved_key_uses_saved_public_key_and_issuer():
         "token",
         "pem",
         algorithms=["RS256"],
-        issuer=mock_issuer["TEST"],
+        issuer=mock_issuer[environment],
         options={"verify_aud": False},
     )
+
+
+@pytest.mark.parametrize("environment", [None, "", "LOCAL", "BOGUS"])
+def test_saved_key_rejects_invalid_environment_before_loading_key(environment):
+    with mock.patch(
+        "cwms_batch_events.core.auth.user.jwt.settings.auth_environment", environment
+    ), mock.patch(
+        "cwms_batch_events.core.auth.user.jwt.get_public_pem"
+    ) as get_key, mock.patch(
+        "cwms_batch_events.core.auth.user.jwt.jwt.decode"
+    ) as decode:
+        with pytest.raises(ValueError, match="Invalid AUTH_ENVIRONMENT"):
+            verify_jwt_by_saved_key("token")
+    get_key.assert_not_called()
+    decode.assert_not_called()
