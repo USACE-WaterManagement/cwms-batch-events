@@ -42,6 +42,8 @@ class JobModel(Base):
     script_slug: Mapped[str | None]
     job_status: Mapped[JobStatus] = mapped_column(VARCHAR)
     username: Mapped[str]
+    display_name: Mapped[str | None]
+    run_trigger: Mapped[str] = mapped_column(default="unknown", server_default="unknown")
     office: Mapped[str]
     repo_path: Mapped[str]
     config_version: Mapped[int] = mapped_column(default=1, server_default="1")

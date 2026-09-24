@@ -31,6 +31,8 @@ function submitButtonLabel(pending: boolean, custom: boolean): string {
   if (custom) return "Submit custom run";
   return "Submit job";
 }
+import { RunTriggerBadge } from "../jobs-list/RunAttribution";
+import { submittedBy } from "../jobs-list/submittedBy";
 
 export const ScriptRunJob = ({ script, onSubmitted }: {
   script: Script;
@@ -61,7 +63,7 @@ export const ScriptRunJob = ({ script, onSubmitted }: {
     <ScriptVersionNotice version={version} />
     <dl className="space-y-2 text-sm">
       <div><dt className="font-semibold">{script.executionType === "command" ? "Executable" : "File"}</dt><dd className="break-all">{script.repoPath}</dd></div>
-      <div><dt className="font-semibold">Saved command · version {version}</dt><dd><pre className="whitespace-pre-wrap break-all">{savedCommandPreview(script)}</pre></dd></div>
+      <div><dt className="font-semibold">Saved command Â· version {version}</dt><dd><pre className="whitespace-pre-wrap break-all">{savedCommandPreview(script)}</pre></dd></div>
       <div><dt className="font-semibold">Execution roles</dt><dd>{script.roles.length ? script.roles.join(", ") : "No additional CDA role required. Office access is required."}</dd></div>
     </dl>
     <p className="text-sm text-gray-600">Submit job uses the saved settings. Custom run lets you change arguments for one run without saving changes to the script.</p>
@@ -87,7 +89,7 @@ export const ScriptRunJob = ({ script, onSubmitted }: {
     </>}>
       <div className="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
         <span className="rounded bg-white px-3 py-2 font-semibold text-slate-600">Version 2</span>
-        <span aria-hidden="true" className="text-2xl text-blue-600">→</span>
+        <span aria-hidden="true" className="text-2xl text-blue-600">â†’</span>
         <span className="rounded bg-blue-700 px-3 py-2 font-semibold text-white">Version 3</span>
       </div>
       <div><p className="font-semibold text-slate-900">Upgrade {script.name} and start the job</p>
@@ -111,10 +113,10 @@ export const ScriptJobRuns = ({ script, selectedJobId, onSelectJob }: {
   const displayedJobId = selectedJobId ?? runs?.[0]?.id;
   return <div className="space-y-4 p-4">
     <div className="flex flex-wrap items-center justify-between gap-2">
-      <H3>Your runs for {script.name}</H3>
+      <H3>Office runs for {script.name}</H3>
       <Button size="sm" disabled={jobs.isFetching} onClick={() => void jobs.refetch()}>Refresh</Button>
     </div>
-    <p className="text-sm text-gray-600">Only jobs submitted by your account are shown. <Link to="/jobs" className="text-blue-700 underline">Open Job History</Link> for all your scripts.</p>
+    <p className="text-sm text-gray-600">Runs are shared with CWMS users in {script.office}. <Link to="/jobs" className="text-blue-700 underline">Open Job History</Link> for all scripts in your offices.</p>
     {jobs.isLoading && <p role="status">Loading job runs...</p>}
     {jobs.isError && <p role="alert">Job runs could not be loaded. Use Refresh to try again.</p>}
     {!jobs.isError && runs?.length === 0 && <p>No runs yet. Open Run script to submit this script.</p>}
@@ -122,7 +124,8 @@ export const ScriptJobRuns = ({ script, selectedJobId, onSelectJob }: {
       {runs.map(job => <li key={job.id}>
         <button type="button" aria-pressed={displayedJobId === job.id} onClick={() => onSelectJob(job.id)}
           className={`flex w-full flex-wrap justify-between gap-2 rounded border p-3 text-left hover:bg-blue-50 ${displayedJobId === job.id ? "border-blue-600 bg-blue-50" : "border-gray-300"}`}>
-          <span>{new Date(job.createdTime).toLocaleString()}</span><span className="inline-flex items-center gap-2 font-semibold">
+          <span>{new Date(job.createdTime).toLocaleString()}<span className="block text-sm text-gray-600">{submittedBy(job)}</span></span><span className="inline-flex items-center gap-2 font-semibold">
+            <RunTriggerBadge job={job} />
             {(job.jobStatus === "Running" || job.jobStatus === "Pending") && <span aria-hidden="true"><LoadingSpinner /></span>}
             {jobStatusLabel(job)}
             <span className="rounded border border-blue-300 bg-white px-3 py-1 font-medium text-blue-700">Open</span>

@@ -54,7 +54,7 @@ test("custom arguments apply once, cancel restores defaults, and role help expla
   await page.getByRole("button", { name: "Submit custom run", exact: true }).click();
   await expect(page.getByRole("alert").filter({ hasText: "Job could not" })).toBeVisible();
   await expect(page.getByLabel("Arguments for this run")).toHaveValue(/2026-09-01/);
-  expect(submissions[0]).toEqual({ scriptId: script.id, commandArgs: ["--start-date", "2026-09-01", "--end-date", "2026-09-07"] });
+  expect(submissions[0]).toEqual({ runTrigger: "manual", scriptId: script.id, commandArgs: ["--start-date", "2026-09-01", "--end-date", "2026-09-07"] });
   await page.getByRole("button", { name: "Cancel custom run" }).click();
   await page.getByRole("button", { name: "Custom run", exact: true }).click();
   await expect(page.getByLabel("Arguments for this run")).toHaveValue(script.commandArgs.join(" "));
@@ -62,11 +62,11 @@ test("custom arguments apply once, cancel restores defaults, and role help expla
   reject = false;
   await page.getByRole("button", { name: "Submit custom run", exact: true }).click();
   await expect(page.getByLabel("Job output")).toHaveValue("Report complete.");
-  expect(submissions[1]).toEqual({ scriptId: script.id, commandArgs: [] });
+  expect(submissions[1]).toEqual({ runTrigger: "manual", scriptId: script.id, commandArgs: [] });
   await row.getByRole("button", { name: "Run script", exact: true }).click();
   await page.getByRole("button", { name: "Submit job", exact: true }).click();
   await expect.poll(() => submissions.length).toBe(3);
-  expect(submissions[2]).toEqual({ scriptId: script.id });
+  expect(submissions[2]).toEqual({ runTrigger: "manual", scriptId: script.id });
   expect(scriptWrites).toEqual([]);
   await page.locator("tr").filter({ hasText: "Legacy report" }).getByRole("button", { name: "Run script", exact: true }).click();
   await expect(page.getByRole("button", { name: "Custom run", exact: true })).toBeDisabled();
@@ -79,6 +79,6 @@ test("custom arguments apply once, cancel restores defaults, and role help expla
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.getByRole("button", { name: "Submit custom run", exact: true }).click();
   await expect(page).toHaveURL(/\/jobs\/custom-job$/);
-  expect(submissions[3]).toEqual({ scriptId: script.id, commandArgs: ["two words", "", "--literal"] });
+  expect(submissions[3]).toEqual({ runTrigger: "manual", scriptId: script.id, commandArgs: ["two words", "", "--literal"] });
   expect(scriptWrites).toEqual([]);
 });

@@ -40,7 +40,7 @@ test("run from a script row, inspect its runs, and switch Groundwork tabs", asyn
     if (path.endsWith("/scripts")) return route.fulfill({ json: [script, second, inactive] });
     if (path.endsWith("/jobs") && route.request().method() === "POST") {
       posts++;
-      expect(route.request().postDataJSON()).toEqual({ scriptId: script.id });
+      expect(route.request().postDataJSON()).toEqual({ scriptId: script.id, runTrigger: "manual" });
       if (failSubmission) return route.fulfill({ status: 403, json: { detail: "Not authorized to run requested script" } });
       await submissionReady;
       return route.fulfill({ json: job });
@@ -86,7 +86,7 @@ test("run from a script row, inspect its runs, and switch Groundwork tabs", asyn
   await page.locator("tr").filter({ hasText: second.name }).click();
   finishSubmission();
   await expect(page.getByRole("tab", { name: "Run history", exact: true })).toHaveAttribute("aria-selected", "true");
-  await expect(page.getByRole("heading", { name: `Your runs for ${script.name}` })).toBeVisible();
+  await expect(page.getByRole("heading", { name: `Office runs for ${script.name}` })).toBeVisible();
   await expect(page.getByRole("textbox", { name: "Job output" })).toHaveValue("TZ=America/Chicago\n");
   await expect(page).toHaveURL(/\/events\/scripts-manager$/);
   expect(posts).toBe(1);
@@ -104,7 +104,7 @@ test("run from a script row, inspect its runs, and switch Groundwork tabs", asyn
   await capture("job-history");
   await page.getByRole("link", { name: "Scripts Manager", exact: true }).click();
   await page.locator("tr").filter({ hasText: second.name }).getByRole("button", { name: "Runs" }).click();
-  await expect(page.getByRole("heading", { name: `Your runs for ${second.name}` })).toBeVisible();
+  await expect(page.getByRole("heading", { name: `Office runs for ${second.name}` })).toBeVisible();
   await expect(page.getByRole("region", { name: "Selected job run" })).toContainText("job-other");
   await expect(page.locator("tr").filter({ hasText: inactive.name }).getByRole("button", { name: "Run script", exact: true })).toBeDisabled();
   await row.getByRole("button", { name: "Run script", exact: true }).click();

@@ -39,20 +39,23 @@ def main():
         else:
             raise RuntimeError("PostgreSQL did not become ready")
         port = json.loads(command("docker", "inspect", name))[0]["NetworkSettings"]["Ports"]["5432/tcp"][0]["HostPort"]
-        for database in ("fresh", "upgrade"):
+        for database in ("fresh", "upgrade", "current_upgrade"):
             command("docker", "exec", name, "createdb", "-U", "postgres", database)
             migrate = ["docker", "run", "--rm", "--network", f"container:{name}",
                 "-e", f"FLYWAY_URL=jdbc:postgresql://127.0.0.1:5432/{database}",
                 "-e", "FLYWAY_USER=postgres", "-e", "FLYWAY_PASSWORD=local-test-only",
                 "-e", "FLYWAY_DEFAULT_SCHEMA=events", "-e", "FLYWAY_PLACEHOLDERS_APP_USER=eventsapp",
                 "-e", "FLYWAY_PLACEHOLDERS_APP_PASSWORD=local-test-only", image]
-            if database == "upgrade":
+            if database != "fresh":
                 subprocess.run(migrate + ["-target=1.01.03", "migrate"], check=True)
                 subprocess.run(["docker", "exec", "-i", name, "psql", "-U", "postgres", "-d", database,
                                 "-v", "ON_ERROR_STOP=1"], input=Path(__file__).with_name("legacy.sql").read_text(), text=True, check=True)
+                if database == "current_upgrade":
+                    # Existing deployments have already applied config versions.
+                    subprocess.run(migrate + ["-target=1.01.15", "migrate"], check=True)
             subprocess.run(migrate + ["migrate"], check=True)
-            check_api(port, database, database == "upgrade")
-        print("PASS: fresh installation and upgrade from schema 1.01.03")
+            check_api(port, database, database != "fresh")
+        print("PASS: fresh installation and upgrades from schemas 1.01.03 and 1.01.15")
         subprocess.run([sys.executable, str(Path(__file__).with_name("verify_execution.py"))], check=True)
     finally:
         subprocess.run(["docker", "rm", "-f", name], capture_output=True)

@@ -22,7 +22,7 @@ users or credentials to the script. Leaving the list empty requires office acces
 only.
 5. The new run opens in **Run history**. Its status updates until it finishes, then output loads.
 6. Use **Runs** on a row to return to that script's runs. Select **Open** on a run to inspect it;
-   **Refresh** reloads the list. **Job History** shows your runs across all scripts, with an
+   **Refresh** reloads the list. **Job History** shows shared runs across scripts in your offices, with an
    **Open** link on each entry that goes directly to its details and output.
 
 The Groundwork tabs keep details, submission, and run output in the selected script's workspace.
@@ -47,17 +47,20 @@ On a phone, scroll the script list to choose a script, then scroll down to its t
 
 </details>
 
-Script rows show the status of your newest submitted run. A spinner indicates that run is
+Script rows show the status of the newest submitted run in the selected office. A spinner indicates that run is
 queued or running; a failure warning appears only if that latest run failed, regardless of age.
 A newer successful run clears the warning even if an older run failed more recently.
 Click an indicator to open that run. **Runs** opens the latest run by default; select an older
 entry in **Run history** to inspect its details without changing the script's latest status.
 Running jobs also show spinners in the run list. The manager refreshes run status every five
 seconds while visible, including when a different tab is selected. A read failure stops polling;
-**Retry run status** resumes it. The indicators remain scoped to your jobs in the selected office.
+**Retry run status** resumes it. The indicators remain scoped to jobs in the selected office.
 
 
-Both history views contain jobs submitted by the signed-in username. Existing `/events/jobs`
+Both history views share runs within the user's CWMS offices and show the submitter's readable
+name. Manual and Scheduled badges identify recorded triggers; historical or unmarked runs
+show Unknown. See [run attribution](job-logs.md#shared-run-attribution) for scheduler setup.
+Existing `/events/jobs`
 and `/events/jobs/{jobId}` links continue to work. **Submit Job** remains available for users
 who can run scripts but do not have script administration access.
 

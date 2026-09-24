@@ -8,6 +8,8 @@ import relativeTime from "dayjs/plugin/relativeTime";
 import JobDetail from "./JobDetail";
 import { jobStatusLabel } from "./jobStatus";
 import LoginPrompt from "../auth/LoginPrompt";
+import { RunTriggerBadge } from "./RunAttribution";
+import { submittedBy } from "./submittedBy";
 
 dayjs.extend(relativeTime);
 
@@ -24,7 +26,7 @@ const JobsList = () => {
     return (
       <LoginPrompt
         title="Sign in to view job history"
-        description="Review the jobs you submitted, including their current status and output."
+        description="Review jobs run in your offices, including who submitted them, their status, and output."
       />
     );
   }
@@ -47,7 +49,7 @@ const JobsList = () => {
   return (
     <div className="mx-auto min-w-0 max-w-4xl space-y-4">
       <H1>Job History</H1>
-      <p>Jobs submitted by your account, with their status and output.</p>
+      <p>Runs shared across your offices, with who submitted them, their status, and output.</p>
       <nav aria-label="Job history pagination" className="flex flex-wrap items-center gap-3">
         <label className="flex items-center gap-2">
           Jobs per page
@@ -81,8 +83,9 @@ const JobsList = () => {
               <span className="flex min-w-0 w-full flex-wrap justify-between gap-2 text-left">
                 <span className="min-w-0 break-all">
                   {job.scriptName} ({dateAgo})
+                  <span className="mt-1 block text-sm font-normal text-gray-600">{job.office} · {submittedBy(job)}</span>
                 </span>
-                <span>{jobStatusLabel(job)}</span>
+                <span className="inline-flex items-center gap-2"><RunTriggerBadge job={job} />{jobStatusLabel(job)}</span>
               </span>
             }
           >

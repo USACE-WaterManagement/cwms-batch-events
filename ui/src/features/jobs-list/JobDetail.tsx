@@ -2,10 +2,13 @@ import { PropsWithChildren } from "react";
 import LoadingSpinner from "../../shared/components/LoadingSpinner";
 import { JobDetails } from "./useJobDetails";
 import { jobStatusLabel } from "./jobStatus";
+import { RunTriggerBadge } from "./RunAttribution";
+import { submittedBy } from "./submittedBy";
 
 const jobFields: (keyof JobDetails)[] = [
   "scriptName",
   "username",
+  "runTrigger",
   "jobStatus",
   "office",
   "createdTime",
@@ -23,6 +26,7 @@ const wideFields: (keyof JobDetails)[] = [
 
 const fieldLabels: Partial<Record<keyof JobDetails, string>> = {
   scriptName: "Script", username: "Submitted by", jobStatus: "Status", office: "Office",
+  runTrigger: "Trigger",
   createdTime: "Submitted", runTime: "Started", endTime: "Finished", id: "Run ID",
 };
 
@@ -40,7 +44,7 @@ function JobDetail({ job }: JobDetailProps) {
             : "";
           return (
             <JobDetailField key={field} field={fieldLabels[field] ?? field} className={className}>
-              {field === "jobStatus" ? (
+              {field === "username" ? submittedBy(job) : field === "runTrigger" ? <RunTriggerBadge job={job} /> : field === "jobStatus" ? (
                 job.jobStatus !== "Completed" && job.jobStatus !== "Failed" ? (
                   <span className="inline-flex items-center gap-2">
                     <span>{jobStatusLabel(job)}</span>

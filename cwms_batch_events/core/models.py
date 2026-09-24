@@ -2,7 +2,8 @@ from datetime import datetime
 from pathlib import PurePosixPath
 from typing import Literal
 from enum import Enum
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_validator
+from cwms_batch_events.core.display_names import readable_name
 from pydantic.alias_generators import to_camel
 from uuid import UUID
 
@@ -113,6 +114,17 @@ class JobRecord(ExecutionRecord):
     script_slug: str | None
     job_status: JobStatus
     username: str
+    display_name: str | None = None
+    run_trigger: Literal["manual", "scheduled", "unknown"] = "unknown"
+
+    @field_serializer("username")
+    def public_username(self, value: str) -> str:
+        return readable_name(value)
+
+    @field_serializer("display_name")
+    def public_display_name(self, value: str | None) -> str:
+        return readable_name(value, self.username)
+
     office: str
     repo_path: str
     created_time: datetime
@@ -166,6 +178,10 @@ class ScriptRunRequest(CamelModel):
         if values is not None and any("\x00" in value for value in values):
             raise ValueError("Command arguments cannot contain NUL characters")
         return values
+    run_trigger: Literal["manual", "scheduled", "unknown"] = Field(
+        default="unknown",
+        description="Caller-reported trigger for display only; grants no permissions. UI sends manual; cron/scheduler clients send scheduled. Omitted values remain unknown.",
+    )
 
 
 class ScriptRunOptions(ExecutionRecord):

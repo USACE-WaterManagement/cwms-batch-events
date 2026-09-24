@@ -5,7 +5,7 @@ import { JobDetails } from "../jobs-list/useJobDetails";
 import { useNavigate } from "@tanstack/react-router";
 import { components } from "../../generated/api-types";
 
-export type ExecuteScriptPayload = components["schemas"]["ScriptRunRequest"];
+export type ExecuteScriptPayload = Omit<components["schemas"]["ScriptRunRequest"], "runTrigger">;
 
 const useExecuteScript = (onSubmitted?: (job: JobDetails) => void) => {
   const auth = useAuth();
@@ -39,7 +39,7 @@ const executeScript = async (
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, runTrigger: "manual" }),
     },
     token
   );
