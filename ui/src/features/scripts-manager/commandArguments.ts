@@ -30,10 +30,12 @@ export function parseArguments(text: string): string[] {
 
 export function commandPreview(script: Pick<Script, "executionType" | "repoPath" | "runtime" | "commandArgs">, trimTarget = true): string {
   const target = trimTarget ? script.repoPath.trim() : script.repoPath;
-  const prefix = script.executionType === "command" ? [target]
-    : script.runtime === "java" ? ["java", "-jar", `/jobs/${target.replace(/^\/jobs\//, "")}`]
-    : [script.runtime === "shell" ? "bash" : "python", `/jobs/${target.replace(/^\/jobs\//, "")}`];
-  return formatArguments([...prefix, ...(script.commandArgs ?? [])]);
+  const args = script.commandArgs ?? [];
+  if (script.executionType === "command") return formatArguments([target, ...args]);
+  const path = `/jobs/${target.replace(/^\/jobs\//, "")}`;
+  if (script.runtime === "java") return formatArguments(["java", "-jar", path, ...args]);
+  if (script.runtime === "shell") return formatArguments(["bash", path, ...args]);
+  return formatArguments(["python", path, ...args]);
 }
 
 export function savedCommandPreview(script: Script): string {

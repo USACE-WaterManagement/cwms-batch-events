@@ -2,6 +2,12 @@ import { useState } from "react";
 import { formatArguments, parseArguments } from "./commandArguments";
 import { ArgumentValues } from "./CommandSummary";
 
+function ArgumentsPreview({ id, error, args }: { id: string; error: string; args: string[] }) {
+  if (error) return <p role="alert" className="text-sm text-red-700">{error}</p>;
+  if (!args.length) return <div id={`${id}-preview`}><span className="text-sm text-gray-500">No arguments</span></div>;
+  return <div id={`${id}-preview`}><ArgumentValues args={args} /></div>;
+}
+
 export function ArgumentsEditor({ id, label = "Arguments", initialArgs, disabled, onChange, onValidityChange }: {
   id: string; label?: string; initialArgs: string[]; disabled?: boolean;
   onChange: (args: string[]) => void; onValidityChange: (valid: boolean) => void;
@@ -20,9 +26,6 @@ export function ArgumentsEditor({ id, label = "Arguments", initialArgs, disabled
         catch { onValidityChange(false); }
       }} />
     <p id={`${id}-help`} className="text-sm text-gray-600">Separate arguments with spaces. Quote a value containing spaces. Trailing spaces are ignored; use <code>''</code> for an empty argument.</p>
-    {error ? <p role="alert" className="text-sm text-red-700">{error}</p> : <div id={`${id}-preview`}>
-      {args.length ? <ArgumentValues args={args} />
-        : <span className="text-sm text-gray-500">No arguments</span>}
-    </div>}
+    <ArgumentsPreview id={id} error={error} args={args} />
   </div>;
 }

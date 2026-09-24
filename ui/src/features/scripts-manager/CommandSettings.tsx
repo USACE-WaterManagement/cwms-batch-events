@@ -5,6 +5,12 @@ import { CommandModal, ScriptVersionHelp } from "./CommandModal";
 import { CommandSummary } from "./CommandSummary";
 import type { ScriptFormData } from "./types";
 
+function editButtonLabel(value: ScriptFormData): string {
+  if (value.commandMode === "shell") return "Edit command";
+  if (value.commandArgs?.length) return "Edit arguments";
+  return "Add arguments";
+}
+
 export function CommandSettings({ value, onChange, disabled }: {
   value: ScriptFormData; onChange: (value: ScriptFormData) => void; disabled?: boolean;
 }) {
@@ -14,7 +20,7 @@ export function CommandSettings({ value, onChange, disabled }: {
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div><h3 className="font-semibold text-slate-900">Arguments and command</h3><p className="text-sm text-slate-500">Review the values this script will receive.</p></div>
       <Button type="button" disabled={disabled} onClick={() => { setDraft({ ...value }); setValid(true); }}>
-        {value.commandMode === "shell" ? "Edit command" : value.commandArgs?.length ? "Edit arguments" : "Add arguments"}
+        {editButtonLabel(value)}
       </Button>
     </div>
     <CommandSummary value={value} />

@@ -80,6 +80,12 @@ const InputLabel = ({
   );
 };
 
+function scriptPathLabel(form: ScriptFormData): string {
+  if (form.executionType === "command") return "Executable";
+  if (form.runtime === "java") return "JAR Path";
+  return "GitHub Repo Path";
+}
+
 interface ScriptFormProps {
   office: string;
   script?: Script;
@@ -173,9 +179,7 @@ export const ScriptForm = ({
           </FormRow>
           {form.commandMode !== "shell" && <FormRow>
             <InputLabel htmlFor="repoPath">
-              {form.executionType === "command"
-                ? "Executable"
-                : form.runtime === "java" ? "JAR Path" : "GitHub Repo Path"}
+              {scriptPathLabel(form)}
             </InputLabel>
             {form.executionType === "command" ? <Input
               id="repoPath"

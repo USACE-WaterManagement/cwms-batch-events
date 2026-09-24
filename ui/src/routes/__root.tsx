@@ -57,6 +57,12 @@ export const Route = createRootRoute({
   },
 });
 
+function repositoryButtonTitle(office: string | undefined, repositoryUrl: string | undefined, repository: string | undefined): string {
+  if (!office) return "Select an office to open its repository";
+  if (!repositoryUrl) return `Repository unavailable for ${office}`;
+  return `Open ${repository}`;
+}
+
 function RootShell({ children }: { children: ReactNode }) {
   const auth = useAuth();
   const [githubOpen, setGithubOpen] = useState(false);
@@ -117,7 +123,7 @@ function RootShell({ children }: { children: ReactNode }) {
       ]}
       navRight={<div className="batch-header-actions flex shrink-0 items-center gap-1 whitespace-nowrap py-1" aria-label="Account and notifications">
       {auth.isAuth && <WarningIndicator />}
-      <Button type="button" className="gw-px-2 gw-shrink-0" aria-label={office ? `${office} GitHub` : "GitHub"} disabled={!auth.isAuth || !repositoryUrl} title={!office ? "Select an office to open its repository" : !repositoryUrl ? `Repository unavailable for ${office}` : `Open ${repository}`}
+      <Button type="button" className="gw-px-2 gw-shrink-0" aria-label={office ? `${office} GitHub` : "GitHub"} disabled={!auth.isAuth || !repositoryUrl} title={repositoryButtonTitle(office, repositoryUrl, repository)}
         onClick={() => setGithubOpen(true)}><FaGithub aria-hidden /> <span className="hidden min-[1100px]:inline">{office ? `${office} GitHub` : "GitHub"}</span></Button>
       <AuthButton />
     </div>}>

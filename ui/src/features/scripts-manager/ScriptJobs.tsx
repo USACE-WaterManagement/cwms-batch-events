@@ -1,6 +1,7 @@
 import { Button, H3 } from "@usace/groundwork";
 import { Link } from "@tanstack/react-router";
 import useExecuteScript from "../script-picker/useExecuteScript";
+import type { ExecuteScriptPayload } from "../script-picker/useExecuteScript";
 import useJobsList from "../jobs-list/useJobsList";
 import JobDetailFull from "../jobs-list/JobDetailFull";
 import type { JobDetails } from "../jobs-list/useJobDetails";
@@ -13,6 +14,23 @@ import { savedCommandPreview, CURRENT_SCRIPT_VERSION, supportsScriptVersion } fr
 import { ScriptVersionNotice } from "./ScriptVersionNotice";
 import { CommandModal, ScriptVersionHelp } from "./CommandModal";
 import useAdminOffices from "./useAdminOffices";
+
+function customRunOptions(custom: boolean, command: ScriptFormData, script: Script): Partial<ExecuteScriptPayload> {
+  if (!custom) return {};
+  if (command.commandMode === "shell") {
+    return { commandMode: "shell", shellCommand: command.shellCommand };
+  }
+  if (script.commandMode === "shell") {
+    return { commandMode: "arguments", commandArgs: command.commandArgs };
+  }
+  return { commandArgs: command.commandArgs };
+}
+
+function submitButtonLabel(pending: boolean, custom: boolean): string {
+  if (pending) return "Submitting...";
+  if (custom) return "Submit custom run";
+  return "Submit job";
+}
 
 export const ScriptRunJob = ({ script, onSubmitted }: {
   script: Script;
@@ -34,9 +52,7 @@ export const ScriptRunJob = ({ script, onSubmitted }: {
     setUpgradeOpen(false);
     run.mutate({ scriptId: script.id,
       ...(upgrade ? { upgradeToVersion: CURRENT_SCRIPT_VERSION } : {}),
-      ...(custom ? command.commandMode === "shell"
-        ? { commandMode: "shell" as const, shellCommand: command.shellCommand }
-        : { commandArgs: command.commandArgs, ...(script.commandMode === "shell" ? { commandMode: "arguments" as const } : {}) } : {}),
+      ...customRunOptions(custom, command, script),
     });
   };
   return <div className="space-y-4 p-4">
@@ -57,7 +73,7 @@ export const ScriptRunJob = ({ script, onSubmitted }: {
     {!script.active && <p role="status">This script is inactive. Enable it in Details before running a job.</p>}
     <div className="flex flex-wrap gap-3">
     <Button disabled={!supportsScriptVersion(version) || !script.active || run.isPending || (custom && !commandValid)} onClick={() => version === 2 ? setUpgradeOpen(true) : submit(false)}>
-      {run.isPending ? "Submitting..." : custom ? "Submit custom run" : "Submit job"}
+      {submitButtonLabel(run.isPending, custom)}
     </Button>
     <Button disabled={!supportsScriptVersion(version) || !script.active || run.isPending || version < 2} onClick={() => {
       setCustom(!custom); setCommand(initialCommand); setCommandValid(true); run.reset();

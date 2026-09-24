@@ -20,6 +20,19 @@ export const RoleList = ({ roles }: { roles: string[] }) => {
   }
 };
 
+function scriptSource(script: Script): string {
+  if ((script.configVersion ?? 1) === 1) return "District GitHub repository (historical)";
+  if (script.executionType === "command") return "Installed command";
+  return "District GitHub repository";
+}
+
+function scriptRuntime(script: Script) {
+  if ((script.configVersion ?? 1) === 1) return "Python (historical)";
+  if (script.commandMode === "shell") return "Bash command";
+  if (script.executionType === "command") return script.repoPath;
+  return script.runtime;
+}
+
 interface ScriptViewProps {
   script?: Script;
   onEdit: () => void;
@@ -45,14 +58,10 @@ export const ScriptView = ({ script, onEdit }: ScriptViewProps) => {
             <span className="block [overflow-wrap:anywhere]">{script.repoPath}</span>
           </ViewField>
           <ViewField label="Source">
-            {(script.configVersion ?? 1) === 1 ? "District GitHub repository (historical)" : script.executionType === "command"
-              ? "Installed command"
-              : "District GitHub repository"}
+            {scriptSource(script)}
           </ViewField>
           <ViewField label="Runtime">
-            {(script.configVersion ?? 1) === 1 ? "Python (historical)" : script.commandMode === "shell" ? "Bash command" : script.executionType === "command"
-              ? script.repoPath
-              : script.runtime}
+            {scriptRuntime(script)}
           </ViewField>
           <ViewField label={`Command (version ${script.configVersion ?? 1})`}>
             <pre className="whitespace-pre-wrap">
