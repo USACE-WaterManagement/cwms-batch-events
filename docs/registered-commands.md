@@ -69,20 +69,21 @@ Source still determines repository checkout and dependency setup in either comma
 
 ## Configuration versions
 
-New registrations and web edits use **v3** (`configVersion: 3` in the API).
-Clients may omit the version on POST/PUT or explicitly submit v2; they cannot create v1 registrations.
-Saving an older script in the web app upgrades its registration after review.
-Ordinary reads and runs preserve its version. Submitting a v2 script in the web app
-offers **Run and upgrade version** or **Run version 2**, with a link to Help → Script versions.
-The upgrade sends `upgradeToVersion: 3` and requires script-admin access for the office.
-The saved registration upgrade and new job are committed together after validation.
-Future runs use v3; the existing argument array remains unchanged and is not reinterpreted
-as shell syntax. Custom arguments or commands affect only the new job snapshot.
-V1 must first be reviewed and saved by an administrator.
+New registrations use **v4** (`configVersion: 4` in the API). Web edits retain the
+saved version. API writes may explicitly use v2/v3 for compatibility, but cannot
+create v1 or downgrade an existing registration.
+Ordinary reads and runs preserve the version without an upgrade prompt.
+Choose **Upgrade configuration** in Details to call `POST /scripts/{id}/upgrade`.
+It requires an office script administrator, shows progress and success/error feedback,
+and saves v4 without submitting a job or enabling a schedule. Repeating the request is
+safe. V2/v3 commands remain unchanged; v1 keeps effective Python execution and clears
+historically ignored fields. Ambiguous legacy paths require a reviewed replacement.
+The older `POST /jobs` option `upgradeToVersion: 3` remains available for existing
+clients but cannot downgrade v4; the web app no longer sends it.
 
 The UI adapts to the saved configuration version without a version selector.
-Details and submission explain the available features, and upgrade forms show
-the previous command beside the new editor's preview. Unknown versions remain
+Details and submission explain the available features. Details has separate General,
+Source & path, Arguments & command, Access, and Schedule sections. Unknown versions remain
 readable but cannot be edited or run by this UI. Configuration versions are
 separate from application releases; saved revision history is not included.
 
@@ -125,8 +126,11 @@ command and an empty argument array. Both runners receive the same `bash -c` arg
 Adjacent version upgrades are registered in `EXECUTION_UPGRADES`; future versions
 must supply their own validated conversion rather than silently relabeling records.
 
-Deploy the schema migration first, then v3-capable runners, then the API and UI.
-Older runners cannot dispatch v3 snapshots. Already queued v1/v2 jobs retain their
+V4 adds district scheduling and timezone settings while keeping v3 command behavior.
+See [district schedules](registered-schedules.md) for recovery and rollout requirements.
+
+Deploy the schema migrations first, then v4-capable dispatchers/runners, then the API and UI.
+Older dispatchers cannot validate v4 snapshots. Already queued v1/v2/v3 jobs retain their
 original command construction. Local Docker tests cover migrations and Bash behavior;
 deployment still needs the normal environment rollout checks.
 
