@@ -59,6 +59,7 @@ test("explicit upgrade shows progress, recoverable failure, success, and stays u
 });
 
 test("save marks missing fields and sections, keeps drafts, and preserves an old version", async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 1000 });
   let script = { ...original };
   const writes: Record<string, unknown>[] = [];
   await page.route("**/api/**", route => {
@@ -121,6 +122,12 @@ test("invalid cron and timezone highlight Schedule and recover without losing va
   await expect(page.getByRole("tab", { name: "Details", exact: true })).toBeVisible();
   await expect(page.locator("[data-invalid-details=false]")).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
+  const sectionPicker = page.getByRole("combobox", { name: "Configuration section" });
+  await expect(sectionPicker).toHaveValue("schedule");
+  await expect(page.getByRole("navigation", { name: "Configuration sections" }).getByRole("button")).toHaveCount(0);
+  await sectionPicker.selectOption("general");
+  await expect(page.getByLabel("Name", { exact: true })).toBeVisible();
+  await sectionPicker.selectOption("schedule");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await expect(page.getByLabel("Cron expression", { exact: true })).toHaveValue("0 8 * * 1-5");
 });

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import { MdTune, MdFolderOpen, MdTerminal, MdShield, MdSchedule, MdChevronRight, MdErrorOutline } from "react-icons/md";
 
 import { scriptSections, fieldSections, type ScriptSection } from "./configurationSections";
@@ -16,10 +16,24 @@ export function ScriptSections({ active, onSelect, errors = {}, children }: {
   active: ScriptSection; onSelect: (section: ScriptSection) => void;
   errors?: Record<string, string>; children: ReactNode;
 }) {
+  const selectId = useId();
+  const invalidSections = scriptSections.filter(section => Object.keys(errors).some(field => fieldSections[field] === section.id));
   return <div className="grid min-h-0 min-w-0 items-start gap-4 @min-[30rem]/script-panel:grid-cols-[10rem_minmax(0,1fr)]">
     <nav aria-label="Configuration sections" className="rounded-xl border border-slate-200 bg-slate-50 p-2.5">
+      <div className="@min-[30rem]/script-panel:hidden">
+        <label htmlFor={selectId} className="mb-2 block text-xs font-semibold text-slate-600">Configuration section</label>
+        <select id={selectId} value={active} onChange={event => onSelect(event.target.value as ScriptSection)}
+          aria-describedby={invalidSections.length ? `${selectId}-errors` : undefined}
+          className={`min-h-12 w-full cursor-pointer rounded-lg border bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm focus:outline-2 focus:outline-offset-2 focus:outline-blue-600 ${invalidSections.length ? "border-red-500" : "border-slate-300"}`}>
+          {scriptSections.map(section => <option key={section.id} value={section.id}>
+            {section.label}{invalidSections.includes(section) ? " — needs attention" : ""}
+          </option>)}
+        </select>
+        {invalidSections.length > 0 && <p id={`${selectId}-errors`} className="mt-2 text-sm text-red-800">Needs attention: {invalidSections.map(section => section.label).join(", ")}.</p>}
+      </div>
+      <div className="hidden @min-[30rem]/script-panel:block">
       <p className="px-2 pb-3 pt-1 text-[11px] font-bold uppercase tracking-widest text-slate-500">Configuration</p>
-      <div className="grid grid-cols-2 gap-2 @min-[30rem]/script-panel:grid-cols-1">
+      <div className="grid grid-cols-1 gap-2">
       {scriptSections.map(section => {
         const invalid = Object.keys(errors).some(field => fieldSections[field] === section.id);
         const Icon = sectionIcons[section.id];
@@ -34,6 +48,7 @@ export function ScriptSections({ active, onSelect, errors = {}, children }: {
           {!invalid && active === section.id && <MdChevronRight aria-hidden className="size-4 shrink-0" />}
         </button>;
       })}
+      </div>
       </div>
     </nav>
     <div className="min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
