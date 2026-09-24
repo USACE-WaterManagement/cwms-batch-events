@@ -10,12 +10,13 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from cwms_batch_events.api.main import app
-from cwms_batch_events.api.dependencies import get_current_user, get_job_queue
+from cwms_batch_events.api.dependencies import get_current_user, get_job_queue, get_job_logger
 from cwms_batch_events.core.auth.user.models import User
 from cwms_batch_events.core.job_database.postgres.session import engine
 from cwms_batch_events.core.queue import JobQueue
 from cwms_batch_events.core.job_database.postgres.postgres import PostgresJobDatabase
 from cwms_batch_events.core.execution import command_for_payload
+from cwms_batch_events.core.models import JobLogPage
 
 
 class CapturedQueue(JobQueue):
@@ -48,13 +49,41 @@ def main():
             assert all(row["configVersion"] == 1 for row in scripts.json())
             assert jobs.json()[0]["configVersion"] == 1
             assert jobs.json()[0]["repoPath"] == "/jobs/python/report.py"
+            assert jobs.json()[0]["runTrigger"] == "unknown"
+            assert jobs.json()[0]["office"] == "SWT"
+            assert jobs.json()[0]["displayName"] == "Name unavailable"
+            assert "1543077719" not in jobs.text
+            shared_page = client.get("/jobs?limit=10&offset=0")
+            assert shared_page.headers["X-Total-Count"] == "1"
+            assert shared_page.json() == jobs.json()
             job_id = jobs.json()[0]["id"]
             assert client.get(f"/jobs/{job_id}").status_code == 200
+            historical_logs = Mock()
+            historical_logs.get_logs_for_job.return_value = "historical output"
+            historical_logs.get_log_page.return_value = JobLogPage(logs="historical output")
+            app.dependency_overrides[get_job_logger] = lambda: historical_logs
+            app.dependency_overrides[get_current_user] = lambda: User(username="colleague", offices=["SWT"],
+                admin_offices=[], roles={"SWT": ["CWMS Users"]})
+            for suffix in ("", "/logs", "/logs/page"):
+                assert client.get(f"/jobs/{job_id}{suffix}").status_code == 200
+            # The original submitter cannot bypass their current office access.
+            app.dependency_overrides[get_current_user] = lambda: User(
+                username="EXAMPLE.CHARLES.ROBERT.1543077719", offices=["LRH"],
+                admin_offices=[], roles={"LRH": ["CWMS Users"]})
+            hidden = client.get("/jobs?limit=10&offset=0")
+            assert hidden.json() == [] and hidden.headers["X-Total-Count"] == "0"
+            for suffix in ("", "/logs", "/logs/page"):
+                assert client.get(f"/jobs/{job_id}{suffix}").status_code == 404
+            app.dependency_overrides.pop(get_job_logger)
+            app.dependency_overrides[get_current_user] = lambda: User(username="upgrade-user", offices=["SWT"],
+                admin_offices=["SWT"], roles={"SWT": ["CWMS Users"]})
             for suffix in (9,):
                 response = client.post("/jobs", json={"scriptId": f"10000000-0000-0000-0000-{suffix:012d}"})
                 assert response.status_code == 422, response.text
             with engine.connect() as connection:
                 assert connection.scalar(text("SELECT count(*) FROM events.jobs")) == 1
+                original = connection.execute(text("SELECT username, office, display_name, run_trigger FROM events.jobs")).one()
+                assert tuple(original) == ("EXAMPLE.CHARLES.ROBERT.1543077719", "SWT", None, "unknown")
             assert not queue.messages
             with engine.connect() as connection:
                 before = connection.execute(text("SELECT * FROM events.scripts ORDER BY id")).all()
@@ -96,8 +125,9 @@ def main():
         script_id = response.json()["id"]
         payload.update(runtime="shell", repoPath="bin/report.sh")
         assert client.put(f"/scripts/{script_id}", json=payload).status_code == 200
-        response = client.post("/jobs", json={"scriptId": script_id})
+        response = client.post("/jobs", json={"scriptId": script_id, "runTrigger": "manual"})
         assert response.status_code == 200, response.text
+        assert response.json()["runTrigger"] == "manual"
         assert len(queue.messages) == 1
         assert queue.messages[0].payload.runtime == "shell"
         assert queue.messages[0].payload.config_version == 3
@@ -112,9 +142,22 @@ def main():
         logs.get_log_events.return_value = {"events": [{"message": "retained output"}]}
         with patch("cwms_batch_events.core.job_logger.cloudwatch.boto3.client",
                    side_effect=lambda name: batch if name == "batch" else logs):
+            app.dependency_overrides[get_current_user] = lambda: User(username="colleague", offices=["SWT"],
+                admin_offices=[], roles={"SWT": ["CWMS Users"]})
+            shared = client.get("/jobs?limit=1&offset=0")
+            assert shared.status_code == 200 and shared.json()[0]["id"] == str(job_id)
+            assert int(shared.headers["X-Total-Count"]) >= 1
             assert client.get(f"/jobs/{job_id}").json()["jobStatus"] == "Running"
             assert client.get(f"/jobs/{job_id}/logs/page").json()["logs"] == "retained output"
             batch.describe_jobs.assert_called_once()
+            app.dependency_overrides[get_current_user] = lambda: User(username="outsider", offices=["LRH"],
+                admin_offices=[], roles={"LRH": ["CWMS Users"]})
+            outsider = client.get("/jobs?limit=10&offset=0")
+            assert outsider.json() == [] and outsider.headers["X-Total-Count"] == "0"
+            for suffix in ("", "/logs", "/logs/page"):
+                assert client.get(f"/jobs/{job_id}{suffix}").status_code == 404
+            app.dependency_overrides[get_current_user] = lambda: User(username="colleague", offices=["SWT"],
+                admin_offices=[], roles={"SWT": ["CWMS Users"]})
             with Session(engine) as session:
                 PostgresJobDatabase(session).record_batch_details(job_id,
                     {"status": "SUCCEEDED", "stoppedAt": 2000}, datetime.now(timezone.utc))
@@ -135,6 +178,8 @@ def main():
             assert PostgresJobDatabase(second).claim_batch_refresh(job_id)
             assert not PostgresJobDatabase(first).claim_batch_refresh(job_id)
         queue.messages.clear()
+        app.dependency_overrides[get_current_user] = lambda: User(username="upgrade-user", offices=["SWT"],
+            admin_offices=["SWT"], roles={"SWT": ["CWMS Users"]})
         for runtime, path, expected in (
             ("python", "python/report.py", ["python", "/jobs/python/report.py", "two words"]),
             ("java", "lib/report.jar", ["java", "-jar", "/jobs/lib/report.jar", "two words"]),

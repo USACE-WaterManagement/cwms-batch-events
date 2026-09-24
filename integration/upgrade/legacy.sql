@@ -12,4 +12,4 @@ VALUES
  ('10000000-0000-0000-0000-000000000009','SWT','Corrupt','corrupt','Empty target never identified a script','','python',true,ARRAY['CWMS Users']);
 INSERT INTO events.scripts_job_runners SELECT id, '58600a09-f18e-42c5-9d3c-df52ebe409f9'::uuid FROM events.scripts;
 INSERT INTO events.jobs (id,script_name,job_status,username,office,job_runner_id,script_id,script_slug,repo_path,execution_type)
-VALUES ('20000000-0000-0000-0000-000000000001','Absolute','Completed','upgrade-user','SWT','58600a09-f18e-42c5-9d3c-df52ebe409f9','10000000-0000-0000-0000-000000000002','absolute','/jobs/python/report.py','python');
+VALUES ('20000000-0000-0000-0000-000000000001','Absolute','Completed','EXAMPLE.CHARLES.ROBERT.1543077719','SWT','58600a09-f18e-42c5-9d3c-df52ebe409f9','10000000-0000-0000-0000-000000000002','absolute','/jobs/python/report.py','python');
