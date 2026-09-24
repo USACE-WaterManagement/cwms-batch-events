@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
+import { formatArguments } from "../../src/features/scripts-manager/commandArguments";
 
 test("run from a script row, inspect its runs, and switch Groundwork tabs", async ({ page }) => {
   const errors: string[] = [];
@@ -49,6 +50,8 @@ test("run from a script row, inspect its runs, and switch Groundwork tabs", asyn
       return route.fulfill({ json: posts ? [job, { ...job, id: "job-other", scriptId: second.id, scriptName: second.name }] : [] });
     }
     if (path.endsWith("/jobs/job-env")) return route.fulfill({ json: job });
+    if (path.endsWith("/jobs/job-other")) return route.fulfill({ json: { ...job, id: "job-other", scriptId: second.id, scriptName: second.name } });
+    if (path.endsWith("/jobs/job-other/logs/page")) return route.fulfill({ json: { logs: "Daily report output", reset: true } });
     if (path.endsWith("/jobs/job-env/logs/page")) return route.fulfill({ json: { logs: "TZ=America/Chicago\n", reset: true } });
     return route.fulfill({ json: [] });
   });
@@ -59,6 +62,15 @@ test("run from a script row, inspect its runs, and switch Groundwork tabs", asyn
   const row = page.locator("tr").filter({ hasText: script.name });
   await row.click();
   await expect(page.getByRole("tab", { name: "Details", exact: true })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByLabel("Name", { exact: true })).toHaveCount(0);
+  await row.getByRole("button", { name: `Edit ${script.name}`, exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("tab", { name: "Details", exact: true })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByLabel("Name", { exact: true })).toHaveValue(script.name);
+  expect(posts).toBe(0);
+  await row.getByText(script.name, { exact: true }).click();
+  await expect(page.getByLabel("Name", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Edit", exact: true })).toBeVisible();
   await capture("onboarding-scripts-manager");
   await row.getByRole("button", { name: "Runs", exact: true }).click();
   await expect(page.getByRole("tab", { name: "Run history", exact: true })).toHaveAttribute("aria-selected", "true");
@@ -79,6 +91,8 @@ test("run from a script row, inspect its runs, and switch Groundwork tabs", asyn
   await expect(page).toHaveURL(/\/events\/scripts-manager$/);
   expect(posts).toBe(1);
   await expect(page.getByRole("list").filter({ has: page.getByRole("button", { name: /Completed/ }) }).getByRole("button")).toHaveCount(1);
+  await page.getByRole("tabpanel").getByRole("button", { name: /Completed Open/ }).click();
+  await expect(page.getByRole("region", { name: "Selected job run" })).toContainText(job.id);
   await capture("onboarding-job-runs");
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("tab", { name: "Run history", exact: true }).scrollIntoViewIfNeeded();
@@ -91,7 +105,7 @@ test("run from a script row, inspect its runs, and switch Groundwork tabs", asyn
   await page.getByRole("link", { name: "Scripts Manager", exact: true }).click();
   await page.locator("tr").filter({ hasText: second.name }).getByRole("button", { name: "Runs" }).click();
   await expect(page.getByRole("heading", { name: `Your runs for ${second.name}` })).toBeVisible();
-  await expect(page.getByRole("region", { name: "Selected job run" })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Selected job run" })).toContainText("job-other");
   await expect(page.locator("tr").filter({ hasText: inactive.name }).getByRole("button", { name: "Run script", exact: true })).toBeDisabled();
   await row.getByRole("button", { name: "Run script", exact: true }).click();
   await page.getByRole("tab", { name: "Details", exact: true }).click();
@@ -103,7 +117,9 @@ test("run from a script row, inspect its runs, and switch Groundwork tabs", asyn
   await page.getByLabel("Description", { exact: true }).fill(script.description);
   await page.getByLabel("Source", { exact: true }).selectOption("command");
   await page.getByLabel("Executable", { exact: true }).fill("bash");
-  await page.getByLabel("Arguments", { exact: true }).fill(script.commandArgs.join("\n"));
+  await page.getByRole("button", { name: "Add arguments", exact: true }).click();
+  await page.getByLabel("Arguments", { exact: true }).fill(formatArguments(script.commandArgs));
+  await page.getByRole("button", { name: "Apply arguments", exact: true }).click();
   await expect(page.getByRole("dialog").getByText("No additional CDA role required. Office access is required.")).toBeVisible();
   await capture("onboarding-script-form");
   await page.getByRole("button", { name: "Cancel", exact: true }).click();

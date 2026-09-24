@@ -53,6 +53,7 @@ def main():
             subprocess.run(migrate + ["migrate"], check=True)
             check_api(port, database, database == "upgrade")
         print("PASS: fresh installation and upgrade from schema 1.01.03")
+        subprocess.run([sys.executable, str(Path(__file__).with_name("verify_execution.py"))], check=True)
     finally:
         subprocess.run(["docker", "rm", "-f", name], capture_output=True)
         subprocess.run(["docker", "image", "rm", image], capture_output=True)

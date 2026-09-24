@@ -14,7 +14,7 @@ def test_demo_switches_catalog_and_saves_manual_path_without_external_access(mon
         assert client.get("/repository-files?office=SWT").json()["warnings"][0]["code"] == "github_app_not_configured"
         legacy = client.get("/scripts?office=SWT").json()[0]
         assert legacy["repoPath"] == "python/reports/example.py"
-        updated = client.put(f"/scripts/{legacy['id']}", json=legacy)
+        updated = client.put(f"/scripts/{legacy['id']}", json=legacy | {"configVersion": 2})
         assert updated.status_code == 200
         assert updated.json()["repoPath"] == "python/reports/example.py"
         assert client.post("/_demo/scenario?value=sample-files").status_code == 200

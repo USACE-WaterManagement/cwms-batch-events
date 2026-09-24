@@ -49,7 +49,7 @@ export const ScriptsWorkspace = ({ office }: ScriptsWorkspaceProps) => {
 
   const onSelect = (scriptId: string, tab = 0, jobId?: string) => {
     setPanelMode("view");
-    if (jobId || scriptId !== selectedScriptId) setSelectedJobId(jobId);
+    if (tab === 2 || scriptId !== selectedScriptId) setSelectedJobId(jobId);
     setSelectedScriptId(scriptId);
     showTab(tab);
   };
@@ -146,6 +146,10 @@ export const ScriptsWorkspace = ({ office }: ScriptsWorkspaceProps) => {
           <ScriptsList
             scripts={scripts.data}
             selectScript={onSelect}
+            editScript={scriptId => {
+              onSelect(scriptId);
+              onEdit();
+            }}
             selectedScriptId={selectedScriptId}
             jobs={jobs.isError ? [] : jobs.data ?? []}
             jobsUpdatedAt={jobs.dataUpdatedAt}

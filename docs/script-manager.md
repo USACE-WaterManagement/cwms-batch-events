@@ -1,14 +1,34 @@
 # Run jobs in Scripts Manager
 
 1. Sign in, open **Scripts Manager**, and select your office.
-2. Select a script row to open **Details**. Use **Edit** to change and save its settings.
-3. Select **Run job** at the end of the row to open that script's **Run job** tab.
+2. Select a script row to open read-only **Details**, or select the row's **Edit** button
+   to open **Details** with the edit form ready. Changes are applied only when saved.
+3. Select **Run script** at the end of the row to open that script's **Run script** tab.
 4. Review the saved file or executable and arguments, then select **Submit job** once.
-5. The new run opens in **Job runs**. Its status updates until it finishes, then output loads.
-6. Use **View job runs** on a row to return to that script's runs. Select a run to inspect it;
-   **Refresh** reloads the list. **Job History** shows your runs across all scripts.
+
+To override arguments for one job, select **Custom run** in the **Run script** tab.
+The same form is available on **Submit Job** for users without script admin rights.
+Enter space-separated arguments and quote values containing spaces, then choose
+**Submit custom run**. The numbered preview shows the parsed values. Unquoted
+trailing spaces are ignored; `''` supplies an empty argument. Clearing the field
+removes all arguments for that run. Choose **Bash command** for a complete command
+chain using `&&` or `||`. The saved script is unchanged. **Cancel custom run** restores its defaults.
+Legacy scripts must be edited and saved in the current format before using custom
+arguments; ordinary submissions continue to use their existing behavior.
+
+Adding an execution role restricts this script to users who have office access
+and at least one selected CDA role in that office. It does not grant roles to
+users or credentials to the script. Leaving the list empty requires office access
+only.
+5. The new run opens in **Run history**. Its status updates until it finishes, then output loads.
+6. Use **Runs** on a row to return to that script's runs. Select **Open** on a run to inspect it;
+   **Refresh** reloads the list. **Job History** shows your runs across all scripts, with an
+   **Open** link on each entry that goes directly to its details and output.
 
 The Groundwork tabs keep details, submission, and run output in the selected script's workspace.
+In the edit form, **Add arguments** or **Edit arguments** opens the command editor modal.
+Review the numbered values and command preview, then **Apply arguments** to update the
+form. Cancel or close discards the modal draft; **Save** persists the script changes.
 Each row groups the script name, runtime, active state, and full path. Actions appear beside
 that information when space permits and below it on smaller screens. The selected script
 appears beside the list on wide screens and below it on narrower screens. Long paths and
@@ -27,13 +47,15 @@ On a phone, scroll the script list to choose a script, then scroll down to its t
 
 </details>
 
-Script rows show a spinner for your queued or running jobs and a warning for your most recent
-failure within the past 24 hours. Click either indicator to open that exact run in **Job runs**.
+Script rows show the status of your newest submitted run. A spinner indicates that run is
+queued or running; a failure warning appears only if that latest run failed, regardless of age.
+A newer successful run clears the warning even if an older run failed more recently.
+Click an indicator to open that run. **Runs** opens the latest run by default; select an older
+entry in **Run history** to inspect its details without changing the script's latest status.
 Running jobs also show spinners in the run list. The manager refreshes run status every five
 seconds while visible, including when a different tab is selected. A read failure stops polling;
 **Retry run status** resumes it. The indicators remain scoped to your jobs in the selected office.
 
-![Running and queued spinners alongside a clickable recent-failure warning](../ui/public/about/script-run-indicators.png)
 
 Both history views contain jobs submitted by the signed-in username. Existing `/events/jobs`
 and `/events/jobs/{jobId}` links continue to work. **Submit Job** remains available for users
@@ -54,11 +76,10 @@ Jobs that call CDA still need appropriate credentials in their execution environ
 
 ## Bash without a CDA call
 
-Register an **Installed command**, executable `bash`, with no roles selected. To inspect
-the runner's time zone, enter these two arguments on separate lines:
+Register an **Installed command**, choose **Bash command**, and leave roles empty.
+To inspect the runner's time zone, enter:
 
 ```text
--lc
 printf 'TZ=%s\n' "$TZ"
 ```
 

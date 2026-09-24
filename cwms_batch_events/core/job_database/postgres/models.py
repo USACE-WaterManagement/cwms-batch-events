@@ -44,11 +44,14 @@ class JobModel(Base):
     username: Mapped[str]
     office: Mapped[str]
     repo_path: Mapped[str]
+    config_version: Mapped[int] = mapped_column(default=1, server_default="1")
     runtime: Mapped[str] = mapped_column(default="python", server_default="python")
     command_args: Mapped[list[str]] = mapped_column(
         ARRAY(String), default=list, server_default="{}"
     )
     execution_type: Mapped[str | None]
+    command_mode: Mapped[str] = mapped_column(default="arguments", server_default="arguments")
+    shell_command: Mapped[str | None]
     created_time: Mapped[datetime.datetime] = mapped_column(
         server_default=func.current_timestamp()
     )
@@ -96,11 +99,14 @@ class ScriptModel(Base):
     slug: Mapped[str]
     description: Mapped[str]
     repo_path: Mapped[str]
+    config_version: Mapped[int] = mapped_column(default=1, server_default="1")
     runtime: Mapped[str] = mapped_column(default="python", server_default="python")
     command_args: Mapped[list[str]] = mapped_column(
         ARRAY(String), default=list, server_default="{}"
     )
     execution_type: Mapped[str]
+    command_mode: Mapped[str] = mapped_column(default="arguments", server_default="arguments")
+    shell_command: Mapped[str | None]
     active: Mapped[bool]
     roles: Mapped[list[str]] = mapped_column(ARRAY(String))
     created_time: Mapped[datetime.datetime] = mapped_column(

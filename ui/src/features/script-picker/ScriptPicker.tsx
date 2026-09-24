@@ -27,6 +27,7 @@ const ScriptPicker = () => {
   if (isError || !data) return <span>Error occurred!</span>;
 
   const scriptsForOffice = data.filter((script) => script.office === office);
+  const selectedScript = scriptsForOffice.find(script => script.id === scriptId);
 
   const officeChange = (office: string) => {
     setOffice(office);
@@ -42,7 +43,7 @@ const ScriptPicker = () => {
       />
       <div className="mt-4">
         <Dropdown
-          className="w-96"
+          className="w-full max-w-96"
           label="Script"
           value={scriptId}
           onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -62,9 +63,9 @@ const ScriptPicker = () => {
           ]}
         />
       </div>
-      {scriptId && (
+      {selectedScript && (
         <div className="mt-8">
-          <ScriptExecutor scriptId={scriptId} />
+          <ScriptExecutor key={selectedScript.id} script={selectedScript} />
         </div>
       )}
     </div>

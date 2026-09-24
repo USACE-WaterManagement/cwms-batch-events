@@ -74,8 +74,9 @@ const JobsList = () => {
       {jobs.map((job) => {
         const dateAgo = dayjs(job.createdTime).fromNow();
         return (
+          <div key={job.id} className="flex min-w-0 items-start gap-2">
+          <div className="min-w-0 flex-1">
           <Accordion
-            key={job.id}
             heading={
               <span className="flex min-w-0 w-full flex-wrap justify-between gap-2 text-left">
                 <span className="min-w-0 break-all">
@@ -96,6 +97,13 @@ const JobsList = () => {
               </Link>
             </div>
           </Accordion>
+          </div>
+          <Link to="/jobs/$jobId" params={{ jobId: job.id }}
+            aria-label={`Open ${job.scriptName ?? "job"} run ${new Date(job.createdTime).toLocaleString()}`}
+            className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg border border-blue-300 bg-white px-3 py-2 font-medium text-blue-700 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
+            Open
+          </Link>
+          </div>
         );
       })}
       </div>

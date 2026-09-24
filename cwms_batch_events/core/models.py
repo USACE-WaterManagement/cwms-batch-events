@@ -20,10 +20,22 @@ class CamelModel(BaseModel):
 class ExecutionRecord(CamelModel):
     """Stored execution fields, including paths accepted by older API versions."""
 
-    execution_type: Literal["github_file", "command"] = "github_file"
-    runtime: Literal["python", "java", "shell"] = "python"
+    config_version: int = Field(default=1, strict=True)
+    execution_type: str | None = "github_file"
+    runtime: str = "python"
     repo_path: str
     command_args: list[str] = Field(default_factory=list)
+    command_mode: str = "arguments"
+    shell_command: str | None = None
+
+
+class ExecutionOptions(ExecutionRecord):
+    """Validated v2/v3 writes; persisted versions retain their execution semantics."""
+
+    config_version: Literal[2, 3] = 3
+    execution_type: Literal["github_file", "command"] = "github_file"
+    runtime: Literal["python", "java", "shell"] = "python"
+    command_mode: Literal["arguments", "shell"] = "arguments"
 
     @field_validator("execution_type", mode="before")
     @classmethod
@@ -31,19 +43,20 @@ class ExecutionRecord(CamelModel):
         # These historical values all dispatched Python repository files.
         return "github_file" if value in (None, "", "python", "batch") else value
 
-
-class ExecutionOptions(ExecutionRecord):
-    """Validated options for saving scripts and dispatching jobs."""
-
-    @field_validator("repo_path")
-    @classmethod
-    def nonempty_target(cls, value):
-        if not value.strip() or "\x00" in value:
-            raise ValueError("A script path or executable is required")
-        return value
-
     @model_validator(mode="after")
     def valid_repository_path(self):
+        if self.config_version == 2 and (self.command_mode != "arguments" or self.shell_command is not None):
+            raise ValueError("Shell commands require script configuration version 3")
+        if self.command_mode == "shell":
+            if not self.shell_command or not self.shell_command.strip() or "\x00" in self.shell_command:
+                raise ValueError("A Bash command without NUL characters is required")
+            if self.command_args:
+                raise ValueError("Shell mode uses shellCommand, not commandArgs")
+            return self
+        elif self.shell_command is not None:
+            raise ValueError("shellCommand is only valid in shell mode")
+        if not self.repo_path.strip() or "\x00" in self.repo_path:
+            raise ValueError("A script path or executable is required")
         path = PurePosixPath(self.repo_path)
         if self.execution_type == "github_file" and self.repo_path.startswith("/jobs/"):
             self.repo_path = self.repo_path[len("/jobs/"):]
@@ -139,12 +152,39 @@ class OfficeCatalogs(CamelModel):
 
 class ScriptRunRequest(CamelModel):
     script_id: UUID
+    upgrade_to_version: Literal[3] | None = None
+    command_mode: Literal["arguments", "shell"] | None = None
+    shell_command: str | None = None
+    command_args: list[str] | None = Field(
+        default=None,
+        description="Arguments for this run only. Omit or use null for saved arguments; [] clears them. Requires version 2 or later.",
+    )
+
+    @field_validator("command_args")
+    @classmethod
+    def valid_arguments(cls, values):
+        if values is not None and any("\x00" in value for value in values):
+            raise ValueError("Command arguments cannot contain NUL characters")
+        return values
 
 
-class ScriptRunOptions(ExecutionOptions):
+class ScriptRunOptions(ExecutionRecord):
     office: str
     repo_path: str
     script_slug: str | None
+
+    @model_validator(mode="after")
+    def validate_execution_schema(self):
+        from cwms_batch_events.core.execution import execution_for_config
+
+        options = execution_for_config(self)
+        self.repo_path = options.repo_path
+        self.execution_type = options.execution_type
+        self.runtime = options.runtime
+        self.command_args = options.command_args
+        self.command_mode = options.command_mode
+        self.shell_command = options.shell_command
+        return self
 
 
 class JobSource(str, Enum):
@@ -177,7 +217,7 @@ class BindExternalJobIdRequest(BaseModel):
     external_job_id: str
 
 
-class ScriptBase(ExecutionRecord):
+class ScriptBase(CamelModel):
     name: str
     description: str
     repo_path: str
@@ -190,7 +230,7 @@ class ScriptCreate(ScriptBase, ExecutionOptions):
     office: str
 
 
-class ScriptRead(ScriptBase):
+class ScriptRead(ScriptBase, ExecutionRecord):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID

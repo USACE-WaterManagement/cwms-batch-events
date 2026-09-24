@@ -2,6 +2,9 @@ import dayjs from "dayjs";
 import { ViewField } from "./ViewField";
 import { Button, Text } from "@usace/groundwork";
 import type { Script } from "../scripts-manager/types";
+import { savedCommandPreview, supportsScriptVersion } from "./commandArguments";
+import { ScriptVersionNotice } from "./ScriptVersionNotice";
+import { ArgumentValues } from "./CommandSummary";
 
 export const RoleList = ({ roles }: { roles: string[] }) => {
   if (roles.length) {
@@ -17,6 +20,19 @@ export const RoleList = ({ roles }: { roles: string[] }) => {
   }
 };
 
+function scriptSource(script: Script): string {
+  if ((script.configVersion ?? 1) === 1) return "District GitHub repository (historical)";
+  if (script.executionType === "command") return "Installed command";
+  return "District GitHub repository";
+}
+
+function scriptRuntime(script: Script) {
+  if ((script.configVersion ?? 1) === 1) return "Python (historical)";
+  if (script.commandMode === "shell") return "Bash command";
+  if (script.executionType === "command") return script.repoPath;
+  return script.runtime;
+}
+
 interface ScriptViewProps {
   script?: Script;
   onEdit: () => void;
@@ -26,6 +42,7 @@ export const ScriptView = ({ script, onEdit }: ScriptViewProps) => {
   if (script) {
     return (
       <div className="flex flex-col gap-y-6">
+        <ScriptVersionNotice version={script.configVersion ?? 1} />
         <div className="flex flex-col gap-2">
           <ViewField label="Id">{script.id}</ViewField>
           <ViewField label="Name">{script.name}</ViewField>
@@ -41,20 +58,19 @@ export const ScriptView = ({ script, onEdit }: ScriptViewProps) => {
             <span className="block [overflow-wrap:anywhere]">{script.repoPath}</span>
           </ViewField>
           <ViewField label="Source">
-            {script.executionType === "command"
-              ? "Installed command"
-              : "District GitHub repository"}
+            {scriptSource(script)}
           </ViewField>
           <ViewField label="Runtime">
-            {script.executionType === "command"
-              ? script.repoPath
-              : script.runtime}
+            {scriptRuntime(script)}
           </ViewField>
-          <ViewField label="Arguments">
+          <ViewField label={`Command (version ${script.configVersion ?? 1})`}>
             <pre className="whitespace-pre-wrap">
-              {(script.commandArgs ?? []).join("\n")}
+              {savedCommandPreview(script)}
             </pre>
           </ViewField>
+          {[2, 3].includes(script.configVersion ?? 1) && script.commandMode !== "shell" && <ViewField label="Arguments">
+            <ArgumentValues args={script.commandArgs ?? []} />
+          </ViewField>}
           <ViewField label="Roles">
             <RoleList roles={script.roles} />
           </ViewField>
@@ -69,7 +85,7 @@ export const ScriptView = ({ script, onEdit }: ScriptViewProps) => {
           </ViewField>
         </div>
         <div className="w-full flex justify-end">
-          <Button onClick={onEdit}>Edit</Button>
+          <Button disabled={!supportsScriptVersion(script.configVersion ?? 1)} onClick={onEdit}>Edit</Button>
         </div>
       </div>
     );

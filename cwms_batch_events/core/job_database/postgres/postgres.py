@@ -8,19 +8,20 @@ import uuid
 
 from cwms_batch_events.core.auth.user.models import User
 from cwms_batch_events.core.batch_details import STATUS_MAP, log_stream
+from cwms_batch_events.core.execution import execution_for_config, upgrade_execution
 from cwms_batch_events.core.job_database.postgres.models import (
     JobModel,
     JobRunnerModel,
     ScriptModel,
 )
 from cwms_batch_events.core.models import (
-    ExecutionOptions,
     JobRecord,
     JobStatus,
     ScriptCreate,
     ScriptRead,
     ScriptRunRequest,
     ScriptUpdate,
+    ExecutionOptions,
 )
 from cwms_batch_events.core.utils import get_runner_id
 
@@ -125,9 +126,32 @@ class PostgresJobDatabase:
         if not can_run_script(script, user.roles):
             raise PermissionError("Not authorized to run requested script")
 
-        # Old registrations remain readable, but must be corrected before a
-        # job is persisted or dispatched with an invalid execution target.
-        ExecutionOptions.model_validate(script, from_attributes=True)
+        options = execution_for_config(script)
+        upgraded = None
+        if payload.upgrade_to_version is not None:
+            if script.office not in user.admin_offices:
+                raise PermissionError("Script administrator access is required to upgrade the saved configuration")
+            options = upgrade_execution(options, payload.upgrade_to_version)
+            upgraded = options.model_copy(deep=True)
+        if payload.command_mode is not None or payload.shell_command is not None:
+            if options.config_version < 3:
+                raise ValueError("Upgrade to version 3 before changing command mode")
+            changes = options.model_dump(by_alias=False)
+            if payload.command_mode is not None:
+                changes["command_mode"] = payload.command_mode
+                if payload.command_mode == "arguments":
+                    changes["shell_command"] = None
+            if payload.shell_command is not None:
+                changes["shell_command"] = payload.shell_command
+            if changes["command_mode"] == "shell":
+                changes["command_args"] = []
+            options = ExecutionOptions(**changes)
+        if payload.command_args is not None:
+            if options.config_version < 2:
+                raise ValueError("Custom arguments require a version 2 script")
+            if options.command_mode == "shell":
+                raise ValueError("Use shellCommand to customize a shell run")
+            options.command_args = list(payload.command_args)
 
         job = JobModel()
         job.id = uuid.uuid4()
@@ -137,12 +161,21 @@ class PostgresJobDatabase:
         job.job_status = JobStatus.PENDING
         job.username = user.username
         job.office = script.office
-        job.repo_path = script.repo_path
-        job.execution_type = script.execution_type
-        job.runtime = script.runtime
-        job.command_args = list(script.command_args)
+        job.config_version = options.config_version
+        job.repo_path = options.repo_path
+        job.execution_type = options.execution_type
+        job.runtime = options.runtime
+        job.command_args = list(options.command_args)
+        job.command_mode = options.command_mode
+        job.shell_command = options.shell_command
         job.job_runner_id = get_runner_id()
 
+        # Persist only the schema conversion, never custom-run overrides.
+        # Validate the entire request before touching the saved registration.
+        if upgraded is not None:
+            for field, value in upgraded.model_dump(by_alias=False).items():
+                setattr(script, field, value)
+            script.updated_time = datetime.now()
         self.db.add(job)
         self.db.commit()
         self.db.refresh(job)
@@ -230,6 +263,7 @@ class PostgresJobDatabase:
         try:
             with self.db.begin():
                 script = ScriptModel()
+                script.config_version = payload.config_version
                 script.office = payload.office
                 script.name = payload.name
                 script.slug = slugify(payload.name)
@@ -238,6 +272,8 @@ class PostgresJobDatabase:
                 script.execution_type = payload.execution_type
                 script.runtime = payload.runtime
                 script.command_args = payload.command_args
+                script.command_mode = payload.command_mode
+                script.shell_command = payload.shell_command
                 script.active = payload.active
                 script.roles = payload.roles
 

@@ -10,6 +10,7 @@ from cwms_batch_events.api.dependencies import (
     get_job_queue,
 )
 from cwms_batch_events.core.auth.user.models import User
+from cwms_batch_events.core.execution import UnsupportedConfigVersion
 from cwms_batch_events.core.job_database.base import JobDatabase
 from cwms_batch_events.core.job_logger.base import JobLogger
 from cwms_batch_events.core.job_logger.cloudwatch import CloudWatchJobLogger
@@ -71,19 +72,28 @@ def post_job(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Script {payload.script_id} not found",
         )
+    except UnsupportedConfigVersion as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
     except ValueError as exc:
+        custom_run = any(value is not None for value in (
+            payload.upgrade_to_version, payload.command_mode, payload.shell_command, payload.command_args,
+        ))
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail="The saved script has invalid execution settings. Correct its path and arguments in Scripts Manager before running it.",
+            detail=("Invalid run settings. Bash commands require version 3 and cannot include separate arguments. Review the command or ask a script administrator to check the saved settings."
+                    if custom_run else "The saved script has invalid execution settings. Correct its path and arguments in Scripts Manager before running it."),
         ) from exc
 
     options = ScriptRunOptions(
+        config_version=job.config_version,
         office=job.office.lower(),
         repo_path=job.repo_path,
         script_slug=job.script_slug,
         execution_type=job.execution_type,
         runtime=job.runtime,
         command_args=job.command_args,
+        command_mode=job.command_mode,
+        shell_command=job.shell_command,
     )
     message = queue.create_job_message(job.id, user.username, JobSource.API, options)
     background_tasks.add_task(queue.send_job_message, message)

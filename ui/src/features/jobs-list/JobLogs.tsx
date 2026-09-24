@@ -1,6 +1,5 @@
 import { useId, useState } from "react";
-import useJobLogs from "./useJobLogs";
-import { Textarea } from "@usace/groundwork";
+import useJobLogs, { FINAL_LOG_CHECKS } from "./useJobLogs";
 import { jobStatusLabel } from "./jobStatus";
 import type { JobDetails } from "./useJobDetails";
 
@@ -8,16 +7,17 @@ interface JobLogsProps {
   jobId: string;
   status: JobDetails["jobStatus"];
   batchStatus?: string | null;
+  endTime?: string | null;
 }
 
-const JobLogs = ({ jobId, status, batchStatus }: JobLogsProps) => {
+const JobLogs = ({ jobId, status, batchStatus, endTime }: JobLogsProps) => {
   const [interval, setInterval] = useState(5000);
   const intervalId = useId();
-  const { data, error, isLoading, isError, isFetching, refresh, dataUpdatedAt } = useJobLogs(jobId, status, interval);
+  const { data, error, isLoading, isError, isFetching, refresh, dataUpdatedAt } = useJobLogs(jobId, status, interval, endTime);
   const pending = status === "Pending";
   const running = status === "Running";
   const live = data?.supportsLive !== false;
-  const catchingUp = data?.completionChecks !== undefined && data.completionChecks < 3 && live && !isError;
+  const catchingUp = data?.completionChecks !== undefined && data.completionChecks < FINAL_LOG_CHECKS && (live || !data.available) && !isError;
   const waiting = batchStatus === "STARTING"
     ? "Container is starting. Logs will appear after it begins writing output."
     : pending ? "Job is queued. Logs will appear after the container starts."
@@ -71,7 +71,7 @@ const JobLogs = ({ jobId, status, batchStatus }: JobLogsProps) => {
       {isError && <p role="alert">{error.message}</p>}
       {data?.hasMore && <p>More output is available. Load more to continue.</p>}
       {data?.truncated && <p>Showing the most recent 2 million characters of loaded output.</p>}
-      <Textarea aria-label="Job output" readOnly value={message} className="w-full h-96 font-mono text-sm" />
+      <textarea aria-label="Job output" readOnly value={message} className="block h-96 min-h-48 w-full resize-y overflow-auto rounded border border-gray-400 bg-white p-3 font-mono text-sm text-gray-900" />
       </div>
     </section>
   );
