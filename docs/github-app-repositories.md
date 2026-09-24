@@ -9,6 +9,30 @@ setting is no longer used for API file browsing.
 
 ## AWS setup
 
+### ECS-injected credentials
+
+Install a GitHub App with **Contents: read** access on the district repositories.
+The API accepts these container environment variables, including ECS secret injection:
+
+| Container variable | App secret JSON field in the current CDK configuration |
+| --- | --- |
+| `GITHUB_APP_PRIVATE_KEY` | `GITHUB_TOKEN` |
+| `GITHUB_APP_ID` | `GITHUB_APP_ID` |
+| `GITHUB_INSTALLATION_ID` | `GITHUB_INSTALLATION_ID` |
+
+Despite the existing secret field name `GITHUB_TOKEN`, its value must be the App's
+PEM private key, not a PAT or installation token. Preserve the PEM's line breaks.
+The API reads `GITHUB_APP_PRIVATE_KEY`, not `GITHUB_TOKEN`.
+
+All three variables must be set together. They take precedence over
+`GITHUB_APP_SECRET_ID`; partial configuration returns a warning instead of falling
+back to another credential. The private key is masked in settings representations.
+ECS needs secret-read permissions on its **task execution role** for injection;
+the API does not call Secrets Manager in this mode. Deploy new tasks after rotating
+injected credentials. Outbound HTTPS access to `api.github.com` is required.
+
+### Alternative: API reads a secret
+
 Install a GitHub App with **Contents: read** access on the district repositories.
 Create an AWS Secrets Manager secret with this JSON structure:
 
@@ -27,7 +51,7 @@ HTTPS access to Secrets Manager and `api.github.com`.
 
 Store the App private key, not a generated installation token. The API signs an
 App JWT, requests a read-only installation token, and caches it until two minutes
-before expiry. It rereads the secret when refreshing, so key rotation does not
+before expiry. In secret-reference mode it rereads the secret when refreshing, so key rotation does not
 require rebuilding the image. GitHub installation tokens expire after one hour:
 [GitHub authentication documentation](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-an-installation-access-token-for-a-github-app).
 

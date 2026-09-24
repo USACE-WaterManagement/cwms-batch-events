@@ -28,6 +28,24 @@ def test_catalog_uses_configured_repository(client, configured_repository):
     assert "release%2Fjobs?recursive=1" in request.call_args.args[0].full_url
 
 
+@pytest.mark.parametrize("environment,branch", [
+    ("dev", "cwbi-dev"), ("test", "cwbi-test"), ("prod", "cwbi-prod"),
+    ("cwbi-dev", "cwbi-dev"), ("cwbi-test", "cwbi-test"), ("cwbi-prod", "cwbi-prod"),
+])
+def test_catalog_uses_office_environment_branch(client, user, monkeypatch, environment, branch):
+    office = user.admin_offices[0]
+    monkeypatch.setattr(settings, "deployment_environment", environment)
+    monkeypatch.setattr(settings, "office_repositories", {})
+    monkeypatch.setattr(settings, "github_repository_ref", "")
+    monkeypatch.setattr(settings, "repository_mock_mode", False)
+    monkeypatch.setattr("cwms_batch_events.api.routers.repository_files.installation_token", lambda: "test-token")
+    with patch("cwms_batch_events.api.routers.repository_files.urlopen", return_value=io.BytesIO(b'{"tree":[]}')) as request:
+        response = client.get("/repository-files", params={"office": office})
+    assert response.status_code == 200
+    assert response.json()["ref"] == branch
+    assert request.call_args.args[0].full_url == f"https://api.github.com/repos/USACE-WaterManagement/{office.lower()}-wm-cwbi-jobs/git/trees/{branch}?recursive=1"
+
+
 def test_catalog_requires_office_admin(client):
     with patch("cwms_batch_events.api.routers.repository_files.urlopen") as request:
         response = client.get("/repository-files?office=UNAUTHORIZED")

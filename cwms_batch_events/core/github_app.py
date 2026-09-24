@@ -29,20 +29,37 @@ def mock_enabled():
 
 def installation_token():
     secret_id = settings.github_app_secret_id
-    if not secret_id:
+    private_key = settings.github_app_private_key.get_secret_value()
+    use_environment = any((settings.github_app_id, settings.github_installation_id, private_key))
+    cache_key = secret_id
+    if use_environment:
+        if not all((settings.github_app_id, settings.github_installation_id, private_key)):
+            raise RepositoryUnavailable(
+                "github_app_not_configured",
+                "Configure all three GitHub App environment variables: GITHUB_APP_ID, GITHUB_INSTALLATION_ID, and GITHUB_APP_PRIVATE_KEY. Manual path entry is available.",
+            )
+        cache_key = f"environment:{settings.github_app_id}:{settings.github_installation_id}"
+    elif not secret_id:
         raise RepositoryUnavailable(
             "github_app_not_configured",
             "The GitHub App token is not set. An administrator must configure the Batch API GitHub App secret. You can still enter a script or JAR path manually.",
         )
     with _lock:
-        cached = _tokens.get(secret_id)
+        cached = _tokens.get(cache_key)
         if cached and cached[1] > time.time() + 120:
             return cached[0]
         try:
-            result = boto3.client("secretsmanager", config=Config(
-                connect_timeout=3, read_timeout=5, retries={"total_max_attempts": 1},
-            )).get_secret_value(SecretId=secret_id)
-            secret = json.loads(result["SecretString"])
+            if use_environment:
+                secret = {
+                    "app_id": settings.github_app_id,
+                    "installation_id": settings.github_installation_id,
+                    "private_key": private_key,
+                }
+            else:
+                result = boto3.client("secretsmanager", config=Config(
+                    connect_timeout=3, read_timeout=5, retries={"total_max_attempts": 1},
+                )).get_secret_value(SecretId=secret_id)
+                secret = json.loads(result["SecretString"])
             app_id = str(secret["app_id"])
             installation_id = str(secret["installation_id"])
             if not installation_id.isdecimal() or not app_id:
@@ -55,7 +72,7 @@ def installation_token():
         except Exception as error:
             raise RepositoryUnavailable(
                 "github_app_secret_unavailable",
-                "The GitHub App secret could not be read or is invalid. Ask an administrator to check the secret and API task permissions. Manual path entry is available.",
+                "The GitHub App credentials could not be read or are invalid. Ask an administrator to check the configured credentials and secret access permissions. Manual path entry is available.",
             ) from error
         try:
             request = Request(
@@ -71,7 +88,7 @@ def installation_token():
             expires = datetime.fromisoformat(payload["expires_at"].replace("Z", "+00:00")).timestamp()
             if not isinstance(token, str) or not token or expires <= time.time() + 120:
                 raise ValueError("Invalid installation token")
-            _tokens[secret_id] = (token, expires)
+            _tokens[cache_key] = (token, expires)
             return token
         except Exception as error:
             raise RepositoryUnavailable(

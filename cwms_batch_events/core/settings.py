@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     office_repositories: dict[str, RepositorySettings] = {}
     github_token: SecretStr = SecretStr("")
     github_app_secret_id: str = ""
+    github_app_id: str = ""
+    github_installation_id: str = ""
+    github_app_private_key: SecretStr = SecretStr("")
     github_repository_ref: str = ""
     repository_mock_mode: bool = False
     api_version: str = "local"
