@@ -15,9 +15,12 @@ export const queryClient = new QueryClient({
     onSuccess: (data, query) => reportWarnings(query.queryHash, data, () => query.fetch()),
   }),
   mutationCache: new MutationCache({
-    onError: (error, _variables, _context, mutation) => notifyError({
+    onError: (error, _variables, _context, mutation) => {
+      if (mutation.meta?.inlineError) return;
+      notifyError({
       id: `mutation-${JSON.stringify(mutation.options.mutationKey ?? [])}-${message(error)}`, message: message(error),
-    }),
+      });
+    },
   }),
   defaultOptions: {
     queries: {

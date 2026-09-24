@@ -1,3 +1,4 @@
+import { configSection } from "../configSection";
 import { expect, test } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
@@ -7,7 +8,7 @@ test("run from a script row, inspect its runs, and switch Groundwork tabs", asyn
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
   const script = {
-    id: "script-env", name: "Inspect runner time zone", slug: "inspect-runner-time-zone",
+    id: "script-env", configVersion: 3, name: "Inspect runner time zone", slug: "inspect-runner-time-zone",
     description: "Print the runner time zone with Bash. No CDA request is made.",
     office: "SWT", executionType: "command", runtime: "shell", repoPath: "bash",
     commandArgs: ["-lc", "printf 'TZ=%s\\n' \"$TZ\""], roles: [], active: true,
@@ -113,13 +114,19 @@ test("run from a script row, inspect its runs, and switch Groundwork tabs", asyn
   await expect(page.getByLabel("Name", { exact: true })).toHaveValue(script.name);
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   await page.getByRole("button", { name: "New +", exact: true }).click();
+  await configSection(page, "General");
   await page.getByLabel("Name", { exact: true }).fill(script.name);
+  await configSection(page, "General");
   await page.getByLabel("Description", { exact: true }).fill(script.description);
+  await configSection(page, "Source & path");
   await page.getByLabel("Source", { exact: true }).selectOption("command");
+  await configSection(page, "Source & path");
   await page.getByLabel("Executable", { exact: true }).fill("bash");
+  await configSection(page, "Arguments & command");
   await page.getByRole("button", { name: "Add arguments", exact: true }).click();
   await page.getByLabel("Arguments", { exact: true }).fill(formatArguments(script.commandArgs));
   await page.getByRole("button", { name: "Apply arguments", exact: true }).click();
+  await configSection(page, "Access");
   await expect(page.getByRole("dialog").getByText("No additional CDA role required. Office access is required.")).toBeVisible();
   await capture("onboarding-script-form");
   await page.getByRole("button", { name: "Cancel", exact: true }).click();

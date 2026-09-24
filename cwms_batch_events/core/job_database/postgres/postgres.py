@@ -9,7 +9,7 @@ import uuid
 from cwms_batch_events.core.auth.user.models import User
 from cwms_batch_events.core.display_names import readable_name
 from cwms_batch_events.core.batch_details import STATUS_MAP, log_stream
-from cwms_batch_events.core.execution import execution_for_config, upgrade_execution
+from cwms_batch_events.core.execution import execution_for_config, upgrade_execution, upgrade_saved_configuration
 from cwms_batch_events.core.job_database.postgres.models import (
     JobModel,
     JobRunnerModel,
@@ -65,6 +65,27 @@ class PostgresJobDatabase:
         job.dispatch_claimed_at = datetime.now(timezone.utc)
         self.db.commit()
         return True
+
+    def upgrade_script_configuration(self, script_id: uuid.UUID, actor: User) -> ScriptRead:
+        with self.db.begin():
+            script = self.db.scalars(select(ScriptModel).where(ScriptModel.id == script_id).with_for_update()).one()
+            if script.office not in actor.admin_offices:
+                raise PermissionError(f"User does not have script admin access for office '{script.office}'")
+            if script.config_version != 4:
+                options = upgrade_saved_configuration(script)
+                for field, value in options.model_dump(by_alias=False).items():
+                    setattr(script, field, value)
+                # Upgrading never enables recurring execution.
+                script.schedule_enabled = False
+                script.schedule_type = "manual"
+                script.schedule_minute = None
+                script.schedule_cron = None
+                script.schedule_timezone = "UTC"
+                script.schedule_error = None
+                self._record_schedule_author(script, actor)
+                self.db.flush()
+            result = ScriptRead.model_validate(script)
+        return result
 
     def claim_batch_refresh(self, job_id: uuid.UUID) -> bool:
         # A DB claim shares the 15-second limit across API workers and viewers.
@@ -345,12 +366,14 @@ class PostgresJobDatabase:
         self, script_id: uuid.UUID, payload: ScriptUpdate, admin_offices: list[str], actor: User | None = None
     ) -> ScriptRead:
         with self.db.begin():
-            script = self.db.get_one(ScriptModel, script_id)
+            script = self.db.scalars(select(ScriptModel).where(ScriptModel.id == script_id).with_for_update()).one()
             if script.office not in admin_offices:
                 raise PermissionError(
                     f"User does not have script admin access for office '{script.office}'"
                 )
             self._record_schedule_author(script, actor)
+            if payload.config_version < script.config_version:
+                raise ValueError("Configuration versions cannot be downgraded. Reload this script before saving.")
             for field, value in payload.model_dump(by_alias=False).items():
                 if field == "job_runners":
                     job_runners = self.db.scalars(

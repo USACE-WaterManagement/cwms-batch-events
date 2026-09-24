@@ -31,6 +31,7 @@ export const ScriptsWorkspace = ({ office }: ScriptsWorkspaceProps) => {
 
   const [panelMode, setPanelMode] = useState<"view" | "edit">("view");
   const [creating, setCreating] = useState(false);
+  const [invalidDetails, setInvalidDetails] = useState(false);
   const [panelTab, setPanelTab] = useState({ index: 0, revision: 0 });
   const [selectedJobId, setSelectedJobId] = useState<string>();
   const showTab = (index: number) => setPanelTab(previous => ({ index, revision: previous.revision + 1 }));
@@ -48,6 +49,7 @@ export const ScriptsWorkspace = ({ office }: ScriptsWorkspaceProps) => {
   );
 
   const onSelect = (scriptId: string, tab = 0, jobId?: string) => {
+    setInvalidDetails(false);
     setPanelMode("view");
     if (tab === 2 || scriptId !== selectedScriptId) setSelectedJobId(jobId);
     setSelectedScriptId(scriptId);
@@ -66,18 +68,15 @@ export const ScriptsWorkspace = ({ office }: ScriptsWorkspaceProps) => {
       office,
       jobRunners: [defaultJobRunner.data.id],
     };
-    try {
-      const script = await createScriptMutation.mutateAsync({ payload });
-      setSelectedScriptId(script.id);
-      setSelectedJobId(undefined);
-      showTab(0);
-      setPanelMode("view");
-      setCreating(false);
-    } catch {
-      // The form displays the mutation error and retains the entered values.
-    }
+    const script = await createScriptMutation.mutateAsync({ payload });
+    setSelectedScriptId(script.id);
+    setSelectedJobId(undefined);
+    showTab(0);
+    setPanelMode("view");
+    setCreating(false);
   };
   const onEdit = () => {
+    setInvalidDetails(false);
     createScriptMutation.reset();
     deleteScriptMutation.reset();
     updateScriptMutation.reset();
@@ -107,7 +106,7 @@ export const ScriptsWorkspace = ({ office }: ScriptsWorkspaceProps) => {
 
     setPanelMode("view");
   };
-  const onCancelEdit = () => setPanelMode("view");
+  const onCancelEdit = () => { setInvalidDetails(false); setPanelMode("view"); };
 
   const isPending =
     createScriptMutation.isPending ||
@@ -163,11 +162,12 @@ export const ScriptsWorkspace = ({ office }: ScriptsWorkspaceProps) => {
           <p className="mb-1 text-xs font-medium uppercase tracking-wide text-gray-500">{office.toUpperCase()} · {selectedScript.runtime}</p>
           <H2 className="break-words">{selectedScript.name}</H2>
         </header>
+        <div data-invalid-details={invalidDetails} className={invalidDetails ? "[&_[role=tab]:first-child]:bg-red-50! [&_[role=tab]:first-child]:text-red-800! [&_[role=tab]:first-child]:border-red-600!" : ""}>
         <Tabs key={`${selectedScript.id}:${panelTab.revision}`} defaultIndex={panelTab.index} fill tabs={[
           { name: "Details", content: <ScriptDetailPanel
             office={office} script={selectedScript} mode={panelMode} isPending={isPending}
             mutationError={mutationError} onDelete={onDelete} onEdit={onEdit}
-            onSave={onSave} onCancelEdit={onCancelEdit} /> },
+            onSave={onSave} onCancelEdit={onCancelEdit} onValidationChange={setInvalidDetails} /> },
           { name: "Run script", content: <ScriptRunJob script={selectedScript} onSubmitted={job => {
             setSelectedScriptId(job.scriptId ?? selectedScript.id);
             setPanelMode("view");
@@ -177,6 +177,7 @@ export const ScriptsWorkspace = ({ office }: ScriptsWorkspaceProps) => {
           { name: "Run history", content: <ScriptJobRuns script={selectedScript}
             selectedJobId={selectedJobId} onSelectJob={setSelectedJobId} /> },
         ]} />
+        </div>
       </> : <ScriptDetailPanel
         office={office}
         script={selectedScript}

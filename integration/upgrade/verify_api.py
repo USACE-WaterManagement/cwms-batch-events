@@ -109,7 +109,7 @@ def main():
             edit = dict(name="Edited legacy", description="Current schema", repoPath="python/run_hourly.py")
             response = client.put(f"/scripts/{script_id}", json=edit)
             assert response.status_code == 200, response.text
-            assert response.json()["configVersion"] == 3
+            assert response.json()["configVersion"] == 4
             old_job = client.get(f"/jobs/{queue.messages[1].job_id}").json()
             assert old_job["configVersion"] == 1 and old_job["repoPath"] == "/python/run_hourly.py"
             assert command_for_payload(queue.messages[1].payload) == ["python", "/jobs//python/run_hourly.py"]
@@ -121,7 +121,7 @@ def main():
             roles=["CWMS Users"], jobRunners=["58600a09-f18e-42c5-9d3c-df52ebe409f9"])
         response = client.post("/scripts", json=payload)
         assert response.status_code == 200, response.text
-        assert response.json()["configVersion"] == 3
+        assert response.json()["configVersion"] == 4
         script_id = response.json()["id"]
         payload.update(runtime="shell", repoPath="bin/report.sh")
         assert client.put(f"/scripts/{script_id}", json=payload).status_code == 200
@@ -130,7 +130,7 @@ def main():
         assert response.json()["runTrigger"] == "manual"
         assert len(queue.messages) == 1
         assert queue.messages[0].payload.runtime == "shell"
-        assert queue.messages[0].payload.config_version == 3
+        assert queue.messages[0].payload.config_version == 4
         assert queue.messages[0].payload.command_args == ["two words"]
         assert client.get(f"/jobs/{response.json()['id']}").status_code == 200
         job_id = UUID(response.json()["id"])
@@ -201,7 +201,10 @@ def main():
         assert client.post("/scripts", json=payload | dict(configVersion=1)).status_code == 422
         # Exercise persisted v2-to-v3 upgrades and shell snapshots against the DB.
         v2 = payload | dict(configVersion=2, commandArgs=["two words", "space ", ""])
-        assert client.put(f"/scripts/{script_id}", json=v2).status_code == 200
+        assert client.put(f"/scripts/{script_id}", json=v2).status_code == 422
+        v2_created = client.post("/scripts", json=v2 | dict(office="SWT", name="Legacy v2 compatibility"))
+        assert v2_created.status_code == 200, v2_created.text
+        script_id = v2_created.json()["id"]
         v2_job = client.post("/jobs", json={"scriptId": script_id}).json()
         upgraded = client.post("/jobs", json={"scriptId": script_id, "upgradeToVersion": 3})
         assert upgraded.status_code == 200, upgraded.text

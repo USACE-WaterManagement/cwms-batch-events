@@ -1,3 +1,4 @@
+import { configSection } from "../configSection";
 import { expect, test } from "@playwright/test";
 
 test("server errors retry once, show one toast, and recover on explicit retry", async ({ page }) => {
@@ -71,7 +72,9 @@ test("failed saves show a toast, retain the form, and are not automatically repe
   await page.getByRole("button", { name: "Login", exact: true }).first().click();
   await page.getByRole("combobox").selectOption("SWT");
   await page.getByRole("button", { name: "Create first script" }).click();
+  await configSection(page, "General");
   await page.getByLabel("Name", { exact: true }).fill("SWT report");
+  await configSection(page, "Source & path");
   await page.getByLabel("GitHub Repo Path", { exact: true }).fill("python/report.py");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("region", { name: "Notifications" })).toContainText("The server could not complete the request");

@@ -12,8 +12,6 @@ import { useState } from "react";
 import { CommandEditor } from "./CommandEditor";
 import { savedCommandPreview, CURRENT_SCRIPT_VERSION, supportsScriptVersion } from "./commandArguments";
 import { ScriptVersionNotice } from "./ScriptVersionNotice";
-import { CommandModal, ScriptVersionHelp } from "./CommandModal";
-import useAdminOffices from "./useAdminOffices";
 
 function customRunOptions(custom: boolean, command: ScriptFormData, script: Script): Partial<ExecuteScriptPayload> {
   if (!custom) return {};
@@ -39,8 +37,6 @@ export const ScriptRunJob = ({ script, onSubmitted }: {
   onSubmitted?: (job: JobDetails) => void;
 }) => {
   const run = useExecuteScript(onSubmitted);
-  const adminOffices = useAdminOffices();
-  const canUpgrade = adminOffices.data?.includes(script.office) ?? false;
   const [custom, setCustom] = useState(false);
   const initialCommand: ScriptFormData = { ...script, configVersion: CURRENT_SCRIPT_VERSION,
     executionType: script.executionType === "command" ? "command" : "github_file",
@@ -48,12 +44,9 @@ export const ScriptRunJob = ({ script, onSubmitted }: {
     commandMode: script.commandMode === "shell" ? "shell" : "arguments" };
   const [command, setCommand] = useState(initialCommand);
   const [commandValid, setCommandValid] = useState(true);
-  const [upgradeOpen, setUpgradeOpen] = useState(false);
   const version = script.configVersion ?? 1;
-  const submit = (upgrade: boolean) => {
-    setUpgradeOpen(false);
+  const submit = () => {
     run.mutate({ scriptId: script.id,
-      ...(upgrade ? { upgradeToVersion: CURRENT_SCRIPT_VERSION } : {}),
       ...customRunOptions(custom, command, script),
     });
   };
@@ -71,10 +64,10 @@ export const ScriptRunJob = ({ script, onSubmitted }: {
       <CommandEditor value={command} onChange={setCommand} onValidityChange={setCommandValid} disabled={run.isPending} argumentsAvailable={!!script.repoPath.trim()} shellRequiresUpgrade={version === 2} label="Arguments for this run" />
       <p className="text-sm text-gray-600">These changes apply only to this run. The saved script stays unchanged.</p>
     </div>}
-    {version === 1 && <p className="text-sm text-gray-600">To use custom arguments, a script administrator must edit and save this legacy script in Scripts Manager first.</p>}
+    {version === 1 && <p className="text-sm text-gray-600">To use custom arguments, a script administrator must use Upgrade configuration in Details first.</p>}
     {!script.active && <p role="status">This script is inactive. Enable it in Details before running a job.</p>}
     <div className="flex flex-wrap gap-3">
-    <Button disabled={!supportsScriptVersion(version) || !script.active || run.isPending || (custom && !commandValid)} onClick={() => version === 2 ? setUpgradeOpen(true) : submit(false)}>
+    <Button disabled={!supportsScriptVersion(version) || !script.active || run.isPending || (custom && (!commandValid || (version < 3 && command.commandMode === "shell")))} onClick={submit}>
       {submitButtonLabel(run.isPending, custom)}
     </Button>
     <Button disabled={!supportsScriptVersion(version) || !script.active || run.isPending || version < 2} onClick={() => {
@@ -82,23 +75,7 @@ export const ScriptRunJob = ({ script, onSubmitted }: {
     }}>{custom ? "Cancel custom run" : "Custom run"}</Button>
     </div>
     {run.isError && <p role="alert" className="text-red-700">Job could not be submitted: {run.error.message}</p>}
-    <CommandModal opened={upgradeOpen} onClose={() => setUpgradeOpen(false)} title="Run and upgrade to version 3" footer={<>
-      <button type="button" className="rounded-lg px-4 py-2 font-medium text-slate-600 hover:bg-slate-200" onClick={() => setUpgradeOpen(false)}>Cancel</button>
-      <button type="button" className="rounded-lg border border-slate-300 bg-white px-4 py-2 font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50" disabled={custom && command.commandMode === "shell"} onClick={() => submit(false)}>Run version 2</button>
-      <Button disabled={!canUpgrade} onClick={() => submit(true)}>Run and upgrade version</Button>
-    </>}>
-      <div className="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
-        <span className="rounded bg-white px-3 py-2 font-semibold text-slate-600">Version 2</span>
-        <span aria-hidden="true" className="text-2xl text-blue-600">â†’</span>
-        <span className="rounded bg-blue-700 px-3 py-2 font-semibold text-white">Version 3</span>
-      </div>
-      <div><p className="font-semibold text-slate-900">Upgrade {script.name} and start the job</p>
-        <p className="mt-2 text-slate-600">The saved script will use version 3 for future runs. Its existing arguments stay unchanged. Version 3 adds Bash commands with success and failure chains.</p></div>
-      <p className="rounded-lg bg-slate-100 p-3 text-sm text-slate-600">Custom arguments or commands apply only to this job. Previously submitted jobs keep their original settings.</p>
-      {!canUpgrade && <p role="status" className="text-sm text-amber-800">A script administrator for {script.office} must upgrade the saved version. You can still run version 2 with its existing capabilities.</p>}
-      {custom && command.commandMode === "shell" && <p className="text-sm font-semibold text-blue-800">This Bash command requires version 3.</p>}
-      <ScriptVersionHelp />
-    </CommandModal>
+    {custom && version < 3 && command.commandMode === "shell" && <p role="status">Upgrade configuration in Details before using Bash command mode.</p>}
   </div>;
 };
 

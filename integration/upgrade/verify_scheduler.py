@@ -16,7 +16,7 @@ from cwms_batch_events.core.job_database.postgres.models import JobModel, Script
 from cwms_batch_events.core.job_database.postgres.postgres import PostgresJobDatabase
 from cwms_batch_events.core.job_database.postgres.session import create_session
 from cwms_batch_events.core.maintenance import register_due_jobs, deliver_pending_jobs
-from cwms_batch_events.core.models import ScriptCreate
+from cwms_batch_events.core.models import ScriptCreate, ScriptRunRequest
 
 
 def main():
@@ -66,6 +66,27 @@ def main():
         assert sorted(pool.map(claim, range(2))) == [False, True]
     app.dependency_overrides[get_current_user] = lambda: actor
     with TestClient(app) as client:
+        # Explicit upgrades do not execute jobs, preserve commands, require an
+        # office administrator, and leave old job snapshots untouched.
+        legacy = client.post("/scripts", json={"office": "SWT", "name": "Upgrade " + uuid4().hex,
+            "description": "", "repoPath": "echo", "executionType": "command",
+            "commandArgs": ["two words", "", "$HOME"], "configVersion": 2}).json()
+        legacy_id = legacy["id"]
+        with create_session() as db:
+            before = PostgresJobDatabase(db).create_job(ScriptRunRequest(script_id=legacy_id), actor)
+        # No real queue should be invoked by this upgrade check.
+        app.dependency_overrides[get_current_user] = lambda: User(username="reader", offices=["SWT"], admin_offices=[], roles={"SWT": ["CWMS Users"]})
+        assert client.post(f"/scripts/{legacy_id}/upgrade").status_code == 403
+        app.dependency_overrides[get_current_user] = lambda: actor
+        upgraded = client.post(f"/scripts/{legacy_id}/upgrade")
+        assert upgraded.status_code == 200, upgraded.text
+        assert upgraded.json()["configVersion"] == 4
+        assert upgraded.json()["commandArgs"] == legacy["commandArgs"]
+        assert upgraded.json()["scheduleEnabled"] is False
+        assert client.post(f"/scripts/{legacy_id}/upgrade").json() == upgraded.json()
+        with create_session() as db:
+            assert db.get(JobModel, before.id).config_version == 2
+            assert len(db.scalars(select(JobModel).where(JobModel.script_id == legacy_id)).all()) == 1
         status = client.get("/scheduler/status?office=SWT")
         assert status.status_code == 200 and status.json()["pendingDelivery"] == 0
         assert client.get("/scheduler/status?office=NWD").status_code == 404

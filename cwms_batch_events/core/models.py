@@ -33,9 +33,9 @@ class ExecutionRecord(CamelModel):
 
 
 class ExecutionOptions(ExecutionRecord):
-    """Validated v2/v3 writes; persisted versions retain their execution semantics."""
+    """Validated writes; persisted versions retain their execution semantics."""
 
-    config_version: Literal[2, 3] = 3
+    config_version: Literal[2, 3, 4] = 4
     execution_type: Literal["github_file", "command"] = "github_file"
     runtime: Literal["python", "java", "shell"] = "python"
     command_mode: Literal["arguments", "shell"] = "arguments"
@@ -315,6 +315,12 @@ class ScriptBase(CamelModel):
 class ScriptCreate(ScriptBase, ExecutionOptions):
     office: str
 
+    @model_validator(mode="after")
+    def schedule_requires_v4(self):
+        if self.config_version < 4 and (self.schedule_enabled or self.schedule_type != "manual"):
+            raise ValueError("Scheduling requires configuration version 4. Use Upgrade configuration first.")
+        return self
+
 
 class ScriptRead(ScriptBase, ExecutionRecord):
     model_config = ConfigDict(from_attributes=True)
@@ -335,4 +341,8 @@ class ScriptRead(ScriptBase, ExecutionRecord):
 
 
 class ScriptUpdate(ScriptBase, ExecutionOptions):
-    pass
+    @model_validator(mode="after")
+    def schedule_requires_v4(self):
+        if self.config_version < 4 and (self.schedule_enabled or self.schedule_type != "manual"):
+            raise ValueError("Scheduling requires configuration version 4. Use Upgrade configuration first.")
+        return self

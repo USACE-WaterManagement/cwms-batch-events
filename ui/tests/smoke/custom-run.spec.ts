@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { configSection } from "../configSection";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -41,6 +42,7 @@ test("custom arguments apply once, cancel restores defaults, and role help expla
   await page.getByRole("combobox").selectOption("SWT");
   const row = page.locator("tr").filter({ hasText: script.name });
   await row.getByRole("button", { name: `Edit ${script.name}`, exact: true }).click();
+  await configSection(page, "Access");
   await expect(page.getByText(/Adding a role restricts who can run this script/)).toBeVisible();
   await page.getByRole("combobox", { name: "Role to add" }).selectOption({ label: "CWMS Users" });
   await page.getByRole("button", { name: "Add role", exact: true }).click();
@@ -70,7 +72,7 @@ test("custom arguments apply once, cancel restores defaults, and role help expla
   expect(scriptWrites).toEqual([]);
   await page.locator("tr").filter({ hasText: "Legacy report" }).getByRole("button", { name: "Run script", exact: true }).click();
   await expect(page.getByRole("button", { name: "Custom run", exact: true })).toBeDisabled();
-  await expect(page.getByText(/edit and save this legacy script/)).toBeVisible();
+  await expect(page.getByText(/must use Upgrade configuration in Details first/)).toBeVisible();
   await page.getByRole("link", { name: "Submit Job", exact: true }).click();
   await page.getByRole("combobox").last().selectOption(script.id);
   await page.getByRole("button", { name: "Custom run", exact: true }).click();

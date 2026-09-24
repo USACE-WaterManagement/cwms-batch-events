@@ -11,7 +11,8 @@ interface ScriptDetailPanelProps {
   mutationError: Error | null;
   onDelete: (scriptId: string) => void;
   onEdit: () => void;
-  onSave: (data: ScriptFormData) => void;
+  onSave: (data: ScriptFormData) => void | Promise<void>;
+  onValidationChange?: (invalid: boolean) => void;
   onCancelEdit: () => void;
 }
 
@@ -25,6 +26,7 @@ export const ScriptDetailPanel = ({
   onEdit,
   onSave,
   onCancelEdit,
+  onValidationChange,
 }: ScriptDetailPanelProps) => {
   if (mode === "view" && !script) {
     return <section className="flex min-h-48 min-w-0 flex-col items-center justify-center gap-3 self-start rounded-xl border border-dashed border-gray-300 bg-gray-50 px-6 py-8 text-center">
@@ -48,6 +50,7 @@ export const ScriptDetailPanel = ({
         onDelete={onDelete}
         onSave={onSave}
         onCancelEdit={onCancelEdit}
+        onValidationChange={onValidationChange}
       />
     );
   }

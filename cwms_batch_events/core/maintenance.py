@@ -37,6 +37,7 @@ def register_due_jobs(now=None, session_factory=create_session):
         last = db.scalar(text("SELECT last_checked FROM maintenance_tasks WHERE name='schedules'"))
         scripts = db.scalars(select(ScriptModel).where(
             ScriptModel.active.is_(True), ScriptModel.schedule_enabled.is_(True),
+            ScriptModel.config_version == 4,
             ScriptModel.schedule_updated_by.is_not(None),
         ).order_by(ScriptModel.id).with_for_update()).all()
         count = 0

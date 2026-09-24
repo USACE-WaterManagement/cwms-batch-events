@@ -93,6 +93,18 @@ def create_demo():
             saved = db.get(ScriptModel, script.id)
             saved.schedule_updated_at = datetime.now(timezone.utc) - timedelta(minutes=1)
             db.commit()
+    # Bring only this isolated demonstration's scheduled fixture to the current
+    # version, and keep a separate old registration for reviewing the upgrade UI.
+    with create_session() as db, db.begin():
+        scheduled_demo = db.scalar(select(ScriptModel).where(ScriptModel.slug == "office-report-demo"))
+        scheduled_demo.config_version = 4
+    with create_session() as db:
+        legacy_demo = db.scalar(select(ScriptModel).where(ScriptModel.slug == "configuration-upgrade-demo"))
+        if legacy_demo is None:
+            db.rollback()
+            PostgresJobDatabase(db).store_script(ScriptCreate(office="SWT", name="Configuration upgrade demo",
+                description="Version 3 sample. Use Upgrade configuration in Details, then explore scheduling.",
+                config_version=3, repo_path="python/reports/example.py", command_args=["--office", "SWT"]), actor)
     @asynccontextmanager
     async def demo_lifespan(application):
         stop = asyncio.Event()

@@ -1,3 +1,4 @@
+import { configSection } from "../configSection";
 import { expect, test } from "@playwright/test";
 
 for (const warning of [
@@ -33,7 +34,9 @@ for (const warning of [
   await expect(page.getByText("https://github.com/USACE-WaterManagement/swt-wm-cwbi-jobs", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   await page.getByRole("button", { name: "Create first script" }).click();
+  await configSection(page, "General");
   await page.getByLabel("Name", { exact: true }).fill("Manual SWT report");
+  await configSection(page, "Source & path");
   await page.getByLabel("GitHub Repo Path", { exact: true }).fill("python/report.py");
   await expect(page.getByRole("button", { name: "Browse", exact: true })).toBeDisabled();
   await page.getByRole("button", { name: "Save", exact: true }).click();

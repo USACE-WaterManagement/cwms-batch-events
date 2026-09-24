@@ -1,3 +1,4 @@
+import { configSection } from "../configSection";
 import { expect, test } from "@playwright/test";
 
 test("saves timezone schedules and disables scheduling when switched to manual", async ({
@@ -38,13 +39,19 @@ test("saves timezone schedules and disables scheduling when switched to manual",
   await page.getByRole("combobox").selectOption("SWT");
   await expect(page.getByText("Scheduler is running", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Create first script", exact: true }).click();
+  await configSection(page, "General");
   await page.getByLabel("Name", { exact: true }).fill("Synthetic Schedule");
+  await configSection(page, "Source & path");
   await page
     .getByLabel("GitHub Repo Path", { exact: true })
     .fill("python/report.py");
+  await configSection(page, "Schedule");
   await page.getByLabel("Schedule", { exact: true }).selectOption("hourly");
+  await configSection(page, "Schedule");
   await page.getByLabel("Minute", { exact: true }).fill("25");
+  await configSection(page, "Schedule");
   await page.getByLabel("Timezone", { exact: true }).fill("America/Chicago");
+  await configSection(page, "Schedule");
   await page.getByLabel("Enable schedule", { exact: true }).check();
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(
@@ -53,7 +60,9 @@ test("saves timezone schedules and disables scheduling when switched to manual",
   expect(saved?.scheduleMinute).toBe(25);
   expect(saved?.scheduleTimezone).toBe("America/Chicago");
   await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await configSection(page, "Schedule");
   await page.getByLabel("Schedule", { exact: true }).selectOption("cron");
+  await configSection(page, "Schedule");
   await page.getByLabel("Cron expression", { exact: true }).fill("0 8 * * 1-5");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(
@@ -61,6 +70,7 @@ test("saves timezone schedules and disables scheduling when switched to manual",
   ).toBeVisible();
   expect(saved?.scheduleCron).toBe("0 8 * * 1-5");
   await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await configSection(page, "Schedule");
   await page.getByLabel("Schedule", { exact: true }).selectOption("manual");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(

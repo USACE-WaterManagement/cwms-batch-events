@@ -1,4 +1,3 @@
-import dayjs from "dayjs";
 import { ViewField } from "./ViewField";
 import {
   Button,
@@ -12,14 +11,17 @@ import {
 import type { Script, ScriptFormData } from "../scripts-manager/types";
 import { MdErrorOutline } from "react-icons/md";
 import { useState } from "react";
+import { ScriptSections, ConfigSection } from "./ScriptSections";
+import { fieldSections, type ScriptSection } from "./configurationSections";
+import { validateScriptForm } from "./validateScriptForm";
+import { ApiError } from "../../utils/fetchWithAuth";
 import { RoleMultiSelect } from "./RoleMultiSelect";
 import { allRoles } from "./utils";
 import { RepositoryPathPicker } from "./RepositoryPathPicker";
 import { FieldHelp } from "./FieldHelp";
 import { Link } from "@tanstack/react-router";
 import { CommandSettings } from "./CommandSettings";
-import { ScriptVersionHelp } from "./CommandModal";
-import { CURRENT_SCRIPT_VERSION, savedCommandPreview, supportsScriptVersion } from "./commandArguments";
+import { CURRENT_SCRIPT_VERSION, supportsScriptVersion } from "./commandArguments";
 import { ScriptVersionNotice } from "./ScriptVersionNotice";
 
 const fieldHelp: Record<string, React.ReactNode> = {
@@ -90,13 +92,20 @@ function scriptPathLabel(form: ScriptFormData): string {
   return "GitHub Repo Path";
 }
 
+function editableVersion(script?: Script): 2 | 3 | 4 {
+  if (script?.configVersion === 2) return 2;
+  if (script?.configVersion === 3) return 3;
+  return CURRENT_SCRIPT_VERSION;
+}
+
 interface ScriptFormProps {
   office: string;
   script?: Script;
   isPending: boolean;
   mutationError: Error | null;
   onDelete: (scriptId: string) => void;
-  onSave: (data: ScriptFormData) => void;
+  onSave: (data: ScriptFormData) => void | Promise<void>;
+  onValidationChange?: (invalid: boolean) => void;
   onCancelEdit: () => void;
 }
 
@@ -108,9 +117,10 @@ export const ScriptForm = ({
   onDelete,
   onSave,
   onCancelEdit,
+  onValidationChange,
 }: ScriptFormProps) => {
   const [form, setForm] = useState<ScriptFormData>({
-    configVersion: CURRENT_SCRIPT_VERSION,
+    configVersion: editableVersion(script),
     name: script?.name ?? "",
     description: script?.description ?? "",
     active: script?.active ?? true,
@@ -128,44 +138,76 @@ export const ScriptForm = ({
     scheduleTimezone: script?.scheduleTimezone ?? "UTC",
   });
 
-  const handleSubmit = () => { onSave({ ...form, repoPath: form.repoPath.trim() }); };
+  const [section, setSection] = useState<ScriptSection>("general");
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitted, setSubmitted] = useState(false);
+  const showErrors = (next: Record<string, string>) => {
+    setErrors(next);
+    onValidationChange?.(Object.keys(next).length > 0);
+    const first = Object.keys(next)[0];
+    if (first) {
+      setSection(fieldSections[first] ?? "general");
+      requestAnimationFrame(() => document.getElementById(first)?.focus());
+    }
+  };
+  const handleSubmit = async () => {
+    setSubmitted(true);
+    const next = validateScriptForm(form);
+    showErrors(next);
+    if (Object.keys(next).length) return;
+    try { await onSave({ ...form, repoPath: form.repoPath.trim() }); }
+    catch (error) {
+      if (error instanceof ApiError && error.fields) showErrors(error.fields);
+    }
+  };
+  const validation = (field: string) => ({
+    invalid: Boolean(errors[field]),
+    "aria-invalid": Boolean(errors[field]),
+    "aria-describedby": errors[field] ? `${field}-error` : undefined,
+    className: errors[field] ? "rounded border-2 border-red-600 bg-red-50 p-2" : "rounded border p-2",
+  });
+  const errorFor = (field: string) => errors[field] && <p id={`${field}-error`} className="text-sm text-red-800">{errors[field]}</p>;
+  const changeForm = (next: ScriptFormData) => {
+    setForm(next);
+    if (submitted) {
+      const nextErrors = validateScriptForm(next);
+      setErrors(nextErrors);
+      onValidationChange?.(Object.keys(nextErrors).length > 0);
+    }
+  };
 
   const update = <K extends keyof typeof form>(
     key: K,
     value: (typeof form)[K],
   ) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    changeForm({ ...form, [key]: value });
   };
 
-  if (script && !supportsScriptVersion(script.configVersion ?? 1)) return <div className="space-y-4 p-4">
+  if (script && ((script.configVersion ?? 1) === 1 || !supportsScriptVersion(script.configVersion ?? 1))) return <div className="space-y-4 p-4">
     <ScriptVersionNotice version={script.configVersion ?? 1} />
     <Button type="button" onClick={onCancelEdit}>Cancel</Button>
   </div>;
 
   return (
     <form
-      className="script-form"
+      className="script-form @container/script-panel" noValidate
       onSubmit={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        handleSubmit();
+        void handleSubmit();
       }}
     >
       <div className="script-form-layout flex flex-col gap-y-2">
-        {script && (script.configVersion ?? 1) < CURRENT_SCRIPT_VERSION && <div className="rounded border border-blue-300 bg-blue-50 p-3 text-sm">
-          Saving upgrades this script from version {script.configVersion ?? 1} to version {CURRENT_SCRIPT_VERSION}. Review the command preview before saving. Existing jobs keep their original version.
-          <div className="mt-2"><ScriptVersionHelp /></div>
-          <p className="mt-2 font-semibold">Before upgrade</p>
-          <pre className="whitespace-pre-wrap break-all">{savedCommandPreview(script)}</pre>
-          {(script.configVersion ?? 1) === 1 && <p>Version 1 ignores saved runtime and separate arguments. Review these fields below because version 3 uses them.</p>}
-        </div>}
+        {Object.keys(errors).length > 0 && <div role="alert" className="rounded border border-red-500 bg-red-50 p-3 text-sm text-red-800">Review the highlighted sections and fields before saving.</div>}
         <div className="script-form-fields">
+        <ScriptSections active={section} onSelect={setSection} errors={errors}>
         <Fieldset disabled={isPending} className="flex min-w-0 flex-col gap-1">
+          <ConfigSection id="general" active={section}>
           {script && <ViewField label="Id">{script.id}</ViewField>}
           <FormRow>
             <InputLabel htmlFor="name">Name</InputLabel>
             <Input
-              id="name"
+              id="name" {...validation("name")}
               name="name"
               value={form.name}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
@@ -174,6 +216,7 @@ export const ScriptForm = ({
               required
             />
           </FormRow>
+          {errorFor("name")}
           {script && <ViewField label="Slug">{script.slug ?? slugify(form.name)}</ViewField>}
           <FormRow>
             <InputLabel htmlFor="description">Description</InputLabel>
@@ -186,12 +229,14 @@ export const ScriptForm = ({
               }
             />
           </FormRow>
+          </ConfigSection>
+          <ConfigSection id="source" active={section}>
           {form.commandMode !== "shell" && <FormRow>
             <InputLabel htmlFor="repoPath">
               {scriptPathLabel(form)}
             </InputLabel>
             {form.executionType === "command" ? <Input
-              id="repoPath"
+              id="repoPath" {...validation("repoPath")}
               name="repoPath"
               value={form.repoPath}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -202,10 +247,12 @@ export const ScriptForm = ({
               key={`${office}:${form.runtime}`}
               office={office}
               runtime={form.runtime ?? "python"}
+              error={errors.repoPath}
               value={form.repoPath}
               onChange={(path) => update("repoPath", path)}
             />}
           </FormRow>}
+          {errorFor("repoPath")}
           <FormRow>
             <InputLabel htmlFor="executionType">Source</InputLabel>
             <select
@@ -243,9 +290,17 @@ export const ScriptForm = ({
               </select>
             </FormRow>
           )}
+          </ConfigSection>
+          <ConfigSection id="arguments" active={section}>
           <div className="my-3 rounded-lg border border-gray-300 bg-white p-3">
-            <CommandSettings value={form} onChange={setForm} disabled={isPending} />
+            <CommandSettings value={form} onChange={changeForm} disabled={isPending} />
           </div>
+          {errorFor("commandMode")}{errorFor("shellCommand")}{errorFor("commandArgs")}
+          </ConfigSection>
+          <ConfigSection id="schedule" active={section}>
+          {(form.configVersion ?? 1) < 4 && <p className="rounded border border-blue-300 bg-blue-50 p-3 text-sm">Scheduling requires version 4. Cancel editing and choose Upgrade configuration in Details.</p>}
+          {errorFor("scheduleType")}
+          <fieldset disabled={(form.configVersion ?? 1) < 4} className="space-y-4">
           <FormRow>
             <InputLabel htmlFor="scheduleType">Schedule</InputLabel>
             <select
@@ -253,9 +308,7 @@ export const ScriptForm = ({
               className="rounded border p-2"
               value={form.scheduleType}
               onChange={(e) => {
-                update("scheduleType", e.target.value);
-                if (e.target.value === "manual")
-                  update("scheduleEnabled", false);
+                changeForm({ ...form, scheduleType: e.target.value, scheduleEnabled: e.target.value === "manual" ? false : form.scheduleEnabled });
               }}
             >
               <option value="manual">Manual only</option>
@@ -269,7 +322,7 @@ export const ScriptForm = ({
                 <FormRow>
                   <InputLabel htmlFor="scheduleMinute">Minute</InputLabel>
                   <Input
-                    id="scheduleMinute"
+                    id="scheduleMinute" {...validation("scheduleMinute")}
                     type="number"
                     min={0}
                     max={59}
@@ -290,13 +343,14 @@ export const ScriptForm = ({
                   </InputLabel>
                   <div>
                     <Input
-                      id="scheduleCron"
+                      id="scheduleCron" {...validation("scheduleCron")}
                       required
                       value={form.scheduleCron ?? ""}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                         update("scheduleCron", e.target.value)
                       }
                     />
+                    {errorFor("scheduleCron")}
                     <Text>
                       Minute, hour, day of month, month, day of week. For
                       example: 0 8 * * 1-5.
@@ -304,11 +358,12 @@ export const ScriptForm = ({
                   </div>
                 </FormRow>
               )}
+              {errorFor("scheduleMinute")}
               <FormRow>
                 <InputLabel htmlFor="scheduleTimezone">Timezone</InputLabel>
                 <div>
                   <Input
-                    id="scheduleTimezone"
+                    id="scheduleTimezone" {...validation("scheduleTimezone")}
                     required
                     list="schedule-timezones"
                     value={form.scheduleTimezone}
@@ -335,6 +390,7 @@ export const ScriptForm = ({
                   </Text>
                 </div>
               </FormRow>
+          {errorFor("scheduleTimezone")}
               <FormRow>
                 <Label htmlFor="scheduleEnabled">Enable schedule</Label>
                 <input
@@ -346,6 +402,9 @@ export const ScriptForm = ({
               </FormRow>
             </>
           )}
+          </fieldset>
+          </ConfigSection>
+          <ConfigSection id="access" active={section}>
           <FormRow>
             <InputLabel htmlFor="roles">Roles (optional)</InputLabel>
             <RoleMultiSelect
@@ -354,17 +413,9 @@ export const ScriptForm = ({
               onChange={(selectedRoles) => update("roles", selectedRoles)}
             />
           </FormRow>
-          {script && (
-            <>
-              <ViewField label="Created At">
-                {dayjs(script?.createdTime).toString()}
-              </ViewField>
-              <ViewField label="Last Update">
-                {dayjs(script?.updatedTime).toString()}
-              </ViewField>
-            </>
-          )}
+          </ConfigSection>
         </Fieldset>
+        </ScriptSections>
         {mutationError && (
           <div role="alert" className="mt-3 flex gap-2">
             <MdErrorOutline className="text-red-500 flex-none size-6" />

@@ -3,6 +3,17 @@
 Batch Events owns scheduling inside the API process. Script administrators choose
 an hourly minute or numeric five-field cron and an IANA timezone in Scripts Manager.
 Schedules default to disabled. Disable any equivalent Airflow/legacy trigger first.
+Scheduling requires script configuration **version 4**. New registrations use v4;
+existing v1–v3 registrations keep their execution behavior until an office administrator
+chooses **Upgrade configuration** in Details. The upgrade is a separate, idempotent
+request with progress and success/error feedback; it never submits a job or enables
+a schedule. Ordinary runs do not prompt, and edits retain the existing version.
+Legacy v1 upgrades keep effective Python execution and clear ignored runtime/argument
+fields. Ambiguous historical paths require a reviewed replacement rather than a guessed
+conversion. Existing job snapshots remain unchanged, and stale writes cannot downgrade v4.
+
+Details has General, Source & path, Arguments & command, Access, and Schedule sections.
+Save highlights sections and inputs needing correction while retaining the draft.
 No new service, EventBridge schedule, or IAM permission is required: the API uses
 its existing PostgreSQL and SQS access. Application deployments and migrations
 are still required.
@@ -71,6 +82,7 @@ dispatch claims while queue messages may still be redelivered.
    1.01.17. Do not renumber applied migrations.
 2. Deploy the API, updated dispatcher Lambda/local dispatcher, and UI. Keep schedules
    disabled until all are updated: old dispatchers reject the scheduler message source.
+   Deploy dispatcher v4 support before creating or upgrading v4 registrations.
 3. Verify heartbeats, enable one harmless schedule, and verify its queue, execution,
    output, attribution, and office authorization in the target environment.
 4. Before rollback, disable schedules and drain/quarantine scheduler messages. Preserve

@@ -1,8 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { formatArguments, parseArguments, savedCommandPreview } from "../../src/features/scripts-manager/commandArguments";
 import type { Script } from "../../src/features/scripts-manager/types";
-import { mkdir } from "node:fs/promises";
-import { join } from "node:path";
 
 test("argument parsing preserves quoted values and ignores unquoted trailing whitespace", () => {
   const args = ["two words", "", "space ", " leading", "$HOME", "&&", "a'b", 'a"b', "a\\b", "*", "line\nbreak"];
@@ -52,7 +50,7 @@ test("UI adapts to legacy and unknown versions without a version selector", asyn
   await expect(page.getByRole("button", { name: "Save", exact: true })).toHaveCount(0);
 });
 
-test("v2 run offers a saved version upgrade and a custom shell snapshot", async ({ page }) => {
+test("v2 runs repeatedly without an upgrade prompt or configuration write", async ({ page }) => {
   const script = { id: "v2-report", configVersion: 2, name: "Daily report", office: "SWT", active: true,
     roles: [], executionType: "github_file", runtime: "python", repoPath: "python/report.py",
     commandArgs: ["--date", "today"], description: "Generate and upload a reservoir report.",
@@ -73,46 +71,31 @@ test("v2 run offers a saved version upgrade and a custom shell snapshot", async 
     if (path.endsWith("/logs/page")) return route.fulfill({ json: { logs: "Report complete", available: true } });
     return route.fulfill({ json: [] });
   });
-  const capture = async (name: string) => {
-    if (!process.env.PR_SCREENSHOT_DIR) return;
-    await mkdir(process.env.PR_SCREENSHOT_DIR, { recursive: true });
-    await page.screenshot({ path: join(process.env.PR_SCREENSHOT_DIR, `${name}.png`), fullPage: true });
-  };
   await page.setViewportSize({ width: 1360, height: 1050 });
   await page.goto("/events/submit");
   await page.getByRole("button", { name: "Login", exact: true }).first().click();
   await page.getByRole("combobox").first().selectOption("SWT");
   await page.getByRole("combobox").last().selectOption(script.id);
   await page.getByRole("button", { name: "Submit job", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Run and upgrade to version 3" })).toBeVisible();
-  expect(posts).toEqual([]);
-  await capture("version-upgrade-prompt");
-  await page.getByRole("button", { name: "Cancel", exact: true }).click();
-  await page.getByRole("button", { name: "Custom run", exact: true }).click();
-  await page.getByLabel("Arguments for this run").fill('--date 2026-09-01 --name "Daily reservoir report"   ');
-  await expect(page.getByLabel("Parsed arguments")).toContainText('4: "Daily reservoir report"');
-  await capture("quoted-arguments");
-  await page.getByLabel("Arguments for this run").fill('--date today && echo done');
-  await expect(page.getByRole("button", { name: "Submit custom run", exact: true })).toBeDisabled();
-  await expect(page.getByRole("alert")).toContainText("Use Bash command mode");
-  await page.getByLabel("Command mode", { exact: true }).selectOption("shell");
-  const command = 'python /jobs/python/report.py --date 2026-09-01 && echo "Report complete" || echo "Report failed"   ';
-  await page.getByLabel("Bash command", { exact: true }).fill(command);
-  await capture("bash-command-chain");
-  await page.getByRole("button", { name: "Submit custom run", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Run version 2", exact: true })).toBeDisabled();
-  await page.getByRole("button", { name: "Run and upgrade version", exact: true }).click();
+  await expect.poll(() => posts.length).toBe(1);
+  expect(posts[0]).toEqual({ runTrigger: "manual", scriptId: script.id });
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page).toHaveURL(/\/jobs\/v3-job$/);
-  expect(posts).toEqual([{ runTrigger: "manual", scriptId: script.id, upgradeToVersion: 3, commandMode: "shell", shellCommand: command }]);
-  expect(scriptWrites).toEqual([]);
-  expect(script.configVersion).toBe(2);
   await page.getByRole("link", { name: "Submit Job", exact: true }).click();
   await page.getByRole("combobox").first().selectOption("SWT");
   await page.getByRole("combobox").last().selectOption(script.id);
-  await page.getByRole("button", { name: "Submit job", exact: true }).click();
-  await page.getByRole("button", { name: "Run version 2", exact: true }).click();
+  await page.getByRole("button", { name: "Custom run", exact: true }).click();
+  await page.getByLabel("Command mode", { exact: true }).selectOption("shell");
+  await page.getByLabel("Bash command", { exact: true }).fill("echo hello && echo done");
+  await expect(page.getByRole("button", { name: "Submit custom run", exact: true })).toBeDisabled();
+  await expect(page.getByText("Upgrade configuration in Details before using Bash command mode.")).toBeVisible();
+  await page.getByLabel("Command mode", { exact: true }).selectOption("arguments");
+  await page.getByLabel("Arguments for this run").fill('--date today');
+  await page.getByRole("button", { name: "Submit custom run", exact: true }).click();
   await expect.poll(() => posts.length).toBe(2);
-  expect(posts[1]).toEqual({ runTrigger: "manual", scriptId: script.id });
+  expect(posts[1]).toEqual({ runTrigger: "manual", scriptId: script.id, commandArgs: ["--date", "today"] });
+  expect(scriptWrites).toEqual([]);
+  expect(script.configVersion).toBe(2);
   await page.goto("/events/help/script-versions");
   await expect(page.getByRole("heading", { name: "Script versions and commands" })).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });

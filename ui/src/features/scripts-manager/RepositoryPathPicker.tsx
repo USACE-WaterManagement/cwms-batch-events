@@ -19,8 +19,8 @@ function contents(paths: string[], directory: string, extension: string): Entry[
   return [...entries.values()].sort((a, b) => Number(b.folder) - Number(a.folder) || a.name.localeCompare(b.name));
 }
 
-export function RepositoryPathPicker({ office, runtime, value, onChange }: {
-  office: string; runtime: string; value: string; onChange: (path: string) => void;
+export function RepositoryPathPicker({ office, runtime, value, onChange, error }: {
+  office: string; runtime: string; value: string; onChange: (path: string) => void; error?: string;
 }) {
   const extension = runtime === "java" ? ".jar" : runtime === "shell" ? ".sh" : ".py";
   const input = useRef<HTMLInputElement>(null);
@@ -59,9 +59,9 @@ export function RepositoryPathPicker({ office, runtime, value, onChange }: {
             event.preventDefault(); chooseSuggestion(suggestions[active]);
           }
         }}
-        placeholder={runtime === "java" ? "java-artifacts/BuildWSmetadataViaCDA.jar" : `Directory or ${extension} file path`} aria-describedby="repository-path-help"
+        placeholder={runtime === "java" ? "java-artifacts/BuildWSmetadataViaCDA.jar" : `Directory or ${extension} file path`} aria-invalid={Boolean(error)} aria-describedby={error ? "repoPath-error repository-path-help" : "repository-path-help"}
         title={value || `Directory or ${extension} file path`}
-        className="min-w-0 flex-1 truncate rounded border border-gray-300 bg-white px-3 py-2 focus:text-clip" />
+        className={`min-w-0 flex-1 truncate rounded border px-3 py-2 focus:text-clip ${error ? "border-red-600 bg-red-50" : "border-gray-300 bg-white"}`} />
       <Button type="button" disabled={unavailable} aria-haspopup="dialog" onClick={() => {
         navigate(paths.some(path => path.startsWith(typedDirectory)) ? typedDirectory : "");
         setFilter(extension); setSuggest(false); setOpen(true);

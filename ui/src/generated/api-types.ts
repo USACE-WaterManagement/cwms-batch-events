@@ -161,6 +161,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/scripts/{script_id}/upgrade": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upgrade Script Configuration */
+        post: operations["upgrade_script_configuration_scripts__script_id__upgrade_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/scripts/{script_id}": {
         parameters: {
             query?: never;
@@ -484,10 +501,10 @@ export interface components {
         ScriptCreate: {
             /**
              * Configversion
-             * @default 3
+             * @default 4
              * @enum {integer}
              */
-            configVersion: 2 | 3;
+            configVersion: 2 | 3 | 4;
             /**
              * Executiontype
              * @default github_file
@@ -675,10 +692,10 @@ export interface components {
         ScriptUpdate: {
             /**
              * Configversion
-             * @default 3
+             * @default 4
              * @enum {integer}
              */
-            configVersion: 2 | 3;
+            configVersion: 2 | 3 | 4;
             /**
              * Executiontype
              * @default github_file
@@ -1086,6 +1103,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upgrade_script_configuration_scripts__script_id__upgrade_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                script_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScriptRead"];
                 };
             };
             /** @description Validation Error */

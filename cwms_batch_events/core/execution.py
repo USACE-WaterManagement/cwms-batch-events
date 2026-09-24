@@ -2,22 +2,22 @@
 from pathlib import PurePosixPath
 from typing import Literal
 
-CURRENT_CONFIG_VERSION = 3
+CURRENT_CONFIG_VERSION = 4
 
 from cwms_batch_events.core.models import ExecutionOptions, ExecutionRecord
 
 
 class UnsupportedConfigVersion(ValueError):
     def __init__(self, version):
-        super().__init__(f"Unsupported script configuration schema version {version}. Supported versions: 1, 2, 3.")
+        super().__init__(f"Unsupported script configuration schema version {version}. Supported versions: 1, 2, 3, 4.")
 
 
 def execution_for_config(config) -> ExecutionRecord:
     """Validate without changing the saved record. Missing versions predate versioning."""
     version = getattr(config, "config_version", 1)
-    if type(version) is not int or version not in (1, 2, 3):
+    if type(version) is not int or version not in (1, 2, 3, 4):
         raise UnsupportedConfigVersion(version)
-    if version in (2, 3):
+    if version in (2, 3, 4):
         return ExecutionOptions.model_validate(config, from_attributes=True)
 
     path = config.repo_path
@@ -31,8 +31,10 @@ def execution_for_config(config) -> ExecutionRecord:
 def upgrade_execution(config, target_version=CURRENT_CONFIG_VERSION) -> ExecutionOptions:
     """Apply known adjacent upgrades to a copy, never to the saved record."""
     options = execution_for_config(config)
-    if target_version != CURRENT_CONFIG_VERSION or options.config_version == 1:
+    if target_version not in (3, 4) or options.config_version == 1:
         raise ValueError("Legacy scripts must be reviewed and saved in Scripts Manager before upgrading")
+    if options.config_version > target_version:
+        raise ValueError("Configuration versions cannot be downgraded")
     while options.config_version < target_version:
         upgrade = EXECUTION_UPGRADES.get(options.config_version)
         if upgrade is None:
@@ -45,7 +47,25 @@ def _upgrade_v2_to_v3(options):
     return ExecutionOptions(**{**options.model_dump(by_alias=False), "config_version": 3})
 
 
-EXECUTION_UPGRADES = {2: _upgrade_v2_to_v3}
+def _upgrade_v3_to_v4(options):
+    return ExecutionOptions(**{**options.model_dump(by_alias=False), "config_version": 4})
+
+
+EXECUTION_UPGRADES = {2: _upgrade_v2_to_v3, 3: _upgrade_v3_to_v4}
+
+
+def upgrade_saved_configuration(config) -> ExecutionOptions:
+    """Keep the effective command, including ignored legacy runtime/arguments."""
+    options = execution_for_config(config)
+    if options.config_version != 1:
+        return upgrade_execution(options)
+    path = options.repo_path
+    # A historical local runner split this string on whitespace. Do not guess
+    # a replacement for paths whose historical meaning differs across runners.
+    if path.startswith("/") or ".." in PurePosixPath(path).parts or any(char.isspace() for char in path):
+        raise ValueError("This legacy path needs administrator review. Create a version 4 replacement with a verified path; the existing script was not changed.")
+    return ExecutionOptions(config_version=4, repo_path=path, runtime="python",
+                            execution_type="github_file", command_args=[])
 
 
 def command_for_v1(options: ExecutionRecord, runner: Literal["batch", "local"]):
