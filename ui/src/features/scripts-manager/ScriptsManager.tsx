@@ -5,6 +5,8 @@ import { ScriptsWorkspace } from "./ScriptsWorkspace";
 import { useRememberedOffice } from "../../shared/hooks/useRememberedOffice";
 import LoginPrompt from "../auth/LoginPrompt";
 import { useSearch, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
+import { useDebouncedValue } from "../../shared/hooks/useDebouncedValue";
 
 export const ScriptsManager = () => {
   const auth = useAuth();
@@ -13,6 +15,8 @@ export const ScriptsManager = () => {
   const [office, setOffice] = useRememberedOffice(data ?? []);
   const search = useSearch({ from: "/scripts-manager" });
   const navigate = useNavigate();
+  const [scriptSearch, setScriptSearch] = useState("");
+  const searchTerm = useDebouncedValue(scriptSearch);
   const selectedOffice = search.office && data?.includes(search.office) ? search.office : office;
 
   if (!auth.isAuth) {
@@ -32,7 +36,8 @@ export const ScriptsManager = () => {
   return (
     <>
       <OfficeSelector offices={data} value={selectedOffice} onChange={next => { setOffice(next); void navigate({ to: "/scripts-manager", search: {}, replace: true }); }} />
-      {selectedOffice && <ScriptsWorkspace key={`${selectedOffice}:${search.scriptId ?? ""}`} office={selectedOffice} initialScriptId={search.scriptId} initialEdit={search.edit} />}
+      {selectedOffice && <ScriptsWorkspace key={`${selectedOffice}:${search.scriptId ?? ""}:${search.jobId ?? ""}`} office={selectedOffice} initialScriptId={search.scriptId} initialJobId={search.jobId} initialEdit={search.edit}
+        search={scriptSearch} onSearch={setScriptSearch} searchTerm={searchTerm} />}
     </>
   );
 };

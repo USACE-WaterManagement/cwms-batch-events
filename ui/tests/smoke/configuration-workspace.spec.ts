@@ -36,7 +36,7 @@ test("explicit upgrade shows progress, recoverable failure, success, and stays u
     return route.fulfill({ json: [] });
   });
   await open(page);
-  await configSection(page, "Upgrade config");
+  await configSection(page, "Upgrade");
   await page.getByRole("button", { name: "Upgrade configuration", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Saving configuration version 4" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Upgrading configuration…", exact: true })).toBeDisabled();
@@ -45,7 +45,7 @@ test("explicit upgrade shows progress, recoverable failure, success, and stays u
   expect(attempts).toBe(1);
   await page.getByRole("button", { name: "Upgrade configuration", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Configuration upgraded successfully" })).toBeVisible();
-  await configSection(page, "Upgrade config");
+  await configSection(page, "Upgrade");
   await expect(page.getByRole("note")).toContainText("version 4");
   expect(jobs).toBe(0);
   expect(script.commandArgs).toEqual(original.commandArgs);
@@ -56,7 +56,7 @@ test("explicit upgrade shows progress, recoverable failure, success, and stays u
   await page.getByRole("button", { name: "Login", exact: true }).first().click();
   await page.getByRole("combobox").selectOption("SWT");
   await page.getByText(original.name, { exact: true }).click();
-  await configSection(page, "Upgrade config");
+  await configSection(page, "Upgrade");
   await expect(page.getByRole("note")).toContainText("version 4");
   await expect(page.getByRole("button", { name: "Upgrade configuration", exact: true })).toHaveCount(0);
 });
@@ -80,7 +80,7 @@ test("save marks missing fields and sections, keeps drafts, and preserves an old
   await open(page);
   await page.getByRole("button", { name: "Edit", exact: true }).click();
   await page.getByLabel("Name", { exact: true }).fill("");
-  await configSection(page, "Source & path");
+  await configSection(page, "Source");
   await page.getByLabel("GitHub Repo Path", { exact: true }).fill("");
   await configSection(page, "Schedule");
   await expect(page.getByLabel("Schedule", { exact: true })).toBeDisabled();
@@ -89,10 +89,10 @@ test("save marks missing fields and sections, keeps drafts, and preserves an old
   await expect(page.getByLabel("Name", { exact: true })).toHaveAttribute("aria-invalid", "true");
   const nav = page.getByRole("navigation", { name: "Configuration sections" });
   await expect(nav.getByRole("button", { name: /General/ }).getByLabel("Needs attention")).toBeVisible();
-  await expect(nav.getByRole("button", { name: /Source & path/ }).getByLabel("Needs attention")).toBeVisible();
+  await expect(nav.getByRole("button", { name: /Source/ }).getByLabel("Needs attention")).toBeVisible();
   expect(writes).toHaveLength(0);
   await page.getByLabel("Name", { exact: true }).fill("Corrected report");
-  await nav.getByRole("button", { name: /Source & path/ }).click();
+  await nav.getByRole("button", { name: /Source/ }).click();
   await expect(page.getByLabel("GitHub Repo Path", { exact: true })).toHaveAttribute("aria-invalid", "true");
   await page.getByLabel("GitHub Repo Path", { exact: true }).fill("python/report.py");
   await configSection(page, "General");

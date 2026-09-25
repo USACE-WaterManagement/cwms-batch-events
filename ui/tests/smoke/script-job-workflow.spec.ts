@@ -118,9 +118,9 @@ test("run from a script row, inspect its runs, and switch Groundwork tabs", asyn
   await page.getByLabel("Name", { exact: true }).fill(script.name);
   await configSection(page, "General");
   await page.getByLabel("Description", { exact: true }).fill(script.description);
-  await configSection(page, "Source & path");
+  await configSection(page, "Source");
   await page.getByLabel("Source", { exact: true }).selectOption("command");
-  await configSection(page, "Source & path");
+  await configSection(page, "Source");
   await page.getByLabel("Executable", { exact: true }).fill("bash");
   await configSection(page, "Command");
   await page.getByRole("button", { name: "Add arguments", exact: true }).click();

@@ -83,7 +83,7 @@ clients but cannot downgrade v4; the web app no longer sends it.
 
 The UI adapts to the saved configuration version without a version selector.
 Details and submission explain the available features. Details has separate General,
-Source & path, Command, Access, Schedule, and Upgrade config sections. Unknown versions remain
+Source, Command, Access, Schedule, and Upgrade sections. Unknown versions remain
 readable but cannot be edited or run by this UI. Configuration versions are
 separate from application releases; saved revision history is not included.
 

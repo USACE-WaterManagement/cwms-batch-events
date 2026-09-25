@@ -47,8 +47,8 @@ test("Scripts Manager argument modal applies drafts, cancels edits, without upgr
   await expect(page.getByRole("region", { name: "Script arguments" })).toContainText("6 arguments");
   expect(writes).toBe(0);
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
-  await configSection(page, "Upgrade config");
+  await configSection(page, "Upgrade");
   await expect(page.getByRole("button", { name: "Upgrade configuration", exact: true })).toBeVisible();
-  await expect(page.getByRole("note")).toContainText("configuration version 2");
+  await expect(page.getByRole("note")).toContainText("Current version 2");
   expect(writes).toBe(0);
 });

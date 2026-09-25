@@ -24,7 +24,7 @@ test("review controls retain sections, update runtime and run mode, and route gu
   await page.getByRole("combobox").first().selectOption("SWT");
   await page.getByText(script.name, { exact: true }).click();
   await expect(page.getByRole("link", { name: "Script version guide" })).toHaveCount(0);
-  await configSection(page, "Source & path");
+  await configSection(page, "Source");
   await page.getByRole("button", { name: "Edit", exact: true }).click();
   await expect(page.getByLabel("Runtime", { exact: true })).toBeVisible();
   await page.getByLabel("Runtime", { exact: true }).selectOption("python");
@@ -43,7 +43,7 @@ test("review controls retain sections, update runtime and run mode, and route gu
   expect(role!.width).toBeGreaterThan(80);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
-  await configSection(page, "Upgrade config");
+  await configSection(page, "Upgrade");
   await expect(page.getByText("This configuration is up to date.")).toBeVisible();
   await page.evaluate(() => { document.documentElement.dataset.routeMarker = "retained"; });
   await page.getByRole("link", { name: "Script version guide" }).click();

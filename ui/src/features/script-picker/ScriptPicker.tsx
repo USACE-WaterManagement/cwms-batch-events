@@ -6,14 +6,18 @@ import { useAuth } from "@usace-watermanagement/groundwork-water";
 import { OfficeSelector } from "../../shared/components/OfficeSelector";
 import { useRememberedOffice } from "../../shared/hooks/useRememberedOffice";
 import LoginPrompt from "../auth/LoginPrompt";
+import { useSearch } from "@tanstack/react-router";
 
 const ScriptPicker = () => {
-  const [scriptId, setScriptId] = useState<string | undefined>();
+  const search = useSearch({ from: "/submit" });
+  const [scriptId, setScriptId] = useState<string | undefined>(search.scriptId);
 
   const auth = useAuth();
   const { data, isLoading, isError } = useScriptsCatalog();
   const offices = Array.from(new Set(data?.map((script) => script.office) ?? []));
-  const [office, setOffice] = useRememberedOffice(offices);
+  const [rememberedOffice, setOffice] = useRememberedOffice(offices);
+  const [changedOffice, setChangedOffice] = useState<string>();
+  const office = changedOffice ?? (offices.includes(search.office ?? "") ? search.office : rememberedOffice);
 
   if (!auth.isAuth) {
     return (
@@ -30,6 +34,7 @@ const ScriptPicker = () => {
   const selectedScript = scriptsForOffice.find(script => script.id === scriptId);
 
   const officeChange = (office: string) => {
+    setChangedOffice(office);
     setOffice(office);
     setScriptId(undefined);
   };

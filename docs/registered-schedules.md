@@ -11,16 +11,20 @@ use numeric five-field syntax rather than names or shortcuts.
 Schedules default to disabled. Disable any equivalent Airflow/legacy trigger first.
 Scheduling requires script configuration **version 4**. New registrations use v4;
 existing v1–v3 registrations keep their execution behavior until an office administrator
-chooses **Upgrade config** in the Details sidebar. The upgrade is a separate, idempotent
+chooses **Upgrade** in the Details sidebar. The upgrade is a separate, idempotent
 request with progress and success/error feedback; it never submits a job or enables
 a schedule. Ordinary runs do not prompt, and edits retain the existing version.
 Legacy v1 upgrades keep effective Python execution and clear ignored runtime/argument
 fields. Ambiguous historical paths require a reviewed replacement rather than a guessed
 conversion. Existing job snapshots remain unchanged, and stale writes cannot downgrade v4.
 
-Details has General, Source & path, Command, Access, Schedule, and Upgrade config sections.
+Details has General, Source, Command, Access, Schedule, and Upgrade sections.
 The sidebar connects to its content panel; small screens use a dropdown. Edit retains
-the selected section. The version guide lives in Upgrade config and uses client routing.
+the selected section. The version guide lives in Upgrade and uses client routing.
+Script search filters the loaded office list after a 300 ms debounce by name, description,
+path, or runtime; it does not issue a new API request for each search. Run selections
+have client-side URLs. Share job log copies the canonical `/jobs/{jobId}` URL; recipients
+must sign in with office access. Back to script view restores the script and selected run.
 Manual/Automatic radio controls pause or enable scheduling; automatic scripts have a
 list badge. Legacy inactive scripts remain inactive until explicitly reactivated.
 Save highlights sections and inputs needing correction while retaining the draft.

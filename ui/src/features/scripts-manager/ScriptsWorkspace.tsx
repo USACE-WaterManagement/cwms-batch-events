@@ -12,14 +12,20 @@ import { useDeleteScript } from "./useDeleteScript";
 import { useDefaultJobRunner } from "./useDefaultJobRunner";
 import { MdCode } from "react-icons/md";
 import useJobsList from "../jobs-list/useJobsList";
+import { useNavigate } from "@tanstack/react-router";
 
 interface ScriptsWorkspaceProps {
   office: string;
   initialScriptId?: string;
   initialEdit?: boolean;
+  initialJobId?: string;
+  search: string;
+  searchTerm: string;
+  onSearch: (search: string) => void;
 }
 
-export const ScriptsWorkspace = ({ office, initialScriptId, initialEdit }: ScriptsWorkspaceProps) => {
+export const ScriptsWorkspace = ({ office, initialScriptId, initialEdit, initialJobId, search, searchTerm, onSearch }: ScriptsWorkspaceProps) => {
+  const navigate = useNavigate();
   const scripts = useOfficeScripts(office);
   const jobs = useJobsList(true, true);
   const createScriptMutation = useCreateScript(office);
@@ -34,8 +40,8 @@ export const ScriptsWorkspace = ({ office, initialScriptId, initialEdit }: Scrip
   const [panelMode, setPanelMode] = useState<"view" | "edit">(initialEdit ? "edit" : "view");
   const [creating, setCreating] = useState(false);
   const [invalidDetails, setInvalidDetails] = useState(false);
-  const [panelTab, setPanelTab] = useState({ index: 0, revision: 0 });
-  const [selectedJobId, setSelectedJobId] = useState<string>();
+  const [panelTab, setPanelTab] = useState({ index: initialJobId ? 2 : 0, revision: 0 });
+  const [selectedJobId, setSelectedJobId] = useState<string | undefined>(initialJobId);
   const showTab = (index: number) => setPanelTab(previous => ({ index, revision: previous.revision + 1 }));
 
   if (scripts.isLoading) return <span>Loading scripts...</span>;
@@ -49,6 +55,11 @@ export const ScriptsWorkspace = ({ office, initialScriptId, initialEdit }: Scrip
   const selectedScript = scripts.data.find(
     (script) => script.id === selectedScriptId,
   );
+  const terms = searchTerm.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const filteredScripts = scripts.data.filter(script => {
+    const text = [script.name, script.slug, script.description, script.repoPath, script.runtime].join(" ").toLowerCase();
+    return terms.every(term => text.includes(term));
+  });
 
   const onSelect = (scriptId: string, tab = 0, jobId?: string) => {
     setInvalidDetails(false);
@@ -127,6 +138,14 @@ export const ScriptsWorkspace = ({ office, initialScriptId, initialEdit }: Scrip
           <H2>{office.toUpperCase()} Scripts</H2>
           {scripts.data.length > 0 && <Button onClick={onNew}>New +</Button>}
         </header>
+        {scripts.data.length > 0 && <div className="mt-3 space-y-2">
+          <label htmlFor="script-search" className="text-sm font-medium text-slate-700">Search scripts</label>
+          <div className="flex gap-2"><input id="script-search" type="search" value={search} onChange={event => onSearch(event.target.value)}
+            placeholder="Name, description, path, or runtime" className="min-h-11 min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 focus:outline-2 focus:outline-blue-600" />
+            {search && <Button type="button" onClick={() => onSearch("")}>Clear</Button>}
+          </div>
+          <p role="status" className="text-xs text-slate-500">{filteredScripts.length} of {scripts.data.length} scripts</p>
+        </div>}
         {scripts.data.length === 0 ? (
           <div className="mt-3 flex min-h-48 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-gray-300 bg-gray-50 px-6 py-10 text-center">
             <MdCode aria-hidden className="text-4xl text-gray-400" />
@@ -145,7 +164,7 @@ export const ScriptsWorkspace = ({ office, initialScriptId, initialEdit }: Scrip
             <Button size="sm" disabled={jobs.isFetching} onClick={() => void jobs.refetch()}>Retry run status</Button>
           </p>}
           <ScriptsList
-            scripts={scripts.data}
+            scripts={filteredScripts}
             selectScript={onSelect}
             editScript={scriptId => {
               onSelect(scriptId);
@@ -156,6 +175,7 @@ export const ScriptsWorkspace = ({ office, initialScriptId, initialEdit }: Scrip
             jobsUpdatedAt={jobs.dataUpdatedAt}
             runHistoryState={jobs.isError ? "unavailable" : jobs.isPending ? "loading" : "ready"}
           />
+          {filteredScripts.length === 0 && <p className="p-5 text-sm text-slate-600">No scripts match your search.</p>}
         </div>}
       </div>
       {scripts.data.length > 0 && <div className="script-workspace-panel @container/script-panel min-w-0 self-start rounded-xl border border-gray-200 bg-white p-3 [overflow-wrap:anywhere]">
@@ -178,7 +198,10 @@ export const ScriptsWorkspace = ({ office, initialScriptId, initialEdit }: Scrip
           }} /> },
           { name: "Run history", content: <ScriptJobRuns script={selectedScript}
             latestRunId={jobs.data?.filter(job => job.scriptId === selectedScript.id).sort((a, b) => new Date(b.createdTime).getTime() - new Date(a.createdTime).getTime())[0]?.id}
-            selectedJobId={selectedJobId} onSelectJob={setSelectedJobId} /> },
+            selectedJobId={selectedJobId} onSelectJob={jobId => {
+              setSelectedJobId(jobId);
+              void navigate({ to: "/scripts-manager", search: { office, scriptId: selectedScript.id, jobId } });
+            }} /> },
         ]} />
         </div>
       </> : <ScriptDetailPanel

@@ -1,10 +1,10 @@
 export const scriptSections = [
   { id: "general", label: "General" },
-  { id: "source", label: "Source & path" },
+  { id: "source", label: "Source" },
   { id: "arguments", label: "Command" },
   { id: "access", label: "Access" },
   { id: "schedule", label: "Schedule" },
-  { id: "upgrade", label: "Upgrade config" },
+  { id: "upgrade", label: "Upgrade" },
 ] as const;
 export type ScriptSection = typeof scriptSections[number]["id"];
 export const fieldSections: Record<string, ScriptSection> = {
