@@ -59,9 +59,29 @@ test("saves timezone schedules and disables scheduling when switched to manual",
   ).toBeVisible();
   expect(saved?.scheduleMinute).toBe(25);
   expect(saved?.scheduleTimezone).toBe("America/Chicago");
+  for (const preset of ["daily", "monthly"]) {
+    await page.getByRole("button", { name: "Edit", exact: true }).click();
+    await configSection(page, "Schedule");
+    await page.getByLabel("Schedule", { exact: true }).selectOption(preset);
+    await page.getByLabel("Run at", { exact: true }).fill("09:35");
+    if (preset === "monthly") {
+      await page.getByLabel("Day of month", { exact: true }).selectOption("31");
+      await expect(page.getByText("Months without day 31 are skipped.")).toBeVisible();
+    }
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Edit", exact: true })).toBeVisible();
+    expect(saved?.scheduleType).toBe("cron");
+    expect(saved?.scheduleCron).toBe(preset === "daily" ? "35 9 * * *" : "35 9 31 * *");
+    await page.getByRole("button", { name: "Edit", exact: true }).click();
+    await configSection(page, "Schedule");
+    await expect(page.getByLabel("Schedule", { exact: true })).toHaveValue(preset);
+    await expect(page.getByLabel("Run at", { exact: true })).toHaveValue("09:35");
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  }
   await page.getByRole("button", { name: "Edit", exact: true }).click();
   await configSection(page, "Schedule");
   await page.getByLabel("Schedule", { exact: true }).selectOption("cron");
+  await expect(page.getByRole("link", { name: "Open cron calculator (new tab)" })).toHaveAttribute("href", "https://crontab.guru/");
   await configSection(page, "Schedule");
   await page.getByLabel("Cron expression", { exact: true }).fill("0 8 * * 1-5");
   await page.getByRole("button", { name: "Save", exact: true }).click();

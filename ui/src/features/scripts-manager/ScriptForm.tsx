@@ -24,6 +24,8 @@ import { CommandSettings } from "./CommandSettings";
 import { CURRENT_SCRIPT_VERSION, supportsScriptVersion } from "./commandArguments";
 import { ScriptVersionNotice } from "./ScriptVersionNotice";
 
+import { schedulePreset, presetCron } from './schedulePresets';
+
 const fieldHelp: Record<string, React.ReactNode> = {
   scheduleType: "Batch Events queues enabled schedules automatically while the API is running. Disable any equivalent Airflow or legacy trigger before enabling this schedule.",
   scheduleMinute: "Minute of each hour, from 0 through 59, in the selected timezone.",
@@ -36,7 +38,7 @@ const fieldHelp: Record<string, React.ReactNode> = {
     <div className="space-y-4">
       <section className="space-y-2">
         <h3 className="font-semibold">District GitHub repository</h3>
-        <p>Downloads the selected officeâ€™s repository before running a Python file, Bash script, or Java JAR. Paths are relative to <code>/jobs</code>. Enabled Java artifact pins also download their release JARs.</p>
+        <p>Downloads the selected officeÃ¢â‚¬â„¢s repository before running a Python file, Bash script, or Java JAR. Paths are relative to <code>/jobs</code>. Enabled Java artifact pins also download their release JARs.</p>
         <div className="space-y-2 rounded-md border border-blue-200 bg-blue-50 p-3 text-blue-950">
           <p className="font-semibold">Example: SWT Java release</p>
           <p>Runtime: <strong>Java JAR</strong><br />JAR Path:</p>
@@ -51,7 +53,7 @@ const fieldHelp: Record<string, React.ReactNode> = {
           <p className="font-semibold">Example: JAR already in the container</p>
           <p>Executable: <code className="font-mono font-semibold">java</code><br />Arguments:</p>
           <pre className="whitespace-pre-wrap break-all rounded bg-white p-2 font-mono text-blue-950"><code>-jar /opt/reports/report.jar</code></pre>
-          <p>Replace this example path with an existing JAR in the image or a mounted directory. Use the repository source for SWTâ€™s downloaded release JAR.</p>
+          <p>Replace this example path with an existing JAR in the image or a mounted directory. Use the repository source for SWTÃ¢â‚¬â„¢s downloaded release JAR.</p>
         </div>
       </section>
       <p>Quote arguments that contain spaces. For shell operations such as <code>&amp;&amp;</code> or <code>||</code>, select Bash command mode and enter the complete command.</p>
@@ -137,6 +139,14 @@ export const ScriptForm = ({
     scheduleCron: script?.scheduleCron ?? "",
     scheduleTimezone: script?.scheduleTimezone ?? "UTC",
   });
+
+  const [preset, setPreset] = useState(() => schedulePreset(form));
+  const initialFields = (form.scheduleCron ?? '').split(/\s+/);
+  const [scheduleTime, setScheduleTime] = useState(() => {
+    if (preset === "daily" || preset === "monthly") return `${initialFields[1].padStart(2, "0")}:${initialFields[0].padStart(2, "0")}`;
+    return "08:00";
+  });
+  const [scheduleDay, setScheduleDay] = useState(() => preset === 'monthly' ? initialFields[2] : '1');
 
   const [section, setSection] = useState<ScriptSection>("general");
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -306,19 +316,48 @@ export const ScriptForm = ({
             <select
               id="scheduleType"
               className="rounded border p-2"
-              value={form.scheduleType}
+              value={preset}
               onChange={(e) => {
-                changeForm({ ...form, scheduleType: e.target.value, scheduleEnabled: e.target.value === "manual" ? false : form.scheduleEnabled });
+                const selected = e.target.value;
+                setPreset(selected);
+                if (selected === "daily" || selected === "monthly") {
+                  changeForm({ ...form, scheduleType: "cron", scheduleCron: presetCron(selected, scheduleTime, scheduleDay) });
+                  return;
+                }
+                changeForm({ ...form, scheduleType: selected, scheduleEnabled: selected === "manual" ? false : form.scheduleEnabled });
               }}
             >
               <option value="manual">Manual only</option>
               <option value="hourly">Every hour</option>
+              <option value="daily">Every day</option>
+              <option value="monthly">Every month</option>
               <option value="cron">Cron expression</option>
             </select>
           </FormRow>
           {form.scheduleType !== "manual" && (
             <>
-              {form.scheduleType === "hourly" ? (
+              {(preset === "daily" || preset === "monthly") && <div className="space-y-4">
+                {preset === "monthly" && <FormRow>
+                  <Label htmlFor="scheduleDay">Day of month</Label>
+                  <select id="scheduleDay" className="rounded border p-2" value={scheduleDay} onChange={event => {
+                    setScheduleDay(event.target.value);
+                    update("scheduleCron", presetCron(preset, scheduleTime, event.target.value));
+                  }}>
+                    {Array.from({ length: 31 }, (_, index) => index + 1).map(day => <option key={day} value={day}>{day}</option>)}
+                  </select>
+                </FormRow>}
+                <FormRow>
+                  <Label htmlFor="scheduleCron">Run at</Label>
+                  <input id="scheduleCron" type="time" required {...validation("scheduleCron")} value={scheduleTime} onChange={event => {
+                    setScheduleTime(event.target.value);
+                    update("scheduleCron", presetCron(preset, event.target.value, scheduleDay));
+                  }} />
+                </FormRow>
+                {errorFor("scheduleCron")}
+                <Text>Time is in the timezone selected below.</Text>
+                {preset === "monthly" && Number(scheduleDay) > 28 && <Text>Months without day {scheduleDay} are skipped.</Text>}
+              </div>}
+              {preset === "hourly" && (
                 <FormRow>
                   <InputLabel htmlFor="scheduleMinute">Minute</InputLabel>
                   <Input
@@ -336,7 +375,8 @@ export const ScriptForm = ({
                     }
                   />
                 </FormRow>
-              ) : (
+              )}
+              {preset === "cron" && (
                 <FormRow>
                   <InputLabel htmlFor="scheduleCron">
                     Cron expression
@@ -355,6 +395,8 @@ export const ScriptForm = ({
                       Minute, hour, day of month, month, day of week. For
                       example: 0 8 * * 1-5.
                     </Text>
+                    <a className="inline-block py-2 font-medium text-blue-700 underline" href="https://crontab.guru/" target="_blank" rel="noopener noreferrer">Open cron calculator (new tab)</a>
+                    <Text>Use numeric five-field expressions here; names and shortcuts such as @daily are not supported.</Text>
                   </div>
                 </FormRow>
               )}

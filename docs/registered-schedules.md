@@ -1,7 +1,11 @@
 # District job schedules
 
 Batch Events owns scheduling inside the API process. Script administrators choose
-an hourly minute or numeric five-field cron and an IANA timezone in Scripts Manager.
+an hourly minute, daily time, monthly day/time, or numeric five-field cron and an IANA
+timezone in Scripts Manager. Daily and monthly controls save ordinary cron expressions
+in the existing v4 format; matching expressions reopen in the simple editor. Monthly
+dates absent from a month are skipped. The advanced option links to crontab.guru;
+use numeric five-field syntax rather than names or shortcuts.
 Schedules default to disabled. Disable any equivalent Airflow/legacy trigger first.
 Scheduling requires script configuration **version 4**. New registrations use v4;
 existing v1–v3 registrations keep their execution behavior until an office administrator
@@ -34,6 +38,17 @@ recurring action, not impersonation of the administrator's current CDA session.
 Disabling stops future occurrences; already committed runs remain queued. Script saves
 record the administrator's private audit identity and readable name. Edits apply only
 prospectively. Existing registrations must be saved by an administrator before scheduling.
+
+The 15-second interval controls polling latency, not schedule precision (one minute).
+A due occurrence normally waits up to one polling interval for registration and another
+for delivery, plus processing time. Polling every minute would increase those waits;
+it would still work with the persisted cursor and catch-up window. This is not an
+execution-time guarantee: SQS, the dispatcher, and AWS Batch add their own latency.
+The loop uses Python `asyncio` and `asyncio.to_thread`; timezone conversion uses
+standard-library `zoneinfo`. The numeric cron validator/matcher is local code in
+`core/schedules.py`, not APScheduler or croniter. SQLAlchemy/PostgreSQL provide durable
+state and coordination; boto3 sends SQS messages. This keeps the worker integrated with
+the existing transaction/outbox design, but makes cron compatibility our responsibility.
 
 Office history shares automatic and manual runs through the existing office access rules.
 Automatic runs show Batch Events scheduler, Scheduled, the intended time/timezone, and

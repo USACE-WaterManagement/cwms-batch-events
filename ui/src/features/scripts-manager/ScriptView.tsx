@@ -9,6 +9,7 @@ import { useState } from "react";
 import { ScriptSections, ConfigSection } from "./ScriptSections";
 import type { ScriptSection } from "./configurationSections";
 import { UpgradeConfiguration } from "./UpgradeConfiguration";
+import { schedulePreset } from "./schedulePresets";
 
 export const RoleList = ({ roles }: { roles: string[] }) => {
   if (roles.length) {
@@ -45,6 +46,10 @@ interface ScriptViewProps {
 function scheduleDescription(script: Script): string {
   if (!script.scheduleEnabled) return "Disabled";
   if (script.scheduleType === "hourly") return `Every hour at minute ${script.scheduleMinute}`;
+  const preset = schedulePreset(script);
+  const [minute, hour, day] = (script.scheduleCron ?? "").trim().split(/\s+/);
+  if (preset === "daily") return `Every day at ${hour.padStart(2, "0")}:${minute.padStart(2, "0")}`;
+  if (preset === "monthly") return `Every month on day ${day} at ${hour.padStart(2, "0")}:${minute.padStart(2, "0")}`;
   return script.scheduleCron || "Not configured";
 }
 
