@@ -3,9 +3,7 @@ import { ViewField } from "./ViewField";
 import { Button, Text } from "@usace/groundwork";
 import type { Script } from "../scripts-manager/types";
 import { savedCommandPreview, supportsScriptVersion } from "./commandArguments";
-import { ScriptVersionNotice } from "./ScriptVersionNotice";
 import { ArgumentValues } from "./CommandSummary";
-import { useState } from "react";
 import { ScriptSections, ConfigSection } from "./ScriptSections";
 import type { ScriptSection } from "./configurationSections";
 import { UpgradeConfiguration } from "./UpgradeConfiguration";
@@ -41,6 +39,8 @@ function scriptRuntime(script: Script) {
 interface ScriptViewProps {
   script?: Script;
   onEdit: () => void;
+  section: ScriptSection;
+  onSectionChange: (section: ScriptSection) => void;
 }
 
 function scheduleDescription(script: Script): string {
@@ -53,14 +53,11 @@ function scheduleDescription(script: Script): string {
   return script.scheduleCron || "Not configured";
 }
 
-export const ScriptView = ({ script, onEdit }: ScriptViewProps) => {
-  const [section, setSection] = useState<ScriptSection>("general");
+export const ScriptView = ({ script, onEdit, section, onSectionChange }: ScriptViewProps) => {
   if (script) {
     return (
       <div className="flex flex-col gap-y-6">
-        <ScriptVersionNotice version={script.configVersion ?? 1} />
-        <UpgradeConfiguration key={script.id} script={script} />
-        <ScriptSections active={section} onSelect={setSection}>
+        <ScriptSections active={section} onSelect={onSectionChange}>
         <div className="flex flex-col gap-2">
           <ConfigSection id="general" active={section}>
           <ViewField label="Id">{script.id}</ViewField>
@@ -110,10 +107,9 @@ export const ScriptView = ({ script, onEdit }: ScriptViewProps) => {
           {script.scheduleError && <p role="alert" className="text-amber-900">{script.scheduleError}</p>}
           </ConfigSection>
           <ConfigSection id="access" active={section}>
-          <ViewField label="Roles">
             <RoleList roles={script.roles} />
-          </ViewField>
           </ConfigSection>
+          <ConfigSection id="upgrade" active={section}><UpgradeConfiguration key={script.id} script={script} /></ConfigSection>
         </div>
         </ScriptSections>
         <div className="w-full flex justify-end">

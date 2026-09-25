@@ -37,7 +37,7 @@ test("saves timezone schedules and disables scheduling when switched to manual",
     .first()
     .click();
   await page.getByRole("combobox").selectOption("SWT");
-  await expect(page.getByText("Scheduler is running", { exact: true })).toBeVisible();
+  await expect(page.getByText("Scheduler is running", { exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Create first script", exact: true }).click();
   await configSection(page, "General");
   await page.getByLabel("Name", { exact: true }).fill("Synthetic Schedule");
@@ -52,7 +52,7 @@ test("saves timezone schedules and disables scheduling when switched to manual",
   await configSection(page, "Schedule");
   await page.getByLabel("Timezone", { exact: true }).fill("America/Chicago");
   await configSection(page, "Schedule");
-  await page.getByLabel("Enable schedule", { exact: true }).check();
+  await page.getByRole("radio", { name: "Automatic", exact: true }).check();
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Edit", exact: true }),
@@ -66,11 +66,11 @@ test("saves timezone schedules and disables scheduling when switched to manual",
     await page.getByLabel("Run at", { exact: true }).fill("09:35");
     if (preset === "monthly") {
       await page.getByLabel("Day of month", { exact: true }).selectOption("31");
-      await expect(page.getByText("Months without day 31 are skipped.")).toBeVisible();
+      await expect(page.getByText("In shorter months, runs on the last day of the month.")).toBeVisible();
     }
     await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(page.getByRole("button", { name: "Edit", exact: true })).toBeVisible();
-    expect(saved?.scheduleType).toBe("cron");
+    expect(saved?.scheduleType).toBe(preset === "monthly" ? "monthly" : "cron");
     expect(saved?.scheduleCron).toBe(preset === "daily" ? "35 9 * * *" : "35 9 31 * *");
     await page.getByRole("button", { name: "Edit", exact: true }).click();
     await configSection(page, "Schedule");

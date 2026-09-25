@@ -1,11 +1,10 @@
 import { useAuth } from "@usace-watermanagement/groundwork-water";
-import { Accordion, Button, H1 } from "@usace/groundwork";
+import { Button, H1 } from "@usace/groundwork";
 import { useState } from "react";
 import { useJobsPage } from "./useJobsList";
 import { Link } from "@tanstack/react-router";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
-import JobDetail from "./JobDetail";
 import { jobStatusLabel } from "./jobStatus";
 import LoginPrompt from "../auth/LoginPrompt";
 import { RunTriggerBadge } from "./RunAttribution";
@@ -76,10 +75,10 @@ const JobsList = () => {
       {jobs.map((job) => {
         const dateAgo = dayjs(job.createdTime).fromNow();
         return (
-          <div key={job.id} className="flex min-w-0 items-start gap-2">
-          <div className="min-w-0 flex-1">
-          <Accordion
-            heading={
+          <Link key={job.id} to="/jobs/$jobId" params={{ jobId: job.id }}
+            aria-label={`Open ${job.scriptName ?? "job"} run ${new Date(job.createdTime).toLocaleString()}`}
+            className="flex min-h-16 items-center gap-3 rounded-lg border border-slate-200 bg-white p-4 hover:border-blue-400 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-blue-600">
+            {
               <span className="flex min-w-0 w-full flex-wrap justify-between gap-2 text-left">
                 <span className="min-w-0 break-all">
                   {job.scriptName} ({dateAgo})
@@ -88,25 +87,8 @@ const JobsList = () => {
                 <span className="inline-flex items-center gap-2"><RunTriggerBadge job={job} />{jobStatusLabel(job)}</span>
               </span>
             }
-          >
-            <div className="flex min-w-0 flex-col sm:flex-row">
-              <JobDetail job={job} />
-              <Link
-                to={`/jobs/$jobId`}
-                params={{ jobId: job.id }}
-                className="px-4 pb-4 content-end"
-              >
-                <Button>Details</Button>
-              </Link>
-            </div>
-          </Accordion>
-          </div>
-          <Link to="/jobs/$jobId" params={{ jobId: job.id }}
-            aria-label={`Open ${job.scriptName ?? "job"} run ${new Date(job.createdTime).toLocaleString()}`}
-            className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg border border-blue-300 bg-white px-3 py-2 font-medium text-blue-700 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
-            Open
+            <span aria-hidden className="text-xl text-blue-700">›</span>
           </Link>
-          </div>
         );
       })}
       </div>

@@ -273,6 +273,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/users/me/system-admin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get System Admin */
+        get: operations["get_system_admin_users_me_system_admin_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/me/admin-offices": {
         parameters: {
             query?: never;
@@ -908,6 +925,8 @@ export interface operations {
                 limit?: number | null;
                 /** @description Number of jobs to skip, newest first. */
                 offset?: number;
+                scriptId?: string | null;
+                latestPerScript?: boolean;
             };
             header?: never;
             path?: never;
@@ -1350,6 +1369,26 @@ export interface operations {
             };
         };
     };
+    get_system_admin_users_me_system_admin_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": boolean;
+                };
+            };
+        };
+    };
     get_admin_offices_users_me_admin_offices_get: {
         parameters: {
             query?: never;
@@ -1372,8 +1411,8 @@ export interface operations {
     };
     scheduler_status_scheduler_status_get: {
         parameters: {
-            query: {
-                office: string;
+            query?: {
+                office?: string | null;
             };
             header?: never;
             path?: never;

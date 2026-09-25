@@ -13,6 +13,7 @@ import { useRepositoryFiles, useRepositoryStatus } from "../features/scripts-man
 import { WarningIndicator } from "../components/WarningIndicator";
 import useAdminOffices from "../features/scripts-manager/useAdminOffices";
 import { EnvironmentBadge } from "../components/EnvironmentBadge";
+import { useSystemAdmin } from "../features/auth/useSystemAdmin";
 
 const primaryLinks = [
   { id: "jobs", text: "Job History", href: "/jobs" },
@@ -65,6 +66,7 @@ function repositoryButtonTitle(office: string | undefined, repositoryUrl: string
 
 function RootShell({ children }: { children: ReactNode }) {
   const auth = useAuth();
+  const systemAdmin = useSystemAdmin();
   const [githubOpen, setGithubOpen] = useState(false);
   const [selectedOffice] = useRememberedOffice([]);
   const status = useRepositoryStatus();
@@ -104,6 +106,7 @@ function RootShell({ children }: { children: ReactNode }) {
     ],
   };
   const navLinks = [...primaryLinks, aboutLink, helpLink, devLink];
+  if (auth.isAuth && systemAdmin.data === true) navLinks.push({ id: "admin", text: "Admin", href: "/admin" });
 
   return (
     <SiteWrapper links={navLinks}

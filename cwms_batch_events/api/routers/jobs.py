@@ -52,9 +52,18 @@ def get_jobs_for_user(
     offset: int = Query(
         default=0, ge=0, description="Number of jobs to skip, newest first.",
     ),
+    script_id: UUID | None = Query(default=None, alias="scriptId"),
+    latest_per_script: bool = Query(default=False, alias="latestPerScript"),
     user: User = Depends(get_current_user),
     job_db: JobDatabase = Depends(get_job_database),
 ) -> list[JobRecord]:
+    if latest_per_script:
+        if script_id is not None or limit is not None or offset:
+            raise HTTPException(422, "latestPerScript cannot be combined with pagination or scriptId")
+        return job_db.get_latest_jobs_for_offices(user.offices)
+    if script_id is not None:
+        response.headers["X-Total-Count"] = str(job_db.count_jobs_for_offices(user.offices, script_id=script_id))
+        return job_db.get_jobs_for_offices(user.offices, limit=limit or 10, offset=offset, script_id=script_id)
     if limit is not None or offset:
         response.headers["X-Total-Count"] = str(job_db.count_jobs_for_offices(user.offices))
         return job_db.get_jobs_for_offices(user.offices, limit=limit, offset=offset)

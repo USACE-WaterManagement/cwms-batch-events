@@ -1,4 +1,5 @@
 import re
+from calendar import monthrange
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -49,6 +50,10 @@ def is_due(script, minute: datetime) -> bool:
         return False
     if script.schedule_type == "hourly":
         return local.minute == script.schedule_minute
+    if script.schedule_type == "monthly":
+        minute_field, hour, day, _, _ = validate_cron(script.schedule_cron).split()
+        last_day = monthrange(local.year, local.month)[1]
+        return local.minute == int(minute_field) and local.hour == int(hour) and local.day == min(int(day), last_day)
     if script.schedule_type != "cron":
         return False
     minute_field, hour, day, month, weekday = validate_cron(script.schedule_cron).split()

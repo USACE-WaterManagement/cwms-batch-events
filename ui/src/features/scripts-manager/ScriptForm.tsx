@@ -23,6 +23,7 @@ import { Link } from "@tanstack/react-router";
 import { CommandSettings } from "./CommandSettings";
 import { CURRENT_SCRIPT_VERSION, supportsScriptVersion } from "./commandArguments";
 import { ScriptVersionNotice } from "./ScriptVersionNotice";
+import { ScriptVersionHelp } from "./CommandModal";
 
 import { schedulePreset, presetCron } from './schedulePresets';
 
@@ -109,6 +110,8 @@ interface ScriptFormProps {
   onSave: (data: ScriptFormData) => void | Promise<void>;
   onValidationChange?: (invalid: boolean) => void;
   onCancelEdit: () => void;
+  initialSection?: ScriptSection;
+  onSectionChange?: (section: ScriptSection) => void;
 }
 
 export const ScriptForm = ({
@@ -120,6 +123,8 @@ export const ScriptForm = ({
   onSave,
   onCancelEdit,
   onValidationChange,
+  initialSection = "general",
+  onSectionChange,
 }: ScriptFormProps) => {
   const [form, setForm] = useState<ScriptFormData>({
     configVersion: editableVersion(script),
@@ -148,7 +153,8 @@ export const ScriptForm = ({
   });
   const [scheduleDay, setScheduleDay] = useState(() => preset === 'monthly' ? initialFields[2] : '1');
 
-  const [section, setSection] = useState<ScriptSection>("general");
+  const [section, setLocalSection] = useState<ScriptSection>(initialSection);
+  const setSection = (next: ScriptSection) => { setLocalSection(next); onSectionChange?.(next); };
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
   const showErrors = (next: Record<string, string>) => {
@@ -321,7 +327,7 @@ export const ScriptForm = ({
                 const selected = e.target.value;
                 setPreset(selected);
                 if (selected === "daily" || selected === "monthly") {
-                  changeForm({ ...form, scheduleType: "cron", scheduleCron: presetCron(selected, scheduleTime, scheduleDay) });
+                  changeForm({ ...form, scheduleType: selected === "monthly" ? "monthly" : "cron", scheduleCron: presetCron(selected, scheduleTime, scheduleDay) });
                   return;
                 }
                 changeForm({ ...form, scheduleType: selected, scheduleEnabled: selected === "manual" ? false : form.scheduleEnabled });
@@ -355,7 +361,7 @@ export const ScriptForm = ({
                 </FormRow>
                 {errorFor("scheduleCron")}
                 <Text>Time is in the timezone selected below.</Text>
-                {preset === "monthly" && Number(scheduleDay) > 28 && <Text>Months without day {scheduleDay} are skipped.</Text>}
+                {preset === "monthly" && Number(scheduleDay) > 28 && <Text>In shorter months, runs on the last day of the month.</Text>}
               </div>}
               {preset === "hourly" && (
                 <FormRow>
@@ -433,31 +439,22 @@ export const ScriptForm = ({
                 </div>
               </FormRow>
           {errorFor("scheduleTimezone")}
-              <label htmlFor="scheduleEnabled" className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 ${form.scheduleEnabled ? "border-blue-200 bg-blue-50" : "border-slate-200 bg-slate-50"}`}>
-                <input
-                  id="scheduleEnabled"
-                  aria-label="Enable schedule"
-                  type="checkbox"
-                  className="mt-0.5 size-5 shrink-0 cursor-pointer accent-blue-700"
-                  checked={form.scheduleEnabled}
-                  onChange={(e) => update("scheduleEnabled", e.target.checked)}
-                />
-                <span><span className="block text-sm font-semibold text-slate-900">Enable schedule</span>
-                  <span className="mt-1 block text-sm leading-relaxed text-slate-600">Queue this script automatically at the times above.</span></span>
-              </label>
+              <p className="text-sm text-slate-600">Choose Automatic below to enable this schedule. Manual keeps it paused.</p>
             </>
           )}
           </fieldset>
           </ConfigSection>
           <ConfigSection id="access" active={section}>
-          <FormRow>
-            <InputLabel htmlFor="roles">Roles (optional)</InputLabel>
             <RoleMultiSelect
               allRoles={allRoles}
               initialSelectedRoles={form.roles}
               onChange={(selectedRoles) => update("roles", selectedRoles)}
             />
-          </FormRow>
+          </ConfigSection>
+          <ConfigSection id="upgrade" active={section}>
+            <ScriptVersionNotice version={form.configVersion ?? 1} />
+            <p className="text-sm">Save or cancel editing before upgrading the saved configuration.</p>
+            <ScriptVersionHelp />
           </ConfigSection>
         </Fieldset>
         </ScriptSections>
@@ -470,12 +467,16 @@ export const ScriptForm = ({
         </div>
         <div className="script-form-actions mt-4 flex w-full flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
           <div className="flex items-center gap-2">
-            <label className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 font-semibold ${form.active ? "border-green-600 bg-green-50 text-green-800" : "border-gray-300 bg-gray-100 text-gray-700"}`}>
-              <input id="active" type="checkbox" checked={form.active} disabled={isPending}
-                onChange={event => update("active", event.target.checked)} className="size-5 accent-green-700" />
-              Active
-            </label>
-            <FieldHelp label="Active">Active scripts are available to run. Clear this option to keep the script definition while disabling it.</FieldHelp>
+            <fieldset className="flex flex-wrap gap-3" disabled={isPending}>
+              <legend className="mb-1 text-xs text-slate-600">Run mode</legend>
+              <label className="flex cursor-pointer items-center gap-2"><input type="radio" name="runMode" checked={!form.scheduleEnabled} onChange={() => update("scheduleEnabled", false)} />Manual</label>
+              <label className="flex cursor-pointer items-center gap-2"><input type="radio" name="runMode" checked={form.scheduleEnabled} disabled={(form.configVersion ?? 1) < 4} onChange={() => {
+                changeForm({ ...form, scheduleEnabled: true, scheduleType: form.scheduleType === "manual" ? "hourly" : form.scheduleType });
+                if (preset === "manual") setPreset("hourly");
+                setSection("schedule");
+              }} />Automatic</label>
+            </fieldset>
+            {!form.active && <label className="text-sm"><input type="checkbox" checked={false} onChange={() => update("active", true)} /> Reactivate inactive script</label>}
           </div>
           {script && <DeleteConfirm onDelete={() => onDelete(script?.id)} />}
           <div className="ml-auto flex justify-between gap-3">

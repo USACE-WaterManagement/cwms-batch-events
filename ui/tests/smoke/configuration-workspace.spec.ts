@@ -36,6 +36,7 @@ test("explicit upgrade shows progress, recoverable failure, success, and stays u
     return route.fulfill({ json: [] });
   });
   await open(page);
+  await configSection(page, "Upgrade config");
   await page.getByRole("button", { name: "Upgrade configuration", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Saving configuration version 4" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Upgrading configuration…", exact: true })).toBeDisabled();
@@ -44,6 +45,7 @@ test("explicit upgrade shows progress, recoverable failure, success, and stays u
   expect(attempts).toBe(1);
   await page.getByRole("button", { name: "Upgrade configuration", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Configuration upgraded successfully" })).toBeVisible();
+  await configSection(page, "Upgrade config");
   await expect(page.getByRole("note")).toContainText("version 4");
   expect(jobs).toBe(0);
   expect(script.commandArgs).toEqual(original.commandArgs);
@@ -54,6 +56,7 @@ test("explicit upgrade shows progress, recoverable failure, success, and stays u
   await page.getByRole("button", { name: "Login", exact: true }).first().click();
   await page.getByRole("combobox").selectOption("SWT");
   await page.getByText(original.name, { exact: true }).click();
+  await configSection(page, "Upgrade config");
   await expect(page.getByRole("note")).toContainText("version 4");
   await expect(page.getByRole("button", { name: "Upgrade configuration", exact: true })).toHaveCount(0);
 });

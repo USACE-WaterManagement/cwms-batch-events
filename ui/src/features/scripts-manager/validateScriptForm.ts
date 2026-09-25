@@ -17,7 +17,7 @@ export function validateScriptForm(form: ScriptFormData): Record<string, string>
   if (form.scheduleType !== "manual") {
     if ((form.configVersion ?? 1) < 4) errors.scheduleType = "Upgrade configuration to version 4 before configuring a schedule.";
     if (form.scheduleType === "hourly" && (form.scheduleMinute == null || !Number.isInteger(form.scheduleMinute) || form.scheduleMinute < 0 || form.scheduleMinute > 59)) errors.scheduleMinute = "Enter a whole minute from 0 through 59.";
-    if (form.scheduleType === "cron") {
+    if (form.scheduleType === "cron" || form.scheduleType === "monthly") {
       const fields = (form.scheduleCron ?? "").trim().split(/\s+/);
       const ranges = [[0, 59], [0, 23], [1, 31], [1, 12], [0, 7]];
       const valid = fields.length === 5 && fields.every((field, index) => field.split(",").every(item => {

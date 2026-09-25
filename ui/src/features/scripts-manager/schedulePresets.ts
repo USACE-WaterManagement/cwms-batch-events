@@ -8,7 +8,7 @@ export function schedulePreset(form: Pick<ScriptFormData, "scheduleType" | "sche
   if (!/^\d+$/.test(minute) || Number(minute) > 59 || !/^\d+$/.test(hour) || Number(hour) > 23) return "cron";
   if (month !== "*" || weekday !== "*") return "cron";
   if (day === "*") return "daily";
-  if (/^\d+$/.test(day) && Number(day) >= 1 && Number(day) <= 31) return "monthly";
+  // Advanced cron keeps skip semantics; do not silently convert it to monthly fallback.
   return "cron";
 }
 

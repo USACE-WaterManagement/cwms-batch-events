@@ -2,6 +2,8 @@ import { ScriptForm } from "./ScriptForm";
 import { ScriptView } from "./ScriptView";
 import type { Script, ScriptFormData } from "../scripts-manager/types";
 import { MdTouchApp } from "react-icons/md";
+import { useState } from "react";
+import type { ScriptSection } from "./configurationSections";
 
 interface ScriptDetailPanelProps {
   office: string;
@@ -28,6 +30,7 @@ export const ScriptDetailPanel = ({
   onCancelEdit,
   onValidationChange,
 }: ScriptDetailPanelProps) => {
+  const [section, setSection] = useState<ScriptSection>("general");
   if (mode === "view" && !script) {
     return <section className="flex min-h-48 min-w-0 flex-col items-center justify-center gap-3 self-start rounded-xl border border-dashed border-gray-300 bg-gray-50 px-6 py-8 text-center">
       <MdTouchApp aria-hidden className="text-4xl text-gray-400" />
@@ -38,7 +41,7 @@ export const ScriptDetailPanel = ({
   let innerComponent;
 
   if (mode === "view") {
-    innerComponent = <ScriptView script={script} onEdit={onEdit} />;
+    innerComponent = <ScriptView script={script} onEdit={onEdit} section={section} onSectionChange={setSection} />;
   } else if (mode === "edit") {
     innerComponent = (
       <ScriptForm
@@ -51,6 +54,8 @@ export const ScriptDetailPanel = ({
         onSave={onSave}
         onCancelEdit={onCancelEdit}
         onValidationChange={onValidationChange}
+        initialSection={section}
+        onSectionChange={setSection}
       />
     );
   }

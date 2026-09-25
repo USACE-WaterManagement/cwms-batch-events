@@ -1,4 +1,3 @@
-import { ScriptVersionHelp } from "./CommandModal";
 
 function versionDescription(version: number): string {
   if (version === 1) return "Historical Python execution. Runtime, source, and separate arguments are not used. Use Upgrade configuration in Details before editing or using newer features.";
@@ -12,6 +11,5 @@ export function ScriptVersionNotice({ version }: { version: number }) {
   return <div className="rounded border border-blue-200 bg-blue-50 p-3 text-sm" role="note" aria-label="Script configuration version">
     <p className="font-semibold">Script configuration version {version}</p>
     <p>{versionDescription(version)}</p>
-    <div className="mt-3"><ScriptVersionHelp /></div>
   </div>;
 }

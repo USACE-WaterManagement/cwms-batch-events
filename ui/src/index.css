@@ -1,6 +1,10 @@
 @import "tailwindcss";
 @import "@usace/groundwork/dist/groundwork.css" layer(components);
 
+button, [role="tab"], nav, .scripts-list-scroll tr, .script-form-actions label {
+  user-select: none;
+}
+
 /* Bound the modal panel itself; wide log tables scroll inside the panel. */
 .server-status-modal [id^="headlessui-dialog-panel-"] {
   width: min(64rem, 100%);

@@ -3,13 +3,14 @@ import { useAuth } from "@usace-watermanagement/groundwork-water";
 import fetchWithAuth from "../../utils/fetchWithAuth";
 import type { components } from "../../generated/api-types";
 
-export function SchedulerStatus({ office }: { office: string }) {
+export function SchedulerStatus({ office }: { office?: string }) {
   const auth = useAuth();
   const status = useQuery({
     queryKey: ["scheduler-status", office],
     meta: { inlineError: true },
     queryFn: async () => {
-      const response = await fetchWithAuth(`/api/scheduler/status?office=${encodeURIComponent(office)}`, {}, auth.token);
+      const query = office ? `?office=${encodeURIComponent(office)}` : "";
+      const response = await fetchWithAuth(`/api/scheduler/status${query}`, {}, auth.token);
       if (!response.ok) throw new Error("Scheduler status is unavailable");
       const data = await response.json() as components["schemas"]["SchedulerStatus"];
       if (!Array.isArray(data.tasks)) throw new Error("Scheduler status is unavailable");

@@ -50,7 +50,7 @@ def create_demo():
     from cwms_batch_events.core.queue import JobQueue
     from cwms_batch_events.core.maintenance import supervise, register_due_jobs, deliver_pending_jobs
     actor = User(username="demo-operator", display_name="Demo Operator", offices=["SWT"],
-                 admin_offices=["SWT"], roles={"SWT": ["CWMS Users"]})
+                 admin_offices=["SWT"], roles={"SWT": ["CWMS Users"], "HQ": ["CWMS Admin"]})
 
     class DemoQueue(JobQueue):
         def __init__(self):

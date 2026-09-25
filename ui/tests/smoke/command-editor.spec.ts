@@ -33,13 +33,13 @@ test("UI adapts to legacy and unknown versions without a version selector", asyn
   await page.getByRole("button", { name: "Login", exact: true }).first().click();
   await page.getByRole("combobox").first().selectOption("SWT");
   await page.getByRole("combobox").last().selectOption("version-1");
-  await expect(page.getByRole("note")).toContainText("Historical Python execution");
+  await expect(page.getByRole("note")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Custom run", exact: true })).toBeDisabled();
   await expect(page.getByText(/AWS Batch: python \/jobs\/python\/report.py/)).toBeVisible();
   await page.getByRole("combobox").last().selectOption("version-99");
   await expect(page.getByRole("button", { name: "Submit job", exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Custom run", exact: true })).toBeDisabled();
-  await expect(page.getByRole("note")).toContainText("does not support");
+  await expect(page.getByRole("alert")).toContainText("does not support");
   await page.getByRole("combobox").last().selectOption("version-2");
   await page.getByRole("button", { name: "Custom run", exact: true }).click();
   await expect(page.getByRole("option", { name: "Bash command (requires version 3 upgrade)", exact: true })).toBeAttached();

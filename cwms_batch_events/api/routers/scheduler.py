@@ -27,20 +27,21 @@ class SchedulerStatus(CamelModel):
 
 
 @router.get("/scheduler/status", response_model=SchedulerStatus)
-def scheduler_status(office: str, user: User = Depends(get_current_user)):
-    office = office.upper()
-    if office not in user.offices:
-        raise HTTPException(404, "Office not found")
+def scheduler_status(office: str | None = None, user: User = Depends(get_current_user)):
+    if "CWMS Admin" not in user.roles.get("HQ", []):
+        raise HTTPException(403, "HQ CWMS Admin role required")
+    if office:
+        office = office.upper()
     with create_session() as db:
         now = db.scalar(text("SELECT CURRENT_TIMESTAMP"))
         tasks = [TaskHealth(name=row.name, last_success=row.last_success,
             healthy=bool(row.last_success and now - row.last_success < timedelta(minutes=2)))
             for row in db.execute(text("SELECT name, last_success FROM maintenance_tasks ORDER BY name"))]
         pending = db.scalar(text("""SELECT count(*) FROM job_outbox o JOIN jobs j ON j.id=o.job_id
-            WHERE j.office=:office AND o.sent_at IS NULL"""), {"office": office})
+            WHERE (CAST(:office AS text) IS NULL OR j.office=:office) AND o.sent_at IS NULL"""), {"office": office})
         attention = db.scalar(text("""SELECT count(*) FROM jobs
-            WHERE office=:office AND scheduled_for IS NOT NULL AND job_status='Pending'
+            WHERE (CAST(:office AS text) IS NULL OR office=:office) AND scheduled_for IS NOT NULL AND job_status='Pending'
               AND created_time < :cutoff"""), {"office": office, "cutoff": now - timedelta(minutes=10)})
-        invalid = db.scalar(text("SELECT count(*) FROM scripts WHERE office=:office AND schedule_enabled AND schedule_error IS NOT NULL"), {"office": office})
+        invalid = db.scalar(text("SELECT count(*) FROM scripts WHERE (CAST(:office AS text) IS NULL OR office=:office) AND schedule_enabled AND schedule_error IS NOT NULL"), {"office": office})
         return SchedulerStatus(enabled=get_settings().scheduler_enabled, tasks=tasks,
                                pending_delivery=pending, needs_attention=attention, invalid_schedules=invalid)

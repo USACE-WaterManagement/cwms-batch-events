@@ -87,9 +87,21 @@ def main():
         with create_session() as db:
             assert db.get(JobModel, before.id).config_version == 2
             assert len(db.scalars(select(JobModel).where(JobModel.script_id == legacy_id)).all()) == 1
-        status = client.get("/scheduler/status?office=SWT")
+        assert client.get("/scheduler/status?office=SWT").status_code == 403
+        hq_admin = actor.model_copy(update={"roles": {"HQ": ["CWMS Admin"]}})
+        app.dependency_overrides[get_current_user] = lambda: hq_admin
+        status = client.get("/scheduler/status")
         assert status.status_code == 200 and status.json()["pendingDelivery"] == 0
-        assert client.get("/scheduler/status?office=NWD").status_code == 404
+        assert client.get("/scheduler/status?office=NWD").status_code == 200
+        app.dependency_overrides[get_current_user] = lambda: actor
+        page = client.get(f"/jobs?scriptId={script.id}&limit=10&offset=0")
+        assert page.status_code == 200 and page.headers["X-Total-Count"] == "1"
+        assert [row["id"] for row in page.json()] == [str(job_id)]
+        assert client.get(f"/jobs?scriptId={script.id}&limit=10&offset=10").json() == []
+        latest = client.get("/jobs?latestPerScript=true")
+        assert latest.status_code == 200
+        assert len([row for row in latest.json() if row["scriptId"] == str(script.id)]) == 1
+        assert all(row["office"] == "SWT" for row in latest.json())
         history = client.get(f"/jobs/{job_id}").json()
         assert history["runTrigger"] == "scheduled" and history["scheduleAuthor"] == "Schedule Test Admin"
     app.dependency_overrides.clear()

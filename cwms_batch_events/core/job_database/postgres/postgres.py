@@ -234,17 +234,23 @@ class PostgresJobDatabase:
             return None
         return JobRecord.model_validate(job_model)
 
-    def count_jobs_for_offices(self, offices: list[str]) -> int:
+    def get_latest_jobs_for_offices(self, offices: list[str]) -> list[JobRecord]:
+        rows = self.db.scalars(select(JobModel).where(JobModel.office.in_(offices), JobModel.script_id.is_not(None))
+            .distinct(JobModel.script_id).order_by(JobModel.script_id, JobModel.created_time.desc(), JobModel.id.desc())).all()
+        return [JobRecord.model_validate(row) for row in rows]
+
+    def count_jobs_for_offices(self, offices: list[str], script_id: uuid.UUID | None = None) -> int:
         return self.db.scalar(
-            select(func.count()).select_from(JobModel).where(JobModel.office.in_(offices))
+            select(func.count()).select_from(JobModel).where(JobModel.office.in_(offices),
+                True if script_id is None else JobModel.script_id == script_id)
         )
 
     def get_jobs_for_offices(
-        self, offices: list[str], limit: int | None = None, offset: int = 0
+        self, offices: list[str], limit: int | None = None, offset: int = 0, script_id: uuid.UUID | None = None
     ) -> list[JobRecord]:
         job_models = self.db.scalars(
             select(JobModel)
-            .where(JobModel.office.in_(offices))
+            .where(JobModel.office.in_(offices), True if script_id is None else JobModel.script_id == script_id)
             .order_by(JobModel.created_time.desc(), JobModel.id.desc())
             .limit(limit)
             .offset(offset)

@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ScriptsManagerRouteImport } from './routes/scripts-manager'
 import { Route as SubmitRouteImport } from './routes/submit'
 import { Route as AboutControlsRouteImport } from './routes/about_.controls'
@@ -31,6 +32,11 @@ const IndexRoute = IndexRouteImport.update({
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
   path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ScriptsManagerRoute = ScriptsManagerRouteImport.update({
@@ -92,6 +98,7 @@ const JobsJobIdRoute = JobsJobIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/admin': typeof AdminRoute
   '/scripts-manager': typeof ScriptsManagerRoute
   '/submit': typeof SubmitRoute
   '/about/controls': typeof AboutControlsRoute
@@ -107,6 +114,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/admin': typeof AdminRoute
   '/scripts-manager': typeof ScriptsManagerRoute
   '/submit': typeof SubmitRoute
   '/about/controls': typeof AboutControlsRoute
@@ -123,6 +131,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/admin': typeof AdminRoute
   '/scripts-manager': typeof ScriptsManagerRoute
   '/submit': typeof SubmitRoute
   '/about_/controls': typeof AboutControlsRoute
@@ -140,6 +149,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
+    | '/admin'
     | '/scripts-manager'
     | '/submit'
     | '/about/controls'
@@ -155,6 +165,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/about'
+    | '/admin'
     | '/scripts-manager'
     | '/submit'
     | '/about/controls'
@@ -170,6 +181,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/about'
+    | '/admin'
     | '/scripts-manager'
     | '/submit'
     | '/about_/controls'
@@ -186,6 +198,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  AdminRoute: typeof AdminRoute
   ScriptsManagerRoute: typeof ScriptsManagerRoute
   SubmitRoute: typeof SubmitRoute
   AboutControlsRoute: typeof AboutControlsRoute
@@ -213,6 +226,13 @@ declare module '@tanstack/react-router' {
       path: '/about'
       fullPath: '/about'
       preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/scripts-manager': {
@@ -298,6 +318,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  AdminRoute: AdminRoute,
   ScriptsManagerRoute: ScriptsManagerRoute,
   SubmitRoute: SubmitRoute,
   AboutControlsRoute: AboutControlsRoute,

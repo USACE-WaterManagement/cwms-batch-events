@@ -92,7 +92,7 @@ test("run from a script row, inspect its runs, and switch Groundwork tabs", asyn
   await expect(page).toHaveURL(/\/events\/scripts-manager$/);
   expect(posts).toBe(1);
   await expect(page.getByRole("list").filter({ has: page.getByRole("button", { name: /Completed/ }) }).getByRole("button")).toHaveCount(1);
-  await page.getByRole("tabpanel").getByRole("button", { name: /Completed Open/ }).click();
+  await page.getByRole("tabpanel").getByRole("button", { name: /Completed/ }).click();
   await expect(page.getByRole("region", { name: "Selected job run" })).toContainText(job.id);
   await capture("onboarding-job-runs");
   await page.setViewportSize({ width: 390, height: 844 });
@@ -122,7 +122,7 @@ test("run from a script row, inspect its runs, and switch Groundwork tabs", asyn
   await page.getByLabel("Source", { exact: true }).selectOption("command");
   await configSection(page, "Source & path");
   await page.getByLabel("Executable", { exact: true }).fill("bash");
-  await configSection(page, "Arguments & command");
+  await configSection(page, "Command");
   await page.getByRole("button", { name: "Add arguments", exact: true }).click();
   await page.getByLabel("Arguments", { exact: true }).fill(formatArguments(script.commandArgs));
   await page.getByRole("button", { name: "Apply arguments", exact: true }).click();

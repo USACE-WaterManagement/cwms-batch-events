@@ -28,7 +28,7 @@ test("Scripts Manager argument modal applies drafts, cancels edits, without upgr
   await page.getByRole("combobox").selectOption("SWT");
   const row = page.locator("tr").filter({ hasText: script.name });
   await row.getByRole("button", { name: `Edit ${script.name}`, exact: true }).click();
-  await configSection(page, "Arguments & command");
+  await configSection(page, "Command");
   await page.getByRole("button", { name: "Add arguments", exact: true }).click();
   await page.getByLabel("Arguments", { exact: true }).fill('--date 2026-09-23 --office SWT --name "Daily reservoir report"   ');
   await expect(page.getByRole("dialog", { name: "Edit arguments and command" }).getByLabel("Parsed arguments")).toContainText('6: "Daily reservoir report"');
@@ -39,7 +39,7 @@ test("Scripts Manager argument modal applies drafts, cancels edits, without upgr
   await page.setViewportSize({ width: 1600, height: 1100 });
   await expect(page.getByRole("region", { name: "Script arguments" })).toContainText("6 arguments");
   await capture("scripts-manager-rendered-arguments");
-  await configSection(page, "Arguments & command");
+  await configSection(page, "Command");
   await page.getByRole("button", { name: "Edit arguments", exact: true }).click();
   await page.getByLabel("Arguments", { exact: true }).fill('"unfinished');
   await expect(page.getByRole("button", { name: "Apply arguments", exact: true })).toBeDisabled();
@@ -47,6 +47,7 @@ test("Scripts Manager argument modal applies drafts, cancels edits, without upgr
   await expect(page.getByRole("region", { name: "Script arguments" })).toContainText("6 arguments");
   expect(writes).toBe(0);
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await configSection(page, "Upgrade config");
   await expect(page.getByRole("button", { name: "Upgrade configuration", exact: true })).toBeVisible();
   await expect(page.getByRole("note")).toContainText("configuration version 2");
   expect(writes).toBe(0);

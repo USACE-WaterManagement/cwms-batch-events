@@ -12,6 +12,7 @@ export const useUpdateScript = (office: string) => {
       updateScript({ ...args, token: auth.token }),
 
     onSuccess: (updatedScript) => {
+      void queryClient.invalidateQueries({ queryKey: ["catalog"] });
       queryClient.setQueryData<Script[]>(["scripts", office], (oldData) => {
         if (!oldData) return oldData;
 

@@ -40,7 +40,7 @@ test("registers and edits an installed Java command with separate arguments", as
   await page.getByLabel("Source", { exact: true }).selectOption("command");
   await configSection(page, "Source & path");
   await page.getByLabel("Executable", { exact: true }).fill("java");
-  await configSection(page, "Arguments & command");
+  await configSection(page, "Command");
   await page.getByRole("button", { name: "Add arguments", exact: true }).click();
   await page
     .getByLabel("Arguments", { exact: true })
@@ -55,7 +55,7 @@ test("registers and edits an installed Java command with separate arguments", as
   expect(saved?.commandArgs).toEqual(["-jar", "/opt/report.jar", "two words"]);
   expect(saved?.jobRunners).toEqual(["runner-1"]);
   await page.getByRole("button", { name: "Edit", exact: true }).click();
-  await configSection(page, "Arguments & command");
+  await configSection(page, "Command");
   await page.getByRole("button", { name: "Edit arguments", exact: true }).click();
   await expect(page.getByLabel("Arguments", { exact: true })).toHaveValue(
     "-jar /opt/report.jar 'two words'",
@@ -69,7 +69,7 @@ test("registers and edits an installed Java command with separate arguments", as
   await page
     .getByLabel("JAR Path", { exact: true })
     .fill("java-artifacts/BuildWSmetadataViaCDA.jar");
-  await configSection(page, "Arguments & command");
+  await configSection(page, "Command");
   await page.getByRole("button", { name: "Edit arguments", exact: true }).click();
   await page.getByLabel("Arguments", { exact: true }).fill('"two words"');
   await page.getByRole("button", { name: "Apply arguments", exact: true }).click();
@@ -114,6 +114,7 @@ test("legacy registration upgrades only through the dedicated action", async ({ 
   await page.getByText("Legacy Python", { exact: true }).click();
   await expect(page.getByRole("button", { name: "Edit", exact: true })).toBeDisabled();
   expect(writes).toBe(0);
+  await configSection(page, "Upgrade config");
   await page.getByRole("button", { name: "Upgrade configuration", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Configuration upgraded successfully" })).toBeVisible();
   expect(writes).toBe(1);

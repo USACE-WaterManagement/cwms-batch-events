@@ -268,8 +268,8 @@ class ScriptBase(CamelModel):
 
     @field_validator("schedule_type")
     def validate_schedule_type(cls, value: str) -> str:
-        if value not in {"manual", "hourly", "cron"}:
-            raise ValueError("scheduleType must be one of: manual, hourly, cron")
+        if value not in {"manual", "hourly", "monthly", "cron"}:
+            raise ValueError("scheduleType must be one of: manual, hourly, monthly, cron")
         return value
 
     @field_validator("schedule_minute")
@@ -291,12 +291,16 @@ class ScriptBase(CamelModel):
 
     @model_validator(mode="after")
     def validate_enabled_schedule(self):
+        if self.schedule_type == "monthly":
+            fields = (self.schedule_cron or "").split()
+            if len(fields) != 5 or not all(field.isdigit() for field in fields[:3]) or fields[3:] != ["*", "*"]:
+                raise ValueError("Monthly schedules require a numeric minute, hour, and day followed by * *")
         if not self.schedule_enabled:
             return self
 
         if self.schedule_type == "manual":
             raise ValueError(
-                "scheduleType must be hourly or cron when scheduleEnabled is true"
+                "scheduleType must be hourly, monthly, or cron when scheduleEnabled is true"
             )
 
         if self.schedule_type == "hourly" and self.schedule_minute is None:

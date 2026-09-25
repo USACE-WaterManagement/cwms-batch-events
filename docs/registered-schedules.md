@@ -2,21 +2,27 @@
 
 Batch Events owns scheduling inside the API process. Script administrators choose
 an hourly minute, daily time, monthly day/time, or numeric five-field cron and an IANA
-timezone in Scripts Manager. Daily and monthly controls save ordinary cron expressions
-in the existing v4 format; matching expressions reopen in the simple editor. Monthly
-dates absent from a month are skipped. The advanced option links to crontab.guru;
+timezone in Scripts Manager. Daily controls save ordinary cron expressions. Monthly
+uses an explicit `monthly` type with a numeric minute/hour/day expression: when that
+day is absent, it runs on the month's last day (including leap years). Advanced cron
+retains standard skip behavior and is never silently converted to monthly fallback.
+The advanced option links to crontab.guru;
 use numeric five-field syntax rather than names or shortcuts.
 Schedules default to disabled. Disable any equivalent Airflow/legacy trigger first.
 Scheduling requires script configuration **version 4**. New registrations use v4;
 existing v1–v3 registrations keep their execution behavior until an office administrator
-chooses **Upgrade configuration** in Details. The upgrade is a separate, idempotent
+chooses **Upgrade config** in the Details sidebar. The upgrade is a separate, idempotent
 request with progress and success/error feedback; it never submits a job or enables
 a schedule. Ordinary runs do not prompt, and edits retain the existing version.
 Legacy v1 upgrades keep effective Python execution and clear ignored runtime/argument
 fields. Ambiguous historical paths require a reviewed replacement rather than a guessed
 conversion. Existing job snapshots remain unchanged, and stale writes cannot downgrade v4.
 
-Details has General, Source & path, Arguments & command, Access, and Schedule sections.
+Details has General, Source & path, Command, Access, Schedule, and Upgrade config sections.
+The sidebar connects to its content panel; small screens use a dropdown. Edit retains
+the selected section. The version guide lives in Upgrade config and uses client routing.
+Manual/Automatic radio controls pause or enable scheduling; automatic scripts have a
+list badge. Legacy inactive scripts remain inactive until explicitly reactivated.
 Save highlights sections and inputs needing correction while retaining the draft.
 No new service, EventBridge schedule, or IAM permission is required: the API uses
 its existing PostgreSQL and SQS access. Application deployments and migrations
@@ -79,8 +85,12 @@ does not concatenate all CloudWatch streams into one output pane.
   The watchdog cannot restart an entirely stopped API; existing ECS/process supervision
   must do that. All API replicas down means scheduling pauses. No new alerting is added.
 
-`GET /scheduler/status?office=SWT` exposes heartbeats and office-scoped pending delivery,
-old pending runs, and invalid schedule counts. `SCHEDULER_ENABLED=false` is an optional
+The Admin page and `GET /scheduler/status` require the **CWMS Admin role in HQ**, enforced
+by the API. Status aggregates all offices; optional `?office=SWT` filters its counts.
+District script administrators do not see the overall utility status in Scripts Manager.
+Run history requests ten office-authorized runs for a script at a time, loading more on
+scroll with a Load more fallback. The sidebar fetches only the latest run per script.
+`SCHEDULER_ENABLED=false` is an optional
 emergency stop, applied consistently across replicas. It defaults to enabled, but the
 migrations enable no schedules. Use per-script controls for normal rollout.
 
@@ -93,7 +103,7 @@ dispatch claims while queue messages may still be redelivered.
 
 ## Deployment and rollback
 
-1. Apply migrations through **1.01.19** using the existing pipeline, after office history
+1. Apply migrations through **1.01.20** using the existing pipeline, after office history
    1.01.17. Do not renumber applied migrations.
 2. Deploy the API, updated dispatcher Lambda/local dispatcher, and UI. Keep schedules
    disabled until all are updated: old dispatchers reject the scheduler message source.

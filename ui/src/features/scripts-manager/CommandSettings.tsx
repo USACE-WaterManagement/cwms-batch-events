@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@usace/groundwork";
 import { CommandEditor } from "./CommandEditor";
-import { CommandModal, ScriptVersionHelp } from "./CommandModal";
+import { CommandModal } from "./CommandModal";
 import { CommandSummary } from "./CommandSummary";
 import type { ScriptFormData } from "./types";
 
@@ -30,7 +30,6 @@ export function CommandSettings({ value, onChange, disabled }: {
     </>}>
       <p className="text-sm text-slate-600">Changes are applied to this form. Save the script when you are ready.</p>
       {draft && <CommandEditor value={draft} onChange={setDraft} onValidityChange={setValid} />}
-      <ScriptVersionHelp />
     </CommandModal>
   </section>;
 }

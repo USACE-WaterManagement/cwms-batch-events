@@ -15,11 +15,13 @@ import useJobsList from "../jobs-list/useJobsList";
 
 interface ScriptsWorkspaceProps {
   office: string;
+  initialScriptId?: string;
+  initialEdit?: boolean;
 }
 
-export const ScriptsWorkspace = ({ office }: ScriptsWorkspaceProps) => {
+export const ScriptsWorkspace = ({ office, initialScriptId, initialEdit }: ScriptsWorkspaceProps) => {
   const scripts = useOfficeScripts(office);
-  const jobs = useJobsList(true);
+  const jobs = useJobsList(true, true);
   const createScriptMutation = useCreateScript(office);
   const deleteScriptMutation = useDeleteScript(office);
   const updateScriptMutation = useUpdateScript(office);
@@ -27,9 +29,9 @@ export const ScriptsWorkspace = ({ office }: ScriptsWorkspaceProps) => {
 
   const [selectedScriptId, setSelectedScriptId] = useState<
     string | undefined
-  >();
+  >(initialScriptId);
 
-  const [panelMode, setPanelMode] = useState<"view" | "edit">("view");
+  const [panelMode, setPanelMode] = useState<"view" | "edit">(initialEdit ? "edit" : "view");
   const [creating, setCreating] = useState(false);
   const [invalidDetails, setInvalidDetails] = useState(false);
   const [panelTab, setPanelTab] = useState({ index: 0, revision: 0 });
@@ -168,13 +170,14 @@ export const ScriptsWorkspace = ({ office }: ScriptsWorkspaceProps) => {
             office={office} script={selectedScript} mode={panelMode} isPending={isPending}
             mutationError={mutationError} onDelete={onDelete} onEdit={onEdit}
             onSave={onSave} onCancelEdit={onCancelEdit} onValidationChange={setInvalidDetails} /> },
-          { name: "Run script", content: <ScriptRunJob script={selectedScript} onSubmitted={job => {
+          { name: "Run script", content: <ScriptRunJob script={selectedScript} onEdit={() => { showTab(0); onEdit(); }} onSubmitted={job => {
             setSelectedScriptId(job.scriptId ?? selectedScript.id);
             setPanelMode("view");
             setSelectedJobId(job.id);
             showTab(2);
           }} /> },
           { name: "Run history", content: <ScriptJobRuns script={selectedScript}
+            latestRunId={jobs.data?.filter(job => job.scriptId === selectedScript.id).sort((a, b) => new Date(b.createdTime).getTime() - new Date(a.createdTime).getTime())[0]?.id}
             selectedJobId={selectedJobId} onSelectJob={setSelectedJobId} /> },
         ]} />
         </div>

@@ -66,7 +66,7 @@ test("browse files, field help, responsive footer, and help navigation", async (
   await page.getByLabel("Name",{exact:true}).fill("Upload job status");
   await configSection(page, "Source & path");
   await page.getByLabel("Executable",{exact:true}).fill("bash");
-  await configSection(page, "Arguments & command");
+  await configSection(page, "Command");
   await page.getByRole("button",{name:"Add arguments",exact:true}).click();
   await page.getByLabel("Command mode",{exact:true}).selectOption("shell");
   await page.getByLabel("Bash command",{exact:true}).fill("printf 'Job completed\\n' > /tmp/job-status.txt && cwms-cli blob upload --input-file /tmp/job-status.txt --blob-id JOB-STATUS --media-type text/plain --office SWT");
@@ -82,7 +82,7 @@ test("browse files, field help, responsive footer, and help navigation", async (
   await page.getByLabel("Role to add").selectOption("RDL Reviewer");
   await page.getByRole("button",{name:"Add role",exact:true}).click();
   await page.setViewportSize({width:390,height:700});
-  await page.getByLabel("Active",{exact:true}).uncheck();
+  await page.getByRole("radio",{name:"Manual",exact:true}).check();
   await expect(page.getByRole("button",{name:"Save",exact:true})).toBeInViewport();
   const bounds = await page.evaluate(() => ({
     fields: document.querySelector(".script-form-fields")!.getBoundingClientRect().bottom,
