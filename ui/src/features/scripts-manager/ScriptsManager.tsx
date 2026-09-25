@@ -35,9 +35,10 @@ export const ScriptsManager = () => {
 
   return (
     <>
-      <OfficeSelector offices={data} value={selectedOffice} onChange={next => { setOffice(next); void navigate({ to: "/scripts-manager", search: {}, replace: true }); }} />
       {selectedOffice && <ScriptsWorkspace key={selectedOffice} office={selectedOffice} initialScriptId={search.scriptId} initialJobId={search.jobId} initialEdit={search.edit}
+        officeSelector={<label className="flex items-center gap-2 text-sm font-medium text-slate-600">Office<select aria-label="Office" value={selectedOffice} className="min-h-10 rounded-md border border-slate-300 bg-white py-2 pl-3 pr-9 text-slate-900" onChange={event => { setOffice(event.target.value); void navigate({ to: "/scripts-manager", search: {}, replace: true }); }}>{[...data].sort().map(code => <option key={code} value={code}>{code}</option>)}</select></label>}
         search={scriptSearch} onSearch={setScriptSearch} searchTerm={searchTerm} />}
+      {!selectedOffice && <OfficeSelector offices={data} value={selectedOffice} onChange={setOffice} />}
     </>
   );
 };

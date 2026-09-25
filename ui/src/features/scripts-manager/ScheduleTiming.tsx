@@ -28,12 +28,13 @@ export function ScheduleTiming({ script, enabled, editing = false }: { script: S
   if (isPending) { next = "Loading…"; last = "Loading…"; }
   if (isError) { next = "Timing unavailable"; last = "Timing unavailable"; }
   return <div className="rounded-lg border border-blue-100 bg-blue-50/50 p-3 text-sm">
+    <p className="mb-3 inline-flex flex-wrap items-center gap-2 rounded-md border border-blue-200 bg-white px-3 py-2 text-blue-950"><MdSchedule aria-hidden /><span>Timezone</span><strong>{timezone}</strong></p>
     <p className="mb-3 text-xs font-semibold text-slate-700">The minimum schedule interval is 5 minutes.</p>
     {script.scheduleError && <p role="alert" className="mb-3 rounded border border-amber-700 bg-amber-50 p-3 text-amber-950">{script.scheduleError}</p>}
     <dl className="grid gap-3">
       <div><dt className="flex items-center gap-2 font-semibold text-slate-600"><MdSchedule aria-hidden />Next scheduled run</dt><dd className="mt-1">{next}</dd></div>
       <div><dt className="flex items-center gap-2 font-semibold text-slate-600"><MdHistory aria-hidden />Last finished run</dt><dd className="mt-1">{last}</dd></div>
     </dl>
-    <p className="mt-3 text-xs text-slate-500">{timezone}. {editing ? "Based on the saved schedule. Save to update the next run." : "Scheduled times are queue times; execution may start later."}</p>
+    <p className="mt-3 text-xs text-slate-500">{editing ? "Based on the saved schedule. Save to update the next run." : "Scheduled times are queue times. Execution may start later."}</p>
   </div>;
 }

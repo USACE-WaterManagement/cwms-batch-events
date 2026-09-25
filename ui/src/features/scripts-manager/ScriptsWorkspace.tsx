@@ -4,7 +4,7 @@ import { ScriptForm } from "./ScriptForm";
 import { ScriptsList } from "./ScriptsList";
 import { ScriptCreate, ScriptFormData, ScriptUpdate } from "./types";
 import useOfficeScripts from "./useOfficeScripts";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Button, H2, Modal, Tabs } from "@usace/groundwork";
 import { ScriptJobRuns, ScriptRunJob } from "./ScriptJobs";
 import { useUpdateScript } from "./useUpdateScript";
@@ -16,6 +16,7 @@ import useJobsList from "../jobs-list/useJobsList";
 import { useNavigate } from "@tanstack/react-router";
 
 interface ScriptsWorkspaceProps {
+  officeSelector?: ReactNode;
   office: string;
   initialScriptId?: string;
   initialEdit?: boolean;
@@ -25,7 +26,7 @@ interface ScriptsWorkspaceProps {
   onSearch: (search: string) => void;
 }
 
-export const ScriptsWorkspace = ({ office, initialScriptId, initialEdit, initialJobId, search, searchTerm, onSearch }: ScriptsWorkspaceProps) => {
+export const ScriptsWorkspace = ({ officeSelector, office, initialScriptId, initialEdit, initialJobId, search, searchTerm, onSearch }: ScriptsWorkspaceProps) => {
   const navigate = useNavigate();
   const scripts = useOfficeScripts(office);
   const jobs = useJobsList(true, true);
@@ -148,10 +149,10 @@ export const ScriptsWorkspace = ({ office, initialScriptId, initialEdit, initial
     updateScriptMutation.error;
 
   return (
-    <div className="scripts-workspace mt-4 grid w-full grid-cols-[repeat(auto-fit,minmax(min(100%,36rem),1fr))] gap-6">
+    <div className="scripts-workspace grid w-full grid-cols-[repeat(auto-fit,minmax(min(100%,36rem),1fr))] gap-6">
       <div className="min-w-0">
-        <header className="flex justify-between">
-          <H2>{office.toUpperCase()} Jobs</H2>
+        <header className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3"><H2>{office.toUpperCase()} Jobs</H2>{officeSelector}</div>
           {scripts.data.length > 0 && <Button onClick={onNew}>New +</Button>}
         </header>
         {scripts.data.length > 0 && <div className="mt-3 space-y-2">

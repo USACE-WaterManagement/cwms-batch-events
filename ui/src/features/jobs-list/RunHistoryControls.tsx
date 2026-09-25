@@ -1,14 +1,14 @@
 import type { RunDateRange } from "./runDateRange";
 export type { RunDateRange } from "./runDateRange";
 export function RunDatePicker({ value, onChange }: { value: RunDateRange; onChange: (range: RunDateRange) => void }) {
-  return <fieldset className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-    <legend className="px-1 text-sm font-semibold">Submitted date range</legend>
-    <div className="flex flex-wrap items-end gap-3">
-      <label className="text-sm font-semibold">From<input aria-label="From date" type="date" max={value.end || undefined} value={value.start} onChange={event => onChange({ ...value, start: event.target.value })} className="mt-1 block rounded border bg-white p-2" /></label>
-      <label className="text-sm font-semibold">Through<input aria-label="Through date" type="date" min={value.start || undefined} value={value.end} onChange={event => onChange({ ...value, end: event.target.value })} className="mt-1 block rounded border bg-white p-2" /></label>
+  return <fieldset className="min-w-0">
+    <legend className="mb-2 text-sm font-semibold">Submitted date range</legend>
+    <div className="flex flex-wrap items-center gap-2">
+      <label className="flex items-center gap-2 text-sm">From<input aria-label="From date" type="date" max={value.end || undefined} value={value.start} onChange={event => onChange({ ...value, start: event.target.value })} className="min-w-0 rounded border bg-white p-2" /></label>
+      <label className="flex items-center gap-2 text-sm">Through<input aria-label="Through date" type="date" min={value.start || undefined} value={value.end} onChange={event => onChange({ ...value, end: event.target.value })} className="min-w-0 rounded border bg-white p-2" /></label>
       {(value.start || value.end) && <button className="action-link" onClick={() => onChange({ start: "", end: "" })}>Clear dates</button>}
     </div>
-    <p className="mt-2 text-xs text-slate-600">Includes both dates in your browser's timezone ({Intl.DateTimeFormat().resolvedOptions().timeZone}).</p>
+    <p className="mt-1 text-xs text-slate-600">Both dates included · {Intl.DateTimeFormat().resolvedOptions().timeZone}</p>
     {value.start && value.end && value.start > value.end && <p role="alert">The start date must be on or before the end date.</p>}
   </fieldset>;
 }

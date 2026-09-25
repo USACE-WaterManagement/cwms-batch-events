@@ -2,7 +2,7 @@ import { RunDatePicker, type RunDateRange } from "./RunHistoryControls";
 import { RequestErrorPage } from "../../shared/components/StatePage";
 import { useAuth } from "@usace-watermanagement/groundwork-water";
 import { LoadingRows } from "../../shared/components/LoadingRows";
-import { Button, H1, UsaceBox } from "@usace/groundwork";
+import { Button, UsaceBox } from "@usace/groundwork";
 import { useQuery } from "@tanstack/react-query";
 import fetchWithAuth from "../../utils/fetchWithAuth";
 import { useState } from "react";
@@ -42,14 +42,14 @@ const JobsList = () => {
 
   return (
     <div className="mx-auto min-w-0 max-w-4xl space-y-4">
-      <header><H1>Job History</H1><p className="mt-1 text-sm text-slate-600">Click a job to open it</p></header>
-      <UsaceBox title="Office runs" className="mb-0!">
-      <div className="space-y-4">
-      <fieldset className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-        <legend className="px-1 text-sm font-semibold">Filter offices</legend>
-        <p className="mb-2 text-xs text-slate-500">Select one or more offices. With none selected, all your offices are included.</p>
-        <div className="flex flex-wrap gap-3">
-          {(accessible.data ?? []).map(office => <label key={office} className="flex cursor-pointer select-none items-center gap-2 rounded border border-slate-300 bg-white px-3 py-2 text-sm">
+      <UsaceBox title="Job History" className="mb-0!">
+      <div className="space-y-3">
+      <p className="text-sm text-slate-600">Click a job to open it</p>
+      <div className="flex flex-wrap items-start gap-x-6 gap-y-3 border-b border-slate-200 pb-3">
+      <fieldset className="min-w-0 flex-1">
+        <legend className="mb-2 text-sm font-semibold">Filter offices <span className="font-normal text-slate-500">· {offices.length ? `${offices.length} selected` : "All offices"}</span></legend>
+        <div className="flex flex-wrap gap-2">
+          {(accessible.data ?? []).map(office => <label key={office} className="flex cursor-pointer select-none items-center gap-2 rounded border border-slate-300 bg-white px-2 py-2 text-sm">
             <input type="checkbox" checked={offices.includes(office)} onChange={event => {
               setOffices(current => event.target.checked ? [...current, office].sort() : current.filter(item => item !== office)); setPage(1);
             }} />{office}
@@ -58,8 +58,9 @@ const JobsList = () => {
         </div>
       </fieldset>
       <RunDatePicker value={range} onChange={value => { setRange(value); setPage(1); }} />
+      </div>
       {isError && <RequestErrorPage error={error} onRetry={() => void refetch()} />}
-      <nav aria-label="Job history pagination" className="flex flex-wrap items-center gap-3">
+      <nav aria-label="Job history pagination" className="flex flex-wrap items-center gap-3 text-sm">
         <label className="flex items-center gap-2">
           Jobs per page
           <select className="rounded border border-gray-400 bg-white min-w-20 pl-3 pr-9 py-2 text-gray-900"

@@ -60,7 +60,7 @@ export const ScriptRunJob = ({ script, onSubmitted, onEdit }: {
     {!supportsScriptVersion(version) && <p role="alert">This app does not support configuration version {version}. Running is unavailable.</p>}
     <dl className="space-y-2 text-sm">
       <div><dt className="font-semibold">{script.executionType === "command" ? "Executable" : "File"}</dt><dd tabIndex={0} className="overflow-x-auto whitespace-nowrap font-mono">{script.repoPath}</dd></div>
-      <div><dt className="font-semibold">Saved command<span className="block text-xs font-normal text-slate-500">v{version}</span></dt><dd><pre tabIndex={0} className="overflow-x-auto whitespace-pre">{savedCommandPreview(script)}</pre></dd></div>
+      <div><dt className="font-semibold">Saved command</dt><dd><pre tabIndex={0} className="overflow-x-auto whitespace-pre">{savedCommandPreview(script)}</pre></dd></div>
       <div><dt className="font-semibold">Execution roles</dt><dd><RequiredRoles office={script.office} roles={script.roles} /></dd></div>
     </dl>
     {custom && <div className="space-y-2 rounded border border-blue-300 bg-blue-50 p-3">
