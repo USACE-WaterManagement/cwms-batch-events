@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useAuth } from "@usace-watermanagement/groundwork-water";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { MdSearch, MdOpenInNew } from "react-icons/md";
+import { MdSearch, MdOpenInNew, MdArrowBack } from "react-icons/md";
 import { Button, UsaceBox } from "@usace/groundwork";
 import LoginPrompt from "../features/auth/LoginPrompt";
 import { RunDatePicker, type RunDateRange } from "../features/jobs-list/RunHistoryControls";
@@ -62,7 +62,9 @@ function LogSearch() {
     } finally { setBusy(false); }
   }
   if (!auth.isAuth) return <LoginPrompt title="Sign in to search job logs" description="Search output from runs in your offices." />;
-  return <div className="mx-auto max-w-4xl"><UsaceBox title="Search job logs">
+  return <div className="mx-auto max-w-4xl">
+    <Link to="/jobs" className="action-link mb-3"><MdArrowBack aria-hidden />Back to Job History</Link>
+    <UsaceBox title="Search job logs">
     <p className="mb-4 text-sm text-slate-600">Search literal text, ignoring case, across runs in your offices. Dates filter when jobs were submitted. Each request scans a bounded section of saved output.</p>
     <form className="space-y-3" onSubmit={event => { event.preventDefault(); void search(); }}>
       <label className="block font-semibold">Search text<input type="search" minLength={2} maxLength={200} required value={text} onChange={event => setText(event.target.value)} placeholder="For example, failed" className="mt-1 block w-full rounded border p-2" /></label>
