@@ -50,8 +50,8 @@ export function AboutMenu({ signedIn, office, repositoryUrl }: {
   }}>
     <button ref={trigger} type="button" aria-expanded={open} aria-controls="about-navigation"
       className="inline-flex min-h-11 items-center gap-1 rounded-lg border border-slate-300 bg-slate-100 px-2 text-sm font-semibold text-slate-900 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-      onClick={() => setOpen(value => !value)}>About <MdExpandMore aria-hidden className={open ? "rotate-180" : ""} /></button>
-    {open && <nav id="about-navigation" aria-label="About and resources"
+      onClick={() => setOpen(value => !value)}>Help <MdExpandMore aria-hidden className={open ? "rotate-180" : ""} /></button>
+    {open && <nav id="about-navigation" aria-label="Help and resources"
       className="fixed left-4 top-28 z-50 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 grid max-h-[75dvh] w-[min(42rem,calc(100vw-2rem))] gap-4 overflow-y-auto overscroll-contain whitespace-normal rounded-xl border border-slate-200 bg-white p-4 text-slate-900 shadow-xl sm:grid-cols-3">
       {groups.map(group => <section key={group.title}>
         <h2 className="mb-2 border-b border-slate-200 pb-2 text-xs font-bold uppercase tracking-wide text-slate-500">{group.title}</h2>

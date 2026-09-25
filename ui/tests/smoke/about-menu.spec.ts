@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 
-test("grouped About navigation works with keyboard, touch, and client-side routing", async ({ page }, testInfo) => {
+test("grouped Help navigation works with keyboard, touch, and client-side routing", async ({ page }, testInfo) => {
   await page.route("**/api/**", route => {
     const path = new URL(route.request().url()).pathname;
     if (path.endsWith("/system-admin")) return route.fulfill({ json: true });
@@ -11,8 +11,8 @@ test("grouped About navigation works with keyboard, touch, and client-side routi
   });
   await page.goto("/events/about");
   const header = page.getByRole("banner").first();
-  const about = header.getByRole("button", { name: "About", exact: true });
-  const menu = page.getByRole("navigation", { name: "About and resources" });
+  const about = header.getByRole("button", { name: "Help", exact: true });
+  const menu = page.getByRole("navigation", { name: "Help and resources" });
   await about.focus();
   await page.keyboard.press("Enter");
   await expect(menu).toBeVisible();
