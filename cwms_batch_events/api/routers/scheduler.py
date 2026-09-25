@@ -59,8 +59,8 @@ class SchedulerStatus(CamelModel):
 
 @router.get("/scheduler/status", response_model=SchedulerStatus)
 def scheduler_status(office: str | None = None, user: User = Depends(get_current_user)):
-    if "CWMS Admin" not in user.roles.get("HQ", []):
-        raise HTTPException(403, "HQ CWMS Admin role required")
+    if "Data Acquisition Mgr" not in user.roles.get("HQ", []):
+        raise HTTPException(403, "HQ Data Acquisition Mgr role required")
     if office:
         office = office.upper()
     with create_session() as db:

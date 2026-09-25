@@ -111,7 +111,7 @@ for (const isAdmin of [false, true]) test(`scheduler admin visibility: HQ admin=
     await expect(page.getByRole("link", { name: "Admin", exact: true })).toBeVisible();
     expect(statusReads).toBe(1);
   } else {
-    await expect(page.getByText(/The HQ CWMS Admin role is required/)).toBeVisible();
+    await expect(page.getByText(/The HQ Data Acquisition Mgr role is required/)).toBeVisible();
     await expect(page.getByRole("link", { name: "Admin", exact: true })).toHaveCount(0);
     expect(statusReads).toBe(0);
   }

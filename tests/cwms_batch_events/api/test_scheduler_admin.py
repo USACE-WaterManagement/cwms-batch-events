@@ -2,7 +2,8 @@ import pytest
 from uuid import uuid4
 
 
-@pytest.mark.parametrize("roles", [{}, {"SWT": ["CWMS Admin"]}, {"HQ": ["CWMS Users"]}])
+@pytest.mark.parametrize("roles", [{}, {"SWT": ["Data Acquisition Mgr"]}, {"HQ": ["CWMS Users"]},
+                                  {"HQ": ["Data Exchange Mgr"]}, {"HQ": ["CWMS Admin"]}])
 def test_scheduler_requires_hq_admin(client, user, roles):
     user.roles = roles
     assert client.get("/users/me/system-admin").json() is False
@@ -10,7 +11,7 @@ def test_scheduler_requires_hq_admin(client, user, roles):
 
 
 def test_hq_admin_capability(client, user):
-    user.roles = {"HQ": ["CWMS Admin"]}
+    user.roles = {"HQ": ["Data Acquisition Mgr"]}
     assert client.get("/users/me/system-admin").json() is True
 
 

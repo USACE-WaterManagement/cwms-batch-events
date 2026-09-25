@@ -80,8 +80,8 @@ def operations(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db_session),
 ):
-    if "CWMS Admin" not in user.roles.get("HQ", []):
-        raise HTTPException(403, "HQ CWMS Admin role required")
+    if "Data Acquisition Mgr" not in user.roles.get("HQ", []):
+        raise HTTPException(403, "HQ Data Acquisition Mgr role required")
     now = db.scalar(text("SELECT CURRENT_TIMESTAMP"))
     since = now - timedelta(days=days)
     params = dict(now=now, since=since, office=office.upper() if office else None,

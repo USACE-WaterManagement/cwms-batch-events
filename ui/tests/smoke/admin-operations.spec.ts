@@ -2,6 +2,17 @@ import { test, expect } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 
+test("Controls explains HQ dashboard access on desktop and mobile", async ({ page }) => {
+  await page.route("**/api/**", route => route.fulfill({ json: [] }));
+  await page.goto("/events/about/controls");
+  await expect(page.getByRole("heading", { name: "View admin dashboards" })).toBeVisible();
+  await expect(page.getByText("Data Acquisition Mgr in HQ", { exact: true })).toBeVisible();
+  await expect(page.getByText(/This role in another office does not grant dashboard access/)).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("heading", { name: "View admin dashboards" }).scrollIntoViewIfNeeded();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
 const summary = {
   asOf: "2026-09-25T00:00:00Z", since: "2026-09-18T00:00:00Z", offices: ["SWT", "SWF", "SAC"],
   usage: [

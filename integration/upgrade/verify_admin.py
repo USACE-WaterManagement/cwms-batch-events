@@ -14,7 +14,7 @@ from cwms_batch_events.core.job_database.postgres.postgres import PostgresJobDat
 
 
 def main():
-    actor = User(username="hq-report-test", offices=[], admin_offices=[], roles={"HQ": ["CWMS Admin"]})
+    actor = User(username="hq-report-test", offices=[], admin_offices=[], roles={"HQ": ["Data Acquisition Mgr"]})
     with create_session() as db:
         now = db.scalar(text("SELECT CURRENT_TIMESTAMP"))
         runner = db.scalar(text("SELECT id FROM job_runners LIMIT 1"))

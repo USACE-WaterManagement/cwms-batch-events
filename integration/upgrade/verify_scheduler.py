@@ -88,7 +88,7 @@ def main():
             assert db.get(JobModel, before.id).config_version == 2
             assert len(db.scalars(select(JobModel).where(JobModel.script_id == legacy_id)).all()) == 1
         assert client.get("/scheduler/status?office=SWT").status_code == 403
-        hq_admin = actor.model_copy(update={"roles": {"HQ": ["CWMS Admin"]}})
+        hq_admin = actor.model_copy(update={"roles": {"HQ": ["Data Acquisition Mgr"]}})
         app.dependency_overrides[get_current_user] = lambda: hq_admin
         status = client.get("/scheduler/status")
         assert status.status_code == 200 and status.json()["pendingDelivery"] == 0
