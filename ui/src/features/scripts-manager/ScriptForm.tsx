@@ -1,4 +1,5 @@
 import { ScheduleTiming } from "./ScheduleTiming";
+import { ReleaseJarPicker } from "./ReleaseJarPicker";
 import { ViewField } from "./ViewField";
 import {
   Button,
@@ -142,6 +143,7 @@ export const ScriptForm = ({
     commandArgs: script?.commandArgs ?? [],
     commandMode: script?.commandMode === "shell" ? "shell" : "arguments",
     shellCommand: script?.shellCommand ?? null,
+    releaseJar: script?.releaseJar ?? null,
     roles: script?.roles ?? [],
     scheduleEnabled: script?.scheduleEnabled ?? false,
     scheduleType: script?.scheduleType ?? "manual",
@@ -196,6 +198,7 @@ export const ScriptForm = ({
   });
   const errorFor = (field: string) => errors[field] && <p id={`${field}-error`} className="text-sm text-red-800">{errors[field]}</p>;
   const changeForm = (next: ScriptFormData) => {
+    if (next.runtime !== "java" || next.executionType !== "github_file" || next.commandMode === "shell") next = { ...next, releaseJar: null };
     setForm(next);
     if (submitted) {
       const nextErrors = validateScriptForm(next);
@@ -273,7 +276,7 @@ export const ScriptForm = ({
               <option value="command">Installed command</option>
             </select>
           </FormRow>
-          <div className="min-h-24">{form.commandMode !== "shell" && <FormRow>
+          <div className="min-h-24">{form.commandMode !== "shell" && !form.releaseJar && <FormRow>
             <InputLabel htmlFor="repoPath">
               {scriptPathLabel(form)}
             </InputLabel>
@@ -319,6 +322,8 @@ export const ScriptForm = ({
             </FormRow>
           </div>
 
+          {form.runtime === "java" && form.executionType === "github_file" && form.commandMode !== "shell" && (form.configVersion ?? 1) === 4 &&
+            <ReleaseJarPicker office={office} value={form.releaseJar ?? null} onChange={releaseJar => changeForm({ ...form, releaseJar, repoPath: releaseJar ? `release-jars/${releaseJar.name}` : "" })} />}
           <div className="my-3 rounded-lg border border-gray-300 bg-white p-3">
             <CommandSettings value={form} onChange={changeForm} disabled={isPending} />
           </div>

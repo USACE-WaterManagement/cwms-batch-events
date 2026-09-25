@@ -20,6 +20,16 @@ class CamelModel(BaseModel):
         return super().model_dump(**kwargs)
 
 
+class ReleaseJar(CamelModel):
+    repository: str = Field(pattern=r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
+    release_id: int = Field(gt=0)
+    asset_id: int = Field(gt=0)
+    tag: str = Field(min_length=1, max_length=256)
+    name: str = Field(pattern=r"^[A-Za-z0-9_.-]+\.jar$")
+    sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    size: int = Field(gt=0, le=536870912)
+
+
 class ExecutionRecord(CamelModel):
     """Stored execution fields, including paths accepted by older API versions."""
 
@@ -30,6 +40,7 @@ class ExecutionRecord(CamelModel):
     command_args: list[str] = Field(default_factory=list)
     command_mode: str = "arguments"
     shell_command: str | None = None
+    release_jar: ReleaseJar | None = None
 
 
 class ExecutionOptions(ExecutionRecord):
@@ -48,6 +59,10 @@ class ExecutionOptions(ExecutionRecord):
 
     @model_validator(mode="after")
     def valid_repository_path(self):
+        if self.release_jar is not None:
+            if self.config_version != 4 or self.runtime != "java" or self.execution_type != "github_file" or self.command_mode != "arguments":
+                raise ValueError("Release JARs require version 4, Java, repository source, and argument mode")
+            self.repo_path = f"release-jars/{self.release_jar.name}"
         if self.config_version == 2 and (self.command_mode != "arguments" or self.shell_command is not None):
             raise ValueError("Shell commands require script configuration version 3")
         if self.command_mode == "shell":

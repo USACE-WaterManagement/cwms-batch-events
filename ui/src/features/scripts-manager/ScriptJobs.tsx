@@ -58,6 +58,7 @@ export const ScriptRunJob = ({ script, onSubmitted, onEdit }: {
   return <div className="min-w-0 max-w-full space-y-4 p-4">
     <H3>Run {script.name}</H3>
     <p>{script.description}</p>
+    {script.releaseJar && <p className="rounded border border-blue-200 bg-blue-50 p-3 text-sm">Release JAR: <strong>{script.releaseJar.tag}</strong> · <code>{script.releaseJar.name}</code>. This asset is downloaded and SHA-256 verified before Java starts.</p>}
     {!supportsScriptVersion(version) && <p role="alert">This app does not support configuration version {version}. Running is unavailable.</p>}
     <dl className="space-y-2 text-sm">
       <div><dt className="font-semibold">{script.executionType === "command" ? "Executable" : "File"}</dt><dd tabIndex={0} className="overflow-x-auto whitespace-nowrap font-mono">{script.repoPath}</dd></div>

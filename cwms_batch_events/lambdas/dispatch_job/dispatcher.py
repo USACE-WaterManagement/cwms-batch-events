@@ -37,7 +37,10 @@ class MissingJobRunner(Exception):
 def dispatch_job(message: JobMessage):
     runner: JobRunner | None = None
     if message.runner_type == "batch":
-        runner = BatchJobRunner()
+        if message.payload.release_jar:
+            runner = BatchJobRunner(artifact_api_url=API_BASE_URL, artifact_key=get_internal_token())
+        else:
+            runner = BatchJobRunner()
 
     if not runner:
         raise MissingJobRunner(

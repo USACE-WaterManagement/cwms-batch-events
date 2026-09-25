@@ -25,6 +25,7 @@ def check_api(port, database, historical):
                     "historical" if historical else "fresh"], env=env, check=True, cwd=ROOT)
     subprocess.run([sys.executable, str(Path(__file__).with_name("verify_scheduler.py"))], env=env, check=True, cwd=ROOT)
     subprocess.run([sys.executable, str(Path(__file__).with_name("verify_admin.py"))], env=env, check=True, cwd=ROOT)
+    subprocess.run([sys.executable, str(Path(__file__).with_name("verify_release_jars.py"))], env=env, check=True, cwd=ROOT)
 
 
 def main():
@@ -35,7 +36,9 @@ def main():
         command("docker", "run", "-d", "--name", name, "-e", "POSTGRES_PASSWORD=local-test-only",
                 "-p", "127.0.0.1::5432", "postgres:17")
         for _ in range(60):
-            if subprocess.run(["docker", "exec", name, "pg_isready", "-U", "postgres"], capture_output=True).returncode == 0:
+            # The initialization server accepts Unix sockets before restarting.
+            # TCP is available only after the final server starts.
+            if subprocess.run(["docker", "exec", name, "pg_isready", "-h", "127.0.0.1", "-U", "postgres"], capture_output=True).returncode == 0:
                 break
             time.sleep(1)
         else:

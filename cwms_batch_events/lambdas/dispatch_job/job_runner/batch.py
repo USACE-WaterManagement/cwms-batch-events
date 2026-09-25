@@ -1,6 +1,7 @@
 import logging
 from cwms_batch_events.core.execution import command_for_payload, skips_repository_checkout
 from cwms_batch_events.core.models import JobMessage
+from cwms_batch_events.core.release_jars import jar_command
 from cwms_batch_events.core.job_correlation import runner_environment
 from cwms_batch_events.lambdas.dispatch_job.utils import OFFICES
 
@@ -11,8 +12,10 @@ logger = logging.getLogger(__name__)
 
 
 class BatchJobRunner:
-    def __init__(self):
+    def __init__(self, artifact_api_url=None, artifact_key=None):
         self.batch = boto3.client("batch")
+        self.artifact_api_url = artifact_api_url
+        self.artifact_key = artifact_key
 
     def run_job(self, message: JobMessage):
         office = message.payload.office
@@ -33,13 +36,16 @@ class BatchJobRunner:
         if skips_repository_checkout(message.payload):
             environment.append({"name": "SKIP_GIT_CLONE", "value": "true"})
 
+        command = command_for_payload(message.payload)
+        if message.payload.release_jar:
+            command = jar_command(message, self.artifact_api_url, self.artifact_key)
         response = self.batch.submit_job(
             jobName=job_name,
             jobQueue=f"cwms-{OFFICES[office]['division']}-jq",
             jobDefinition=f"cwms-{office}-jobs-jobdef",
             containerOverrides={
                 "environment": environment,
-                "command": command_for_payload(message.payload),
+                "command": command,
             },
             tags=tags,
         )

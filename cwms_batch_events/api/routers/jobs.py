@@ -132,6 +132,7 @@ def post_job(
         command_args=job.command_args,
         command_mode=job.command_mode,
         shell_command=job.shell_command,
+        release_jar=job.release_jar,
     )
     message = queue.create_job_message(job.id, user.username, JobSource.API, options)
     background_tasks.add_task(queue.send_job_message, message)
