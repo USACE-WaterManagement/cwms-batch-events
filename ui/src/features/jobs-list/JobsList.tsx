@@ -14,6 +14,7 @@ import { jobStatusLabel } from "./jobStatus";
 import LoginPrompt from "../auth/LoginPrompt";
 import { RunTriggerBadge } from "./RunAttribution";
 import { submittedBy } from "./submittedBy";
+import { MdSearch } from "react-icons/md";
 
 dayjs.extend(relativeTime);
 
@@ -44,7 +45,7 @@ const JobsList = () => {
     <div className="mx-auto min-w-0 max-w-4xl space-y-4">
       <UsaceBox title="Job History" className="mb-0!">
       <div className="space-y-3">
-      <p className="text-sm text-slate-600">Click a job to open it</p>
+      <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-sm text-slate-600">Click a job to open it</p><Link to="/log-search" className="action-link"><MdSearch aria-hidden />Search logs</Link></div>
       <div className="flex flex-wrap items-start gap-x-6 gap-y-3 border-b border-slate-200 pb-3">
       <fieldset className="min-w-0 flex-1">
         <legend className="mb-2 text-sm font-semibold">Filter offices <span className="font-normal text-slate-500">· {offices.length ? `${offices.length} selected` : "All offices"}</span></legend>
