@@ -1,3 +1,5 @@
+import { RequestErrorPage } from "../../shared/components/StatePage";
+import { LoadingRows } from "../../shared/components/LoadingRows";
 import { MdArrowBack, MdOpenInNew } from "react-icons/md";
 import JobDetail from "./JobDetail";
 import JobLogs from "./JobLogs";
@@ -14,13 +16,13 @@ interface JobDetailFullProps {
 }
 
 const JobDetailFull = ({ jobId, standalone = false }: JobDetailFullProps) => {
-  const { data, isPending, isError } = useJobDetails(jobId);
+  const { data, isPending, isError, error, refetch } = useJobDetails(jobId);
   const admins = useAdminOffices();
   const auth = useAuth();
 
   if (!auth.isAuth) return <LoginPrompt title="Sign in to view this job" description="This job log is shared with users who have access to its office." />;
-  if (isPending) return <span>Loading...</span>;
-  if (isError) return <div className="space-y-3"><p role="alert">This job could not be loaded. It may be unavailable or outside your office access.</p><Link to="/jobs" className="action-link"><MdArrowBack aria-hidden />Job History</Link></div>;
+  if (isPending) return <LoadingRows label="Loading job" />;
+  if (isError) return <RequestErrorPage error={error} onRetry={() => void refetch()} />;
   if (!data) return null;
 
   return (

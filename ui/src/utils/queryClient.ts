@@ -10,6 +10,7 @@ export const queryClient = new QueryClient({
   queryCache: new QueryCache({
     onError: (error, query) => {
       if (query.meta?.inlineError) return;
+      if (query.meta?.pageError && error instanceof ApiError && [401, 403, 404, 422].includes(error.status)) return;
       notifyError({ id: query.queryHash, message: message(error), retry: () => query.fetch() });
     },
     onSuccess: (data, query) => reportWarnings(query.queryHash, data, () => query.fetch()),

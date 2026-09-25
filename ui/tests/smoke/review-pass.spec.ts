@@ -56,7 +56,7 @@ test("review controls retain sections, update runtime and run mode, and route gu
   await expect(page.getByLabel("Name", { exact: true })).toHaveValue(script.name);
 });
 
-test("script history loads ten runs then fetches the next page on scroll", async ({ page }) => {
+test("script history uses bounded pages instead of infinite scroll", async ({ page }) => {
   const offsets: number[] = [];
   const runs = Array.from({ length: 23 }, (_, index) => ({ id: `run-${index}`, scriptId: initial.id,
     office: "SWT", scriptName: initial.name, jobStatus: "Completed", createdTime: new Date(Date.UTC(2026, 8, 24, 0, 23-index)).toISOString() }));
@@ -83,11 +83,14 @@ test("script history loads ten runs then fetches the next page on scroll", async
   const list = page.getByRole("list", { name: "Script run history" });
   await expect(list.getByRole("button")).toHaveCount(10);
   expect(offsets).toEqual([0]);
-  await list.evaluate(element => { element.scrollTop = element.scrollHeight; });
-  await expect(list.getByRole("button")).toHaveCount(20);
-  await list.evaluate(element => { element.scrollTop = element.scrollHeight; });
-  await expect(list.getByRole("button")).toHaveCount(23);
+  await page.getByRole('button', { name: 'Next', exact: true }).click();
+  await expect(list.getByRole('button')).toHaveCount(10);
+  await expect.poll(() => offsets).toEqual([0, 10]);
+  await page.getByRole('button', { name: 'Next', exact: true }).click();
+  await expect(list.getByRole('button')).toHaveCount(3);
   expect(offsets).toEqual([0, 10, 20]);
+  await expect(page.getByRole('button', { name: 'Load more runs' })).toHaveCount(0);
+
 });
 
 for (const isAdmin of [false, true]) test(`scheduler admin visibility: HQ admin=${isAdmin}`, async ({ page }) => {
@@ -108,7 +111,7 @@ for (const isAdmin of [false, true]) test(`scheduler admin visibility: HQ admin=
     await expect(page.getByRole("link", { name: "Admin", exact: true })).toBeVisible();
     expect(statusReads).toBe(1);
   } else {
-    await expect(page.getByText("The HQ CWMS Admin role is required.")).toBeVisible();
+    await expect(page.getByText(/The HQ CWMS Admin role is required/)).toBeVisible();
     await expect(page.getByRole("link", { name: "Admin", exact: true })).toHaveCount(0);
     expect(statusReads).toBe(0);
   }

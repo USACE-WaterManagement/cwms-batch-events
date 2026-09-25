@@ -239,18 +239,23 @@ class PostgresJobDatabase:
             .distinct(JobModel.script_id).order_by(JobModel.script_id, JobModel.created_time.desc(), JobModel.id.desc())).all()
         return [JobRecord.model_validate(row) for row in rows]
 
-    def count_jobs_for_offices(self, offices: list[str], script_id: uuid.UUID | None = None) -> int:
+    def count_jobs_for_offices(self, offices: list[str], script_id: uuid.UUID | None = None, submitted_from: datetime | None = None, submitted_before: datetime | None = None) -> int:
         return self.db.scalar(
             select(func.count()).select_from(JobModel).where(JobModel.office.in_(offices),
-                True if script_id is None else JobModel.script_id == script_id)
+                True if script_id is None else JobModel.script_id == script_id,
+                True if submitted_from is None else JobModel.created_time >= submitted_from,
+                True if submitted_before is None else JobModel.created_time < submitted_before)
         )
 
     def get_jobs_for_offices(
-        self, offices: list[str], limit: int | None = None, offset: int = 0, script_id: uuid.UUID | None = None
+        self, offices: list[str], limit: int | None = None, offset: int = 0, script_id: uuid.UUID | None = None,
+        submitted_from: datetime | None = None, submitted_before: datetime | None = None
     ) -> list[JobRecord]:
         job_models = self.db.scalars(
             select(JobModel)
-            .where(JobModel.office.in_(offices), True if script_id is None else JobModel.script_id == script_id)
+            .where(JobModel.office.in_(offices), True if script_id is None else JobModel.script_id == script_id,
+                True if submitted_from is None else JobModel.created_time >= submitted_from,
+                True if submitted_before is None else JobModel.created_time < submitted_before)
             .order_by(JobModel.created_time.desc(), JobModel.id.desc())
             .limit(limit)
             .offset(offset)

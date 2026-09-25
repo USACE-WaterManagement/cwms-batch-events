@@ -27,7 +27,7 @@ def main():
         script = PostgresJobDatabase(db).store_script(ScriptCreate(
             office="SWT", name="Scheduler integration " + uuid4().hex,
             description="isolated test", repo_path="python/report.py", schedule_enabled=True,
-            schedule_type="cron", schedule_cron="* * * * *", schedule_timezone="America/Chicago"), actor)
+            schedule_type="cron", schedule_cron=f"{now.minute} * * * *", schedule_timezone="America/Chicago"), actor)
     with create_session() as db, db.begin():
         db.execute(text("UPDATE scripts SET schedule_updated_at=:t WHERE id=:id"), {"t": now - timedelta(minutes=2), "id": script.id})
         db.execute(text("UPDATE maintenance_tasks SET last_checked=:t WHERE name='schedules'"), {"t": now - timedelta(minutes=1)})
@@ -111,6 +111,17 @@ def main():
     register_due_jobs(now + timedelta(minutes=1))
     with create_session() as db:
         assert len(db.scalars(select(JobModel).where(JobModel.script_id == script.id)).all()) == 1
+    # An old stored schedule cannot bypass the new write-time minimum.
+    with create_session() as db, db.begin():
+        saved = db.get(ScriptModel, script.id)
+        saved.schedule_enabled = True
+        saved.schedule_cron = "* * * * *"
+    register_due_jobs(now + timedelta(minutes=2))
+    with create_session() as db, db.begin():
+        saved = db.get(ScriptModel, script.id)
+        assert "5 minutes" in saved.schedule_error
+        assert len(db.scalars(select(JobModel).where(JobModel.script_id == script.id)).all()) == 1
+        saved.schedule_enabled = False
     print("PASS: scheduler concurrency, attribution, durable retry, dispatch deduplication, office access, and disable")
 
 

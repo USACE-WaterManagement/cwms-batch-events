@@ -16,13 +16,17 @@ def test_colleague_can_read_office_run_without_management_role(client, user, job
 
 @pytest.mark.parametrize("suffix", ["", "/logs", "/logs/page"])
 @pytest.mark.parametrize("missing", [False, True])
-def test_inaccessible_and_missing_jobs_are_indistinguishable(client, user, job_db, job_logger, suffix, missing):
+def test_denial_exposes_only_office_for_access_request(client, user, job_db, job_logger, suffix, missing):
     # Even the submitter must still have office membership.
     job = make_job_record(username=user.username, office="SPK")
     job_db.get_job_by_id.return_value = None if missing else job
     response = client.get(f"/jobs/{job.id}{suffix}")
-    assert response.status_code == 404
-    assert response.json() == {"detail": "Job not found"}
+    if missing:
+        assert response.status_code == 404
+        assert response.json() == {"detail": "Job not found"}
+    else:
+        assert response.status_code == 403
+        assert response.json() == {"detail": {"code": "office_access_required", "office": "SPK"}}
     job_logger.get_logs_for_job.assert_not_called()
     job_logger.get_log_page.assert_not_called()
     job_logger.refresh_job.assert_not_called()

@@ -1,4 +1,5 @@
 from uuid import UUID
+from datetime import datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Response, status
 from sqlalchemy.exc import NoResultFound
@@ -29,8 +30,11 @@ router = APIRouter(prefix="/jobs", tags=["jobs"])
 
 def get_office_job(job_id: UUID, user: User, job_db: JobDatabase) -> JobRecord:
     job = job_db.get_job_by_id(job_id)
-    if not job or job.office not in user.offices:
+    if not job:
         raise HTTPException(status_code=404, detail="Job not found")
+    if job.office not in user.offices:
+        # Share only the office needed to request access, never job metadata.
+        raise HTTPException(status_code=403, detail={"code": "office_access_required", "office": job.office})
     return job
 
 
@@ -53,27 +57,39 @@ def get_jobs_for_user(
         default=0, ge=0, description="Number of jobs to skip, newest first.",
     ),
     script_id: UUID | None = Query(default=None, alias="scriptId"),
+    submitted_from: datetime | None = Query(default=None, alias="submittedFrom"),
+    submitted_before: datetime | None = Query(default=None, alias="submittedBefore"),
     latest_per_script: bool = Query(default=False, alias="latestPerScript"),
     office: list[str] | None = Query(default=None, description="Offices to include; defaults to all accessible offices."),
     user: User = Depends(get_current_user),
     job_db: JobDatabase = Depends(get_job_database),
 ) -> list[JobRecord]:
+    for boundary in (submitted_from, submitted_before):
+        if boundary is not None and boundary.utcoffset() is None:
+            raise HTTPException(422, "Date filters must include a timezone")
+    if submitted_from and submitted_before and submitted_from >= submitted_before:
+        raise HTTPException(422, "The start date must precede the end date")
+    dates = {}
+    if submitted_from is not None:
+        dates["submitted_from"] = submitted_from
+    if submitted_before is not None:
+        dates["submitted_before"] = submitted_before
     offices = user.offices
     if office:
         offices = sorted(set(value.upper() for value in office))
         if not set(offices).issubset(user.offices):
             raise HTTPException(403, "Office access required")
     if latest_per_script:
-        if script_id is not None or limit is not None or offset:
+        if script_id is not None or limit is not None or offset or dates:
             raise HTTPException(422, "latestPerScript cannot be combined with pagination or scriptId")
         return job_db.get_latest_jobs_for_offices(offices)
     if script_id is not None:
-        response.headers["X-Total-Count"] = str(job_db.count_jobs_for_offices(offices, script_id=script_id))
-        return job_db.get_jobs_for_offices(offices, limit=limit or 10, offset=offset, script_id=script_id)
+        response.headers["X-Total-Count"] = str(job_db.count_jobs_for_offices(offices, script_id=script_id, **dates))
+        return job_db.get_jobs_for_offices(offices, limit=limit or 10, offset=offset, script_id=script_id, **dates)
     if limit is not None or offset:
-        response.headers["X-Total-Count"] = str(job_db.count_jobs_for_offices(offices))
-        return job_db.get_jobs_for_offices(offices, limit=limit, offset=offset)
-    job_list = job_db.get_jobs_for_offices(offices)
+        response.headers["X-Total-Count"] = str(job_db.count_jobs_for_offices(offices, **dates))
+        return job_db.get_jobs_for_offices(offices, limit=limit, offset=offset, **dates)
+    job_list = job_db.get_jobs_for_offices(offices, **dates)
     return job_list
 
 

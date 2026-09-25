@@ -22,7 +22,7 @@ def test_log_page_preserves_cursor_contract(client, job_db, job_logger, user):
 def test_log_page_requires_job_office(client, job_db, job_logger, missing):
     job = make_job_record(username="someone-else", office="SPK")
     job_db.get_job_by_id.return_value = None if missing else job
-    assert client.get(f"/jobs/{job.id}/logs/page").status_code == 404
+    assert client.get(f"/jobs/{job.id}/logs/page").status_code == (404 if missing else 403)
     job_logger.get_log_page.assert_not_called()
 
 

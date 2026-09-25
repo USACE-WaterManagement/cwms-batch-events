@@ -44,6 +44,22 @@ def field_matches(field: str, value: int, minimum: int, maximum: int) -> bool:
     return False
 
 
+def validate_schedule_interval(expression: str) -> str:
+    """Require at least five minutes between selected daily time slots.
+
+    Include the midnight boundary. Calendar restrictions cannot relax this
+    policy, which keeps the rule predictable when dates or timezones change.
+    """
+    expression = validate_cron(expression)
+    minute, hour, *_ = expression.split()
+    slots = [h * 60 + m for h in range(24) if field_matches(hour, h, 0, 23)
+             for m in range(60) if field_matches(minute, m, 0, 59)]
+    gaps = [b - a for a, b in zip(slots, slots[1:] + [slots[0] + 1440])]
+    if min(gaps) < 5:
+        raise ValueError("The minimum schedule interval is 5 minutes. Space all selected run times at least 5 minutes apart.")
+    return expression
+
+
 def is_due(script, minute: datetime) -> bool:
     local = minute.astimezone(ZoneInfo(script.schedule_timezone))
     if local.fold:
@@ -89,6 +105,8 @@ def next_run(script, after: datetime) -> datetime | None:
     """
     if not script.active or not script.schedule_enabled or script.config_version != 4:
         return None
+    if script.schedule_type == "cron":
+        validate_schedule_interval(script.schedule_cron)
     zone = ZoneInfo(script.schedule_timezone)
     day = after.astimezone(zone).replace(hour=0, minute=0, second=0, microsecond=0)
     if script.schedule_type == "hourly":

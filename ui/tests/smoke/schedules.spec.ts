@@ -83,6 +83,10 @@ test("saves timezone schedules and disables scheduling when switched to manual",
   await page.getByLabel("Schedule", { exact: true }).selectOption("cron");
   await expect(page.getByRole("link", { name: "Open cron calculator (new tab)" })).toHaveAttribute("href", "https://crontab.guru/");
   await configSection(page, "Schedule");
+  await page.getByLabel("Cron expression", { exact: true }).fill("0,1 * * * *");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText("The minimum schedule interval is 5 minutes. Space all selected run times at least 5 minutes apart.")).toBeVisible();
+  expect(saved?.scheduleCron).toBe("35 9 31 * *");
   await page.getByLabel("Cron expression", { exact: true }).fill("0 8 * * 1-5");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(

@@ -15,7 +15,7 @@ from cwms_batch_events.core.execution import execution_for_config
 from cwms_batch_events.core.job_database.postgres.models import JobModel, ScriptModel
 from cwms_batch_events.core.job_database.postgres.session import create_session
 from cwms_batch_events.core.models import JobMessage, JobRequestedBy, JobSource, JobStatus, ScriptRunOptions
-from cwms_batch_events.core.schedules import due_minutes
+from cwms_batch_events.core.schedules import due_minutes, validate_schedule_interval
 from cwms_batch_events.core.settings import get_settings
 from cwms_batch_events.core.utils import get_runner_id
 
@@ -46,6 +46,8 @@ def register_due_jobs(now=None, session_factory=create_session):
             try:
                 with db.begin_nested():
                     script.schedule_error = None
+                    if script.schedule_type == "cron":
+                        validate_schedule_interval(script.schedule_cron)
                     options = execution_for_config(script)
                     for minute in due_minutes(script, last, now):
                         existing = db.scalar(select(JobModel.id).where(
@@ -75,8 +77,10 @@ def register_due_jobs(now=None, session_factory=create_session):
                         logger.info("Scheduled occurrence registered", extra={"event": "scheduled_job_registered",
                             "job_id": job.id, "script_id": script.id, "office": script.office,
                             "run_trigger": "scheduled", "scheduled_for": minute, "submitted_by": script.schedule_updated_name})
-            except Exception:
+            except Exception as exc:
                 script.schedule_error = "Schedule could not be evaluated. Review the saved command and schedule."
+                if isinstance(exc, ValueError) and "minimum schedule interval" in str(exc):
+                    script.schedule_error = "The minimum schedule interval is 5 minutes. Update this schedule before it can run."
                 logger.exception("Schedule could not be evaluated", extra={"event": "schedule_failed", "script_id": script.id, "office": script.office})
         db.execute(text("UPDATE maintenance_tasks SET last_success=:now, last_checked=:now WHERE name='schedules'"), {"now": now})
         if last and now - last > timedelta(minutes=5):

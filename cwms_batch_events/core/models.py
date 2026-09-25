@@ -7,7 +7,7 @@ from cwms_batch_events.core.display_names import readable_name
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from pydantic.alias_generators import to_camel
 from uuid import UUID
-from cwms_batch_events.core.schedules import validate_cron
+from cwms_batch_events.core.schedules import validate_cron, validate_schedule_interval
 
 
 class CamelModel(BaseModel):
@@ -289,6 +289,11 @@ class ScriptBase(CamelModel):
     def validate_schedule_timezone(cls, value: str | None) -> str:
         return _validate_schedule_timezone(value)
 
+    def enforce_schedule_interval(self):
+        if self.schedule_enabled and self.schedule_type == "cron" and self.schedule_cron:
+            validate_schedule_interval(self.schedule_cron)
+        return self
+
     @model_validator(mode="after")
     def validate_enabled_schedule(self):
         if self.schedule_type == "monthly":
@@ -317,6 +322,8 @@ class ScriptBase(CamelModel):
 
 
 class ScriptCreate(ScriptBase, ExecutionOptions):
+    _minimum_interval = model_validator(mode="after")(ScriptBase.enforce_schedule_interval)
+
     office: str
 
     @model_validator(mode="after")
@@ -345,6 +352,8 @@ class ScriptRead(ScriptBase, ExecutionRecord):
 
 
 class ScriptUpdate(ScriptBase, ExecutionOptions):
+    _minimum_interval = model_validator(mode="after")(ScriptBase.enforce_schedule_interval)
+
     @model_validator(mode="after")
     def schedule_requires_v4(self):
         if self.config_version < 4 and (self.schedule_enabled or self.schedule_type != "manual"):

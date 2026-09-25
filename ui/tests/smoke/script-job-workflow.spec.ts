@@ -139,7 +139,7 @@ test("run from a script row, inspect its runs, and switch Groundwork tabs", asyn
   failHistory = true;
   await row.getByRole("button", { name: "Runs", exact: true }).click();
   await page.getByRole("button", { name: "Refresh", exact: true }).click();
-  await expect(page.getByText("Job runs could not be loaded. Use Refresh to try again.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "We couldn't load this page" })).toBeVisible();
   failHistory = false;
   await page.getByRole("button", { name: "Refresh", exact: true }).click();
   await expect(page.getByRole("button", { name: /Completed/ })).toBeVisible();

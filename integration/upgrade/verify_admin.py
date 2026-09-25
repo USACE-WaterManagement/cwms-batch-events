@@ -10,6 +10,7 @@ from sqlalchemy import text
 from cwms_batch_events.api.routers.admin import operations
 from cwms_batch_events.core.auth.user.models import User
 from cwms_batch_events.core.job_database.postgres.session import create_session
+from cwms_batch_events.core.job_database.postgres.postgres import PostgresJobDatabase
 
 
 def main():
@@ -44,6 +45,14 @@ def main():
         assert result.attention[0].status == "Pending"
         assert all(row.office == "ZZA" for row in result.top_jobs)
         assert len(result.failures) == 2 and all(row.office == "ZZA" for row in result.failures)
+        history = PostgresJobDatabase(db)
+        bounds = dict(submitted_from=now-timedelta(days=2), submitted_before=now-timedelta(days=1))
+        # Inclusive start, exclusive end, applied before count and pagination.
+        assert history.count_jobs_for_offices(["ZZA"], **bounds) == 1
+        page = history.get_jobs_for_offices(["ZZA"], limit=10, **bounds)
+        assert len(page) == 1 and page[0].office == "ZZA"
+        assert page[0].created_time == now-timedelta(days=2)
+        assert history.get_jobs_for_offices(["ZZA"], limit=10, offset=1, **bounds) == []
         db.rollback()
     print("PASS: HQ usage, office/date filters, durations, missing timestamps, and old queue alerts on PostgreSQL")
 

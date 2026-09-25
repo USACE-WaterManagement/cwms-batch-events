@@ -23,6 +23,11 @@ const fetchWithAuth = async (
     throw new ConnectionError(error);
   }
   if (!response.ok) {
+    let office: string | undefined;
+    if (response.status === 403) {
+      const body = await response.clone().json().catch(() => null);
+      if (body?.detail?.code === "office_access_required" && typeof body.detail.office === "string" && /^[A-Z0-9-]{2,10}$/.test(body.detail.office)) office = body.detail.office;
+    }
     let fields: Record<string, string> | undefined;
     let message = response.status >= 500
       ? "The server could not complete the request. Please try again later."
@@ -44,7 +49,7 @@ const fetchWithAuth = async (
         }
       }
     }
-    throw new ApiError(message, response.status, fields);
+    throw new ApiError(message, response.status, fields, office);
   }
   return response;
 };
@@ -58,7 +63,7 @@ class ConnectionError extends Error {
 }
 
 export class ApiError extends Error {
-  constructor(message: string, public readonly status: number, public readonly fields?: Record<string, string>) {
+  constructor(message: string, public readonly status: number, public readonly fields?: Record<string, string>, public readonly office?: string) {
     super(message);
     this.name = "ApiError";
   }

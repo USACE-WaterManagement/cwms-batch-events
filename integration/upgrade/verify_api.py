@@ -73,7 +73,7 @@ def main():
             hidden = client.get("/jobs?limit=10&offset=0")
             assert hidden.json() == [] and hidden.headers["X-Total-Count"] == "0"
             for suffix in ("", "/logs", "/logs/page"):
-                assert client.get(f"/jobs/{job_id}{suffix}").status_code == 404
+                assert client.get(f"/jobs/{job_id}{suffix}").status_code == 403
             app.dependency_overrides.pop(get_job_logger)
             app.dependency_overrides[get_current_user] = lambda: User(username="upgrade-user", offices=["SWT"],
                 admin_offices=["SWT"], roles={"SWT": ["CWMS Users"]})
@@ -155,7 +155,7 @@ def main():
             outsider = client.get("/jobs?limit=10&offset=0")
             assert outsider.json() == [] and outsider.headers["X-Total-Count"] == "0"
             for suffix in ("", "/logs", "/logs/page"):
-                assert client.get(f"/jobs/{job_id}{suffix}").status_code == 404
+                assert client.get(f"/jobs/{job_id}{suffix}").status_code == 403
             app.dependency_overrides[get_current_user] = lambda: User(username="colleague", offices=["SWT"],
                 admin_offices=[], roles={"SWT": ["CWMS Users"]})
             with Session(engine) as session:

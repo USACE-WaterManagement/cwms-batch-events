@@ -1,4 +1,5 @@
-import { useQuery, keepPreviousData, useInfiniteQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { dateParams, type RunDateRange } from "./runDateRange";
+import { useQuery, keepPreviousData, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useAuth } from "@usace-watermanagement/groundwork-water";
 import fetchWithAuth from "../../utils/fetchWithAuth";
 import { JobDetails } from "./useJobDetails";
@@ -37,37 +38,16 @@ const fetchJobs = async (token?: string, latestPerScript = false): Promise<JobDe
 
 export default useJobsList;
 
-export function useScriptRuns(scriptId: string) {
-  const auth = useAuth();
-  const client = useQueryClient();
-  return useInfiniteQuery({
-    queryKey: ["jobs", "script", scriptId], enabled: auth.isAuth,
-    initialPageParam: 0,
-    queryFn: async ({ pageParam }) => {
-      const response = await fetchWithAuth(`/api/jobs?scriptId=${encodeURIComponent(scriptId)}&limit=10&offset=${pageParam}`, {}, auth.token);
-      if (!response.ok) throw new Error("Failed to fetch script runs");
-      const jobs: JobDetails[] = await response.json();
-      const totalHeader = response.headers.get("X-Total-Count");
-      const total = totalHeader === null ? pageParam + jobs.length : Number(totalHeader);
-      return { jobs: mergeObservedJobs(jobs, client), total, offset: pageParam };
-    },
-    getNextPageParam: last => {
-      const next = last.offset + last.jobs.length;
-      if (!last.jobs.length || next >= last.total) return undefined;
-      return next;
-    },
-  });
-}
-
-export const useJobsPage = (page: number, pageSize: number | "all", offices: string[] = []) => {
+export const useJobsPage = (page: number, pageSize: number | "all", offices: string[] = [], range: RunDateRange = { start: "", end: "" }, scriptId?: string) => {
   const auth = useAuth();
   const client = useQueryClient();
   return useQuery({
-    queryKey: ["jobs", "page", page, pageSize, offices],
+    queryKey: ["jobs", "page", page, pageSize, offices, range, scriptId],
     placeholderData: keepPreviousData,
-    enabled: auth.isAuth,
+    enabled: auth.isAuth && !(range.start && range.end && range.start > range.end),
     queryFn: async () => {
-      const params = new URLSearchParams();
+      const params = dateParams(range);
+      if (scriptId) params.set("scriptId", scriptId);
       if (pageSize !== "all") { params.set("limit", String(pageSize)); params.set("offset", String((page - 1) * pageSize)); }
       offices.forEach(office => params.append("office", office));
       const query = params.size ? `?${params}` : "";

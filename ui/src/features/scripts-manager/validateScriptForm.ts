@@ -1,3 +1,4 @@
+import { meetsMinimumInterval } from "./schedulePresets";
 import type { ScriptFormData } from "./types";
 
 export function validateScriptForm(form: ScriptFormData): Record<string, string> {
@@ -29,6 +30,7 @@ export function validateScriptForm(form: ScriptFormData): Record<string, string>
         if (step && bounds.length === 1) return false;
         return bounds[0] >= ranges[index][0] && bounds[0] <= bounds[bounds.length - 1] && bounds[bounds.length - 1] <= ranges[index][1];
       }));
+      if (valid && form.scheduleEnabled && !meetsMinimumInterval(fields)) errors.scheduleCron = "The minimum schedule interval is 5 minutes. Space all selected run times at least 5 minutes apart.";
       if (!valid) errors.scheduleCron = "Enter a valid five-field numeric cron expression, such as 0 8 * * 1-5.";
     }
     try {

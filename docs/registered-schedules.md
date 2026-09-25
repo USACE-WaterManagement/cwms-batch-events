@@ -152,3 +152,7 @@ is not AWS billing data. Opening logs still requires office access. Migration
 1.01.21 adds reporting indexes to the existing PostgreSQL database. Schedule the
 migration during a suitable deployment window because index creation takes a table
 write lock. No additional AWS resources or billing permissions are required.
+
+Schedules must have at least five minutes between selected run times. See the [capacity and retry review](capacity-and-retries.md) for infrastructure settings and proposed office limits.
+
+Run history supports submitted-date ranges and explicit pagination. Date boundaries use the browser timezone and include the selected end date. Shared job access denial exposes only the office needed to request access, without returning job metadata or logs.

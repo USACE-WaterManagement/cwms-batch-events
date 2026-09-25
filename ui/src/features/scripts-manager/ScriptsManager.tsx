@@ -36,7 +36,7 @@ export const ScriptsManager = () => {
   return (
     <>
       <OfficeSelector offices={data} value={selectedOffice} onChange={next => { setOffice(next); void navigate({ to: "/scripts-manager", search: {}, replace: true }); }} />
-      {selectedOffice && <ScriptsWorkspace key={`${selectedOffice}:${search.scriptId ?? ""}:${search.jobId ?? ""}`} office={selectedOffice} initialScriptId={search.scriptId} initialJobId={search.jobId} initialEdit={search.edit}
+      {selectedOffice && <ScriptsWorkspace key={selectedOffice} office={selectedOffice} initialScriptId={search.scriptId} initialJobId={search.jobId} initialEdit={search.edit}
         search={scriptSearch} onSearch={setScriptSearch} searchTerm={searchTerm} />}
     </>
   );

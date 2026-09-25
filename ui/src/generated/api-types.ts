@@ -1073,6 +1073,8 @@ export interface operations {
                 /** @description Number of jobs to skip, newest first. */
                 offset?: number;
                 scriptId?: string | null;
+                submittedFrom?: string | null;
+                submittedBefore?: string | null;
                 latestPerScript?: boolean;
                 /** @description Offices to include; defaults to all accessible offices. */
                 office?: string[] | null;

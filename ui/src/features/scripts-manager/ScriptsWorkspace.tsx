@@ -45,6 +45,21 @@ export const ScriptsWorkspace = ({ office, initialScriptId, initialEdit, initial
   const [selectedJobId, setSelectedJobId] = useState<string | undefined>(initialJobId);
   const showTab = (index: number) => setPanelTab(previous => ({ index, revision: previous.revision + 1 }));
 
+  const routeState = JSON.stringify([initialScriptId, initialJobId, initialEdit]);
+  const [lastRouteState, setLastRouteState] = useState(routeState);
+  if (lastRouteState !== routeState) {
+    setLastRouteState(routeState);
+    if (initialScriptId && (initialScriptId !== selectedScriptId || initialJobId !== selectedJobId || initialEdit)) {
+      setSelectedScriptId(initialScriptId);
+      setSelectedJobId(initialJobId);
+      if (initialJobId) setPanelTab(previous => ({ index: 2, revision: previous.revision + 1 }));
+      if (initialEdit) {
+        setPanelMode('edit');
+        setPanelTab(previous => ({ index: 0, revision: previous.revision + 1 }));
+      }
+    }
+  }
+
   if (scripts.isLoading) return <LoadingRows label="Loading job definitions" />;
   if (defaultJobRunner.isLoading) return <LoadingRows label="Loading job runner" />;
   if (scripts.isError)

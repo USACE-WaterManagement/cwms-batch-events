@@ -1,3 +1,5 @@
+import { RunDatePicker, type RunDateRange } from "./RunHistoryControls";
+import { RequestErrorPage } from "../../shared/components/StatePage";
 import { useAuth } from "@usace-watermanagement/groundwork-water";
 import { LoadingRows } from "../../shared/components/LoadingRows";
 import { Button, H1, UsaceBox } from "@usace/groundwork";
@@ -17,12 +19,13 @@ dayjs.extend(relativeTime);
 
 const JobsList = () => {
   const auth = useAuth();
+  const [range, setRange] = useState<RunDateRange>({ start: "", end: "" });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number | "all">(10);
   const [offices, setOffices] = useState<string[]>([]);
   const accessible = useQuery<string[]>({ queryKey: ["accessibleOffices"], enabled: auth.isAuth,
     queryFn: async () => (await fetchWithAuth("/api/users/me/offices", {}, auth.token)).json() });
-  const { data, isLoading, isPlaceholderData, isError } = useJobsPage(page, pageSize, offices);
+  const { data, isLoading, isPlaceholderData, isError, error, refetch } = useJobsPage(page, pageSize, offices, range);
   const loading = isLoading || isPlaceholderData;
   const jobs = data?.jobs ?? [];
   const total = data?.total ?? 0;
@@ -54,7 +57,8 @@ const JobsList = () => {
           {offices.length > 0 && <button type="button" className="action-link" onClick={() => { setOffices([]); setPage(1); }}>All offices</button>}
         </div>
       </fieldset>
-      {isError && <p role="alert">Error occurred while fetching job history.</p>}
+      <RunDatePicker value={range} onChange={value => { setRange(value); setPage(1); }} />
+      {isError && <RequestErrorPage error={error} onRetry={() => void refetch()} />}
       <nav aria-label="Job history pagination" className="flex flex-wrap items-center gap-3">
         <label className="flex items-center gap-2">
           Jobs per page

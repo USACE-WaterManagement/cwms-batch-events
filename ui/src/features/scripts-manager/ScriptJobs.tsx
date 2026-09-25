@@ -1,9 +1,12 @@
+import { RunDatePicker, RunPagination, type RunDateRange } from "../jobs-list/RunHistoryControls";
+import { LoadingRows } from "../../shared/components/LoadingRows";
+import { RequestErrorPage } from "../../shared/components/StatePage";
 import { RequiredRoles } from "./RequiredRoles";
 import { Button, H3 } from "@usace/groundwork";
 import { Link } from "@tanstack/react-router";
 import useExecuteScript from "../script-picker/useExecuteScript";
 import type { ExecuteScriptPayload } from "../script-picker/useExecuteScript";
-import { useScriptRuns } from "../jobs-list/useJobsList";
+import { useJobsPage } from "../jobs-list/useJobsList";
 import JobDetailFull from "../jobs-list/JobDetailFull";
 import type { JobDetails } from "../jobs-list/useJobDetails";
 import type { Script, ScriptFormData } from "./types";
@@ -85,14 +88,18 @@ export const ScriptJobRuns = ({ script, selectedJobId, onSelectJob, latestRunId 
   onSelectJob: (id: string | undefined) => void;
   latestRunId?: string;
 }) => {
-  const jobs = useScriptRuns(script.id);
+  const [page, setPage] = useState(1);
+  const [size, setSize] = useState(10);
+  const [range, setRange] = useState<RunDateRange>({ start: "", end: "" });
+  const jobs = useJobsPage(page, size, [], range, script.id);
+  const loading = jobs.isPending || jobs.isPlaceholderData;
   const observedLatest = useRef(latestRunId);
   const refresh = jobs.refetch;
   useEffect(() => {
     if (latestRunId && latestRunId !== observedLatest.current) void refresh();
     observedLatest.current = latestRunId;
   }, [latestRunId, refresh]);
-  const uniqueRuns = new Map(jobs.data?.pages.flatMap(page => page.jobs).map(job => [job.id, job]));
+  const uniqueRuns = new Map(jobs.data?.jobs.map(job => [job.id, job]));
   const runs = [...uniqueRuns.values()].filter(job => job.scriptId === script.id && job.office === script.office)
     .sort((a, b) => new Date(b.createdTime).getTime() - new Date(a.createdTime).getTime());
   const displayedJobId = selectedJobId ?? runs?.[0]?.id;
@@ -102,13 +109,13 @@ export const ScriptJobRuns = ({ script, selectedJobId, onSelectJob, latestRunId 
       <Button size="sm" disabled={jobs.isFetching} onClick={() => void jobs.refetch()}>Refresh</Button>
     </div>
     <p className="text-sm text-gray-600">Runs are shared with CWMS users in {script.office}. <Link to="/jobs" className="text-blue-700 underline">Open Job History</Link> for all scripts in your offices.</p>
-    {jobs.isLoading && <p role="status">Loading job runs...</p>}
-    {jobs.isError && <p role="alert">Job runs could not be loaded. Use Refresh to try again.</p>}
-    {!jobs.isError && runs?.length === 0 && <p>No runs yet. Open Run job to submit this script.</p>}
-    {runs && runs.length > 0 && <ul aria-label="Script run history" className="max-h-64 space-y-2 overflow-y-auto" onScroll={event => {
-      const list = event.currentTarget;
-      if (list.scrollHeight - list.scrollTop - list.clientHeight < 80 && jobs.hasNextPage && !jobs.isFetching && !jobs.isFetchNextPageError) void jobs.fetchNextPage();
-    }}>
+    <RunDatePicker value={range} onChange={value => { setRange(value); setPage(1); onSelectJob(undefined); }} />
+    <RunPagination page={page} size={size} total={jobs.data?.total ?? 0} loading={loading}
+      onPage={value => { setPage(value); onSelectJob(undefined); }} onSize={value => { setSize(value); setPage(1); onSelectJob(undefined); }} />
+    {loading && <LoadingRows label="Loading job runs" />}
+    {jobs.isError && <RequestErrorPage error={jobs.error} onRetry={() => void refresh()} />}
+    {!loading && !jobs.isError && runs?.length === 0 && <p>No runs yet. Open Run job to submit this script.</p>}
+    {!loading && !jobs.isError && runs.length > 0 && <ul aria-label="Script run history" className="min-h-64 space-y-2">
       {runs.map(job => <li key={job.id}>
         <button type="button" aria-pressed={displayedJobId === job.id} onClick={() => onSelectJob(job.id)}
           className={`flex w-full flex-wrap justify-between gap-2 rounded border p-3 text-left hover:bg-blue-50 ${displayedJobId === job.id ? "border-blue-600 bg-blue-50" : "border-gray-300"}`}>
@@ -121,8 +128,8 @@ export const ScriptJobRuns = ({ script, selectedJobId, onSelectJob, latestRunId 
         </button>
       </li>)}
     </ul>}
-    {jobs.hasNextPage && <Button size="sm" disabled={jobs.isFetching} onClick={() => void jobs.fetchNextPage()}>{jobs.isFetchingNextPage ? "Loading runs…" : "Load more runs"}</Button>}
-    {displayedJobId && <section aria-label="Selected job run" className="min-w-0 border-t border-gray-200 pt-4">
+
+    {!loading && displayedJobId && <section aria-label="Selected job run" className="min-w-0 border-t border-gray-200 pt-4">
       <JobDetailFull key={displayedJobId} jobId={displayedJobId} />
     </section>}
   </div>;

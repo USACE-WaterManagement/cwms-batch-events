@@ -12,6 +12,7 @@ const useJobDetails = (jobId: string) => {
 
   const query = useQuery({
     queryKey: ["job", jobId],
+    meta: { pageError: true },
     enabled: auth.isAuth,
     queryFn: () => fetchJob(jobId, auth.token),
     refetchInterval: (query) => {
