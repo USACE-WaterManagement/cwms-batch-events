@@ -7,6 +7,7 @@ from cwms_batch_events.api.dependencies import get_current_user, get_job_databas
 from cwms_batch_events.core.auth.user.models import User
 from cwms_batch_events.core.job_database.base import JobDatabase
 from cwms_batch_events.core.job_database.postgres.postgres import SlugError
+from cwms_batch_events.core.release_jars import validate_selection
 from cwms_batch_events.core.models import (
     ScriptCreate,
     ScriptRead,
@@ -75,6 +76,11 @@ def post_script(
     job_db: JobDatabase = Depends(get_job_database),
 ):
     check_user_office_admin(user, payload.office)
+    if payload.release_jar:
+        try:
+            validate_selection(payload.office, payload.release_jar)
+        except Exception as exc:
+            raise HTTPException(422, "The release JAR could not be verified. Select an available JAR from this office's releases.") from exc
     try:
         return job_db.store_script(payload, actor=user)
     except ValueError as e:
@@ -93,6 +99,13 @@ def put_script(
     job_db: JobDatabase = Depends(get_job_database),
 ):
     try:
+        if payload.release_jar:
+            saved = job_db.get_script_by_id(script_id)
+            check_user_office_admin(user, saved.office)
+            try:
+                validate_selection(saved.office, payload.release_jar)
+            except Exception as exc:
+                raise HTTPException(422, "The release JAR could not be verified. Select an available JAR from this office's releases.") from exc
         return job_db.update_script(script_id, payload, user.admin_offices, actor=user)
     except NoResultFound:
         raise HTTPException(

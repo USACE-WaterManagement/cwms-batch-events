@@ -9,7 +9,7 @@ from sqlalchemy import (
     UUID,
     VARCHAR,
 )
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from typing import Optional
 import uuid
@@ -31,6 +31,7 @@ scripts_job_runners = Table(
 
 class JobModel(Base):
     __tablename__ = "jobs"
+    release_jar: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
@@ -96,6 +97,7 @@ class JobRunnerModel(Base):
 
 class ScriptModel(Base):
     __tablename__ = "scripts"
+    release_jar: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4

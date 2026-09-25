@@ -136,6 +136,30 @@ Deployment still needs the normal environment rollout checks.
 
 ## Repository browsing configuration
 
+### Release JAR selection
+
+For a version 4 Java job, choose **Browse release JARs** in Command. Select a
+published release and JAR from the office's configured repository. Releases are
+repository-wide, not branch-specific. Draft releases are excluded and prereleases
+are labeled. Selectable assets must have GitHub's SHA-256 digest and be at most
+512 MiB. Existing repository paths and installed commands remain available.
+
+The selection pins the asset ID, release, digest, and size in the configuration
+and each job snapshot. Later edits do not change queued runs. The runner downloads
+the pinned JAR through the API, verifies its bytes, then starts Java with the saved
+or custom arguments. A failed download or checksum prevents Java from starting.
+Release jobs skip repository checkout and use argument mode.
+
+Apply migration 1.01.22 and deploy the API and dispatcher before enabling the picker
+in the UI. Existing Python/Java runner images need no added packages. Batch containers
+must be able to reach the dispatcher's existing API address. GitHub App credentials
+stay in the API. Dispatch creates a job-specific download ticket valid for seven days.
+An expired ticket fails the download. For local Docker dispatch, set `ARTIFACT_API_URL`
+to the API URL reachable from the container and supply the same `APP_KEY` as the API.
+
+See [GitHub release assets](https://docs.github.com/en/rest/releases/assets) for the
+asset digest and download API contract.
+
 ### Java programs from office releases
 
 With the runner's Java artifact loader deployed, repository jobs download the

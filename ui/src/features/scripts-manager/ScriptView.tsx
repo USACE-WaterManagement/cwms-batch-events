@@ -12,6 +12,7 @@ import { UpgradeConfiguration } from "./UpgradeConfiguration";
 import { schedulePreset } from "./schedulePresets";
 
 function scriptSource(script: Script): string {
+  if (script.releaseJar) return `GitHub Release ${script.releaseJar.tag} · ${script.releaseJar.repository}`;
   if ((script.configVersion ?? 1) === 1) return "District GitHub repository (historical)";
   if (script.executionType === "command") return "Installed command";
   return "District GitHub repository";

@@ -99,4 +99,5 @@ def command_for_payload(payload, *, runner: Literal["batch", "local"] = "batch")
 
 
 def skips_repository_checkout(payload) -> bool:
-    return execution_for_config(payload).execution_type == "command"
+    options = execution_for_config(payload)
+    return options.execution_type == "command" or options.release_jar is not None
