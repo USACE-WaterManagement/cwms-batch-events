@@ -21,19 +21,19 @@ test("header controls and links fit desktop, tablet and phone widths", async ({ 
   for (const { width, letterSpacing } of layouts) {
     await page.getByRole("banner").first().evaluate((header, spacing) => { header.style.letterSpacing = spacing; }, letterSpacing);
     await page.setViewportSize({ width, height: 900 });
-    const boxes = await page.locator(".batch-header-actions > button").evaluateAll(buttons => buttons.map(button => {
+    const boxes = await page.locator(".batch-header-actions > button").evaluateAll(buttons => buttons.filter(button => button.getClientRects().length > 0).map(button => {
       const r = button.getBoundingClientRect();
       return { x: r.x, right: r.right, centerY: r.y + r.height / 2 };
     }));
-    expect(boxes).toHaveLength(3);
+    expect(boxes).toHaveLength(width < 640 ? 2 : 3);
     expect(Math.max(...boxes.map(b => b.centerY)) - Math.min(...boxes.map(b => b.centerY))).toBeLessThan(2);
     expect(boxes[0].x).toBeGreaterThan(60);
-    expect(boxes[2].right).toBeLessThan(width);
+    expect(boxes[boxes.length - 1].right).toBeLessThan(width);
     for (let i = 1; i < boxes.length; i++) expect(boxes[i].x).toBeGreaterThanOrEqual(boxes[i - 1].right);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
     if (width >= 768) {
       const first = await page.getByRole("link", { name: "Job History", exact: true }).first().boundingBox();
-      const last = await page.getByRole("link", { name: /^Dev/ }).first().boundingBox();
+      const last = await page.getByRole("link", { name: "Job Manager", exact: true }).first().boundingBox();
       expect(Math.abs(first!.y - last!.y), `Navigation at ${width}px with ${letterSpacing} letter spacing`).toBeLessThan(5);
       if (width < 1024) {
         const actions = await page.locator(".batch-header-actions").boundingBox();

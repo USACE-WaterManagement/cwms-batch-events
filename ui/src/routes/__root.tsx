@@ -14,6 +14,7 @@ import { useRememberedOffice } from "../shared/hooks/useRememberedOffice";
 import { useRepositoryFiles, useRepositoryStatus } from "../features/scripts-manager/useRepositoryFiles";
 import { WarningIndicator } from "../components/WarningIndicator";
 import useAdminOffices from "../features/scripts-manager/useAdminOffices";
+import { AboutMenu } from "../components/AboutMenu";
 import { EnvironmentBadge } from "../components/EnvironmentBadge";
 import { useSystemAdmin } from "../features/auth/useSystemAdmin";
 
@@ -23,25 +24,7 @@ const primaryLinks = [
   { id: "manager", text: "Job Manager", href: "/scripts-manager" },
 ];
 
-const publicAboutLinks = [
-  { id: "about", text: "About", href: "/about" },
-  { id: "controls", text: "Controls", href: "/about/controls" },
-];
-
-const helpLinks = [
-  { id: "onboarding", text: "Onboarding", href: "/help/onboarding" },
-  { id: "script-files", text: "Script setup", href: "/help/script-files" },
-  { id: "script-versions", text: "Script versions", href: "/help/script-versions" },
-];
-
-const authenticatedAboutLinks = [
-  { id: "version", text: "Version", href: "/about/version" },
-];
-
 const batchRepository = "https://github.com/USACE-WaterManagement/cwms-batch-events";
-const externalLink = (id: string, text: string, href: string) => ({
-  id, text, href, target: "_blank", rel: "noopener noreferrer",
-});
 const footerLinks = [
   { text: "About Batch Events", href: "/events/about" },
   { text: "Controls and access", href: "/events/about/controls" },
@@ -85,31 +68,7 @@ function RootShell({ children }: { children: ReactNode }) {
     : undefined;
   const repositoryUrl = repository && /^[\w.-]+\/[\w.-]+$/.test(repository)
     ? `https://github.com/${repository}` : undefined;
-  const aboutLink = {
-    id: "about-menu",
-    text: "About",
-    href: "/about",
-    children: auth.isAuth
-      ? [...publicAboutLinks, ...authenticatedAboutLinks]
-      : publicAboutLinks,
-  };
-  const helpLink = {
-    id: "help-menu",
-    text: "Help",
-    href: "/help/onboarding",
-    children: helpLinks,
-  };
-  const devLink = {
-    id: "dev-menu",
-    text: "Dev",
-    children: [
-      externalLink("swagger", "Swagger UI", `${window.location.origin}/api/docs`),
-      externalLink("batch-repository", "CWMS Batch Events", batchRepository),
-      ...(repositoryUrl ? [externalLink("district-repository", `${office} CWBI jobs`, repositoryUrl)] : []),
-      externalLink("images-repository", "CWBI WM images", "https://github.com/USACE/cwbi-wm-images"),
-    ],
-  };
-  const navLinks = [...primaryLinks, aboutLink, helpLink, devLink];
+  const navLinks = [...primaryLinks];
   if (auth.isAuth && systemAdmin.data === true) navLinks.push({ id: "admin", text: "Admin", href: "/admin" });
 
   return (
@@ -128,10 +87,11 @@ function RootShell({ children }: { children: ReactNode }) {
         { text: "CWMS Data API", href: "https://github.com/USACE/cwms-data-api" },
         { text: "CWBI WM images", href: "https://github.com/USACE/cwbi-wm-images" },
       ]}
-      navRight={<div className="batch-header-actions flex shrink-0 items-center gap-1 whitespace-nowrap py-1" aria-label="Account and notifications">
+      navRight={<div className="batch-header-actions relative flex shrink-0 items-center gap-1 whitespace-nowrap py-1" aria-label="Account and notifications">
+      <AboutMenu signedIn={auth.isAuth} office={office} repositoryUrl={repositoryUrl} />
       {auth.isAuth && <WarningIndicator />}
-      <Button type="button" className="gw-px-2 gw-shrink-0" aria-label={office ? `${office} GitHub` : "GitHub"} disabled={!auth.isAuth || !repositoryUrl} title={repositoryButtonTitle(office, repositoryUrl, repository)}
-        onClick={() => setGithubOpen(true)}><FaGithub aria-hidden /> <span className="hidden min-[1100px]:inline">{office ? `${office} GitHub` : "GitHub"}</span></Button>
+      <Button type="button" className="hidden! sm:inline-flex! gw-px-2 gw-shrink-0" aria-label={office ? `${office} GitHub` : "GitHub"} disabled={!auth.isAuth || !repositoryUrl} title={repositoryButtonTitle(office, repositoryUrl, repository)}
+        onClick={() => setGithubOpen(true)}><FaGithub aria-hidden /></Button>
       <AuthButton />
     </div>}>
       <Modal opened={githubOpen} onClose={() => setGithubOpen(false)} dialogTitle="Open GitHub repository?"
