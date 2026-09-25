@@ -19,6 +19,7 @@ import { useSystemAdmin } from "../features/auth/useSystemAdmin";
 
 const primaryLinks = [
   { id: "jobs", text: "Job History", href: "/jobs" },
+  { id: "log-search", text: "Log search", href: "/log-search" },
   { id: "submit", text: "Submit Job", href: "/submit" },
   { id: "manager", text: "Job Manager", href: "/scripts-manager" },
 ];
