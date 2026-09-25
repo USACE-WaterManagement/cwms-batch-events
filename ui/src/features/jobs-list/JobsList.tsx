@@ -14,6 +14,7 @@ import { jobStatusLabel } from "./jobStatus";
 import LoginPrompt from "../auth/LoginPrompt";
 import { RunTriggerBadge } from "./RunAttribution";
 import { submittedBy } from "./submittedBy";
+import { MdSearch } from "react-icons/md";
 
 dayjs.extend(relativeTime);
 
@@ -44,7 +45,7 @@ const JobsList = () => {
     <div className="mx-auto min-w-0 max-w-4xl space-y-4">
       <UsaceBox title="Job History" className="mb-0!">
       <div className="space-y-3">
-      <p className="text-sm text-slate-600">Click a job to open it</p>
+      <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-sm text-slate-600">Click a job to open it</p><Link to="/log-search" className="action-link"><MdSearch aria-hidden />Search logs</Link></div>
       <div className="flex flex-wrap items-start gap-x-6 gap-y-3 border-b border-slate-200 pb-3">
       <fieldset className="min-w-0 flex-1">
         <legend className="mb-2 text-sm font-semibold">Filter offices <span className="font-normal text-slate-500">· {offices.length ? `${offices.length} selected` : "All offices"}</span></legend>
@@ -80,8 +81,8 @@ const JobsList = () => {
           <Button type="button" disabled={loading || page >= pages} onClick={() => setPage(page + 1)}>Next</Button>
         </>}
       </nav>
-      <div role="region" aria-label="Job history results" tabIndex={pageSize === "all" ? undefined : 0}
-        className={pageSize === "all" ? "space-y-4" : "min-h-64 h-[60vh] space-y-4 overflow-auto overscroll-contain"}>
+      <div role="region" aria-label="Job history results" tabIndex={0}
+        className="min-h-64 h-[60vh] space-y-4 overflow-y-auto overscroll-contain [scrollbar-gutter:stable]">
       {!loading && !isError && jobs.length === 0 && <p>No jobs found for this selection.</p>}
       {loading && <LoadingRows label="Loading job history" />}
       {!loading && jobs.map((job) => {

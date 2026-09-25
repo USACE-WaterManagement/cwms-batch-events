@@ -18,6 +18,7 @@ from cwms_batch_events.api.routers import (
     users,
     scheduler,
     admin,
+    log_search,
     release_jars,
 )
 from cwms_batch_events.core.log_diagnostics import configure_log_diagnostics
@@ -54,4 +55,5 @@ app.include_router(server_logs.router)
 app.include_router(users.router)
 app.include_router(scheduler.router)
 app.include_router(admin.router)
+app.include_router(log_search.router)
 app.include_router(release_jars.router)

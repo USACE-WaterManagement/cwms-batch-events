@@ -68,7 +68,7 @@ test("modern script actions keep submission explicit and open the latest run", a
   }
 });
 
-test("selected run shares Starting and Running status with the run list without extra requests", async ({ page }) => {
+test("selected run shares Starting and Running status with the manager badge without extra requests", async ({ page }) => {
   await page.clock.install({ time: now });
   const current = { ...job, jobStatus: "Pending", batchStatus: "STARTING" };
   let listRequests = 0;
@@ -93,8 +93,7 @@ test("selected run shares Starting and Running status with the run list without 
   const indicator = page.getByRole("button", { name: `View active run for ${script.name}`, exact: true });
   await indicator.click();
   const selected = page.getByRole("region", { name: "Selected job run" });
-  const runButton = page.getByRole("tabpanel").getByRole("button", { name: /Starting/ });
-  await expect(runButton).toBeVisible();
+  await expect(page.getByRole("list", { name: "Script run history" })).toHaveCount(0);
   await expect(indicator).toContainText("Starting");
   await expect(selected.getByText("Starting", { exact: true })).toHaveCount(2);
   await expect(selected.getByText("Pending", { exact: true })).toHaveCount(0);
@@ -111,7 +110,8 @@ test("selected run shares Starting and Running status with the run list without 
   current.jobStatus = "Running";
   current.batchStatus = "RUNNING";
   await page.clock.runFor(5100);
-  await expect(page.getByRole("tabpanel").getByRole("button", { name: /Running/ })).toBeVisible();
+  await expect(indicator).toContainText("Running");
+  await expect(selected.getByText("Running", { exact: true })).toHaveCount(2);
   await expect(page.getByLabel("Job output")).toHaveValue(/Waiting for the first log lines/);
   expect(listRequests).toBe(3);
   expect(logRequests).toBe(1);
@@ -126,7 +126,7 @@ test("selected run shares Starting and Running status with the run list without 
 });
 
 
-test("latest run controls the badge and default history selection", async ({ page }) => {
+test("history starts with the list and the latest badge opens the current run", async ({ page }) => {
   await page.clock.install({ time: now });
   const oldFailure = { ...job, id: "old-failure", jobStatus: "Failed", createdTime: "2026-09-12T12:00:00Z", endTime: "2026-09-14T17:59:00Z" };
   const latest = { ...job, id: "latest", jobStatus: "Completed", endTime: "2026-09-14T17:40:00Z" };
@@ -148,17 +148,19 @@ test("latest run controls the badge and default history selection", async ({ pag
   await expect(row).toContainText("Latest run: Completed");
   await row.getByRole("button", { name: "Runs", exact: true }).click();
   const selected = page.getByRole("region", { name: "Selected job run" });
-  await expect(selected).toContainText("latest");
+  await expect(selected).toHaveCount(0);
   await page.getByRole("tabpanel").getByRole("button", { name: /Failed/ }).click();
   await expect(selected).toContainText("old-failure");
   await expect(warning).toHaveCount(0);
   await row.getByRole("button", { name: "Runs", exact: true }).click();
-  await expect(selected).toContainText("latest");
-  // A new submission supersedes the selected run only in default latest mode.
+  await expect(selected).toHaveCount(0);
+  // New submissions update the badge without opening output over the list.
   latest.id = "newest";
   latest.jobStatus = "Pending";
   await page.clock.runFor(5100);
   await expect(row.getByRole("button", { name: /View active run/ })).toContainText("Queued");
+  await expect(selected).toHaveCount(0);
+  await row.getByRole("button", { name: /View active run/ }).click();
   await expect(selected).toContainText("newest");
 });
 
