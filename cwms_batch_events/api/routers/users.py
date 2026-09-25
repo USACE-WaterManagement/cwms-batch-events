@@ -14,7 +14,7 @@ def get_offices(user: User = Depends(get_current_user)) -> list[str]:
 
 @router.get("/me/system-admin")
 def get_system_admin(user: User = Depends(get_current_user)) -> bool:
-    return "CWMS Admin" in user.roles.get("HQ", [])
+    return "Data Acquisition Mgr" in user.roles.get("HQ", [])
 
 
 @router.get("/me/admin-offices")

@@ -52,7 +52,7 @@ def create_demo():
     from cwms_batch_events.core.execution import command_for_payload
     import shlex
     actor = User(username="demo-operator", display_name="Demo Operator", offices=["SWT"],
-                 admin_offices=["SWT"], roles={"SWT": ["CWMS Users"], "HQ": ["CWMS Admin"]})
+                 admin_offices=["SWT"], roles={"SWT": ["CWMS Users"], "HQ": ["Data Acquisition Mgr"]})
 
     class DemoQueue(JobQueue):
         def __init__(self):

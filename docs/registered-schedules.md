@@ -100,7 +100,7 @@ does not concatenate all CloudWatch streams into one output pane.
   The watchdog cannot restart an entirely stopped API. Existing ECS/process supervision
   must do that. All API replicas down means scheduling pauses. No new alerting is added.
 
-The Admin page and `GET /scheduler/status` require the **CWMS Admin role in HQ**, enforced
+The Admin page and `GET /scheduler/status` require the **Data Acquisition Mgr role in HQ**, enforced
 by the API. Status aggregates all offices. Optional `?office=SWT` filters its counts.
 District script administrators do not see the overall utility status in Scripts Manager.
 Run history requests ten office-authorized runs for a script at a time, with date
@@ -130,7 +130,7 @@ dispatch claims while queue messages may still be redelivered.
 
 ## Administration reporting
 
-HQ CWMS Admin users can review office usage, recent failures, and queue age in Admin.
+HQ Data Acquisition Mgr users can review office usage, recent failures, and queue age in Admin.
 Reports aggregate stored job records for 7, 30, or 90 days. Recorded runtime covers
 finished runs with valid timestamps. Active-job alerts include older submissions.
 AWS status can lag until the existing status updater observes it.

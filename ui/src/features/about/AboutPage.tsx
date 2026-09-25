@@ -146,6 +146,8 @@ const controls = [
     result: "An empty script role list requires no additional CDA role. Run active scripts from Submit Job or Job Manager." },
   { action: "Define or change a job", access: "Data Acquisition Mgr or Data Exchange Mgr for the office",
     result: "Job Manager provides Details, Run job, and Job runs tabs. Editing still requires office administrator access." },
+  { action: "View admin dashboards", access: "Data Acquisition Mgr in HQ",
+    result: "View organization-wide office usage, failures, queue health, and scheduler status from Admin. This role in another office does not grant dashboard access. Contact your HQ administrator to request access." },
 ];
 
 const ControlsPane = ({ user }: { user?: ApplicationInfo["user"] }) => {
@@ -154,7 +156,7 @@ const ControlsPane = ({ user }: { user?: ApplicationInfo["user"] }) => {
     <div><H2 id="controls-heading">Controls</H2>
       <Text>Batch Events uses office roles from your CDA profile. It does not assign or change roles.</Text>
     </div>
-    <div className="grid min-w-0 gap-4 lg:grid-cols-3">{controls.map(control => <Card key={control.action} className="min-w-0 border-t-4 border-t-red-700 p-5">
+    <div className="grid min-w-0 gap-4 md:grid-cols-2">{controls.map(control => <Card key={control.action} className="min-w-0 border-t-4 border-t-red-700 p-5">
       <H3>{control.action}</H3><dl className="mt-4 space-y-4 text-sm">
         <div><dt className="font-semibold text-slate-700">Required access</dt><dd className="mt-1 whitespace-normal text-slate-600">{control.access}</dd></div>
         <div><dt className="font-semibold text-slate-700">What happens</dt><dd className="mt-1 whitespace-normal text-slate-600">{control.result}</dd></div>
