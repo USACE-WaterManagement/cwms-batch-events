@@ -20,6 +20,7 @@ FIELDS = (
     "previous_status", "batch_status", "stream_available", "error_type",
     "aws_error_code", "method", "route", "status_code", "duration_ms", "count",
     "has_more", "exit_code",
+    "run_trigger", "scheduled_for", "task", "attempts", "submitted_by",
 )
 
 

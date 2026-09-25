@@ -62,22 +62,22 @@ def test_v1_ignores_fields_that_did_not_control_historical_execution():
     assert saved.command_args == ["--ignored"]
 
 
-@pytest.mark.parametrize("version", [-1, 0, 4, 99, None, True, "1"])
+@pytest.mark.parametrize("version", [-1, 0, 5, 99, None, True, "1"])
 def test_unsupported_versions_fail_at_execution_boundary(version):
     with pytest.raises(UnsupportedConfigVersion, match="Unsupported script configuration schema version"):
         command_for_payload(SimpleNamespace(config_version=version, repo_path="report.py"))
 
 
-@pytest.mark.parametrize("version", [0, 4, 99])
+@pytest.mark.parametrize("version", [0, 5, 99])
 def test_unsupported_queued_versions_fail_deserialization(version):
     with pytest.raises(ValidationError, match=f"schema version {version}"):
         ScriptRunOptions(config_version=version, office="swt", script_slug="report", repo_path="report.py")
 
 
 @pytest.mark.parametrize("model", [ScriptCreate, ScriptUpdate])
-def test_current_writes_default_to_v3_and_cannot_choose_compatibility_format(model):
+def test_current_writes_default_to_v4_and_cannot_choose_compatibility_format(model):
     fields = dict(office="SWT", name="Report", description="test", repo_path="report.py")
-    assert model(**fields).config_version == 3
+    assert model(**fields).config_version == 4
     for version in (1, 99):
         with pytest.raises(ValidationError):
             model(**fields, config_version=version)

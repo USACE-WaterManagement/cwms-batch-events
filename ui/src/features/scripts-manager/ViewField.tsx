@@ -6,14 +6,14 @@ interface ViewLabelProps {
 
 const ViewLabel = ({ children }: ViewLabelProps) => {
   return (
-    <span className="select-none text-base/6 text-zinc-950 data-disabled:opacity-50 sm:text-sm/6">
+    <span className="select-none font-semibold text-base/6 text-slate-700 data-disabled:opacity-50 sm:text-sm/6">
       {children}
     </span>
   );
 };
 
 interface ViewFieldProps {
-  label: string;
+  label: React.ReactNode;
 }
 
 export const ViewField = ({

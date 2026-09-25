@@ -13,13 +13,13 @@ def test_v2_upgrade_preserves_exact_argv_and_source(source):
                             repo_path="echo" if source == "command" else "python/report.py",
                             command_args=["two words", "", "space ", "$HOME", "&&"])
     before = command_for_payload(saved)
-    upgraded = upgrade_execution(saved)
+    upgraded = upgrade_execution(saved, 3)
     assert upgraded.config_version == 3
     assert upgraded.command_mode == "arguments"
     assert command_for_payload(upgraded) == before
     assert saved.config_version == 2
     assert skips_repository_checkout(upgraded) == (source == "command")
-    assert upgrade_execution(upgraded) == upgraded
+    assert upgrade_execution(upgraded, 3) == upgraded
 
 
 @pytest.mark.parametrize("source", ["command", "github_file"])

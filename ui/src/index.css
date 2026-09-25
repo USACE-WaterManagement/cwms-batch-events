@@ -1,7 +1,11 @@
 @import "tailwindcss";
 @import "@usace/groundwork/dist/groundwork.css" layer(components);
 
-/* Bound the modal panel itself; wide log tables scroll inside the panel. */
+button, [role="tab"], nav, .scripts-list-scroll tr, .script-form-actions label {
+  user-select: none;
+}
+
+/* Bound the modal panel itself. Wide log tables scroll inside the panel. */
 .server-status-modal [id^="headlessui-dialog-panel-"] {
   width: min(64rem, 100%);
   max-width: 64rem;
@@ -32,3 +36,23 @@ header span:has(> .batch-header-actions) {
     flex-basis: 100%;
   }
 }
+
+html { scrollbar-gutter: stable; }
+code, pre, .font-mono, #repoPath, #shellCommand, #scheduleCron, [aria-label="Job log link"] {
+  font-family: "Cascadia Code", "Cascadia Mono", Consolas, "Liberation Mono", monospace;
+}
+.action-link {
+  display: inline-flex; align-items: center; gap: .5rem; min-height: 2.5rem;
+  padding: .5rem .75rem; border: 1px solid #cbd5e1; border-radius: .5rem;
+  background: white; color: #334155; font-size: .875rem; font-weight: 600;
+  text-decoration: none; user-select: none;
+}
+.action-link:hover { background: #eff6ff; border-color: #60a5fa; color: #1d4ed8; }
+.action-link:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+
+/* Keep intrinsic table and command widths inside the app viewport. */
+#root { min-width: 0; width: 100%; }
+#root > div { min-width: 0; max-width: 100%; }
+
+#root > .gw-grid { grid-template-columns: minmax(0, 1fr); }
+#root > .gw-grid > div { min-width: 0; }

@@ -15,7 +15,7 @@ db_url = URL.create(
     port=settings.pgport,
 )
 
-engine = create_engine(db_url)
+engine = create_engine(db_url, connect_args={"connect_timeout": 5})
 
 SessionLocal = sessionmaker(engine)
 

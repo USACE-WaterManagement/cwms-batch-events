@@ -1,5 +1,5 @@
 import { Modal } from "@usace/groundwork";
-import { MdClose, MdTerminal, MdArrowOutward } from "react-icons/md";
+import { MdClose, MdTerminal, MdMenuBook } from "react-icons/md";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import "./command-modal.css";
@@ -20,8 +20,7 @@ export function CommandModal({ opened, onClose, title, children, footer }: {
 }
 
 export function ScriptVersionHelp() {
-  return <Link to="/help/script-versions" target="_blank" rel="noopener noreferrer"
-    className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:border-blue-500 hover:bg-blue-50">
-    Script version guide <MdArrowOutward aria-hidden="true" /><span className="sr-only"> (new tab)</span>
+  return <Link to="/help/script-versions" className="action-link">
+    <MdMenuBook aria-hidden /> Script version guide
   </Link>;
 }

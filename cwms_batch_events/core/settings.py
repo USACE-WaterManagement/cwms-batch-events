@@ -56,7 +56,7 @@ class DatabaseSettings(ComponentSettings):
     pgdatabase: str | None = None
     pghost: str | None = None
     pgport: int = Field(default=5432, ge=1, le=65535)
-    # CWBI deployments use "events"; local Docker overrides this setting.
+    # CWBI deployments use "events". Local Docker overrides this setting.
     database_schema: str = "events"
 
     @model_validator(mode="after")
@@ -74,7 +74,7 @@ class RunnerSettings(ComponentSettings):
 
 
 class Settings(LoggingSettings, StorageSettings, ExecutorSettings, RunnerSettings):
-    """API options; required dependencies are checked by ApiSettings at startup."""
+    """API options. Required dependencies are checked by ApiSettings at startup."""
 
     office_repositories: dict[str, RepositorySettings] = {}
     github_token: SecretStr = SecretStr("")
@@ -84,6 +84,7 @@ class Settings(LoggingSettings, StorageSettings, ExecutorSettings, RunnerSetting
     github_app_private_key: SecretStr = SecretStr("")
     github_repository_ref: str = ""
     repository_mock_mode: bool = False
+    scheduler_enabled: bool = True
     api_version: str = "local"
     app_key: str | None = None
     auth_environment: str | None = None

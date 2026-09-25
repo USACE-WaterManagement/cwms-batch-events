@@ -1,5 +1,6 @@
 import os
 import sys
+os.environ.setdefault("SCHEDULER_ENABLED", "false")
 from pathlib import Path
 
 

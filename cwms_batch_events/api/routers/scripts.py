@@ -25,6 +25,22 @@ def check_user_office_admin(user: User, office: str):
 router = APIRouter(prefix="/scripts", tags=["scripts"])
 
 
+@router.post("/{script_id}/upgrade", response_model=ScriptRead)
+def upgrade_script_configuration(
+    script_id: UUID,
+    user: User = Depends(get_current_user),
+    job_db: JobDatabase = Depends(get_job_database),
+):
+    try:
+        return job_db.upgrade_script_configuration(script_id, user)
+    except NoResultFound:
+        raise HTTPException(status_code=404, detail="Script not found")
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+
 @router.delete("/{script_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_script(
     script_id: UUID,
@@ -60,7 +76,7 @@ def post_script(
 ):
     check_user_office_admin(user, payload.office)
     try:
-        return job_db.store_script(payload)
+        return job_db.store_script(payload, actor=user)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(e)
@@ -77,7 +93,7 @@ def put_script(
     job_db: JobDatabase = Depends(get_job_database),
 ):
     try:
-        return job_db.update_script(script_id, payload, user.admin_offices)
+        return job_db.update_script(script_id, payload, user.admin_offices, actor=user)
     except NoResultFound:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -89,6 +105,19 @@ def put_script(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(e)
         )
+
+
+@router.get("/scheduled")
+def get_scheduled_scripts(
+    user: User = Depends(get_current_user),
+    job_db: JobDatabase = Depends(get_job_database),
+) -> list[ScriptRead]:
+    # The existing catalog applies active/office/role authorization first.
+    return [
+        script
+        for script in job_db.retrieve_script_catalog(user.roles)
+        if script.config_version == 4 and script.schedule_enabled and script.schedule_type in {"hourly", "monthly", "cron"}
+    ]
 
 
 @router.get("/catalog")

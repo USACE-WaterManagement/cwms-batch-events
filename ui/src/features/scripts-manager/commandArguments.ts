@@ -1,8 +1,8 @@
 import parse from "shell-quote/parse.js";
 import type { Script } from "./types";
 
-export const CURRENT_SCRIPT_VERSION = 3;
-export const supportsScriptVersion = (version: number) => [1, 2, 3].includes(version);
+export const CURRENT_SCRIPT_VERSION = 4;
+export const supportsScriptVersion = (version: number) => [1, 2, 3, 4].includes(version);
 // Single quotes keep every saved value literal, including glob characters.
 export const formatArguments = (args: string[]) => args.map(argument =>
   /^[a-zA-Z0-9_./:-]+$/.test(argument) ? argument : "'" + argument.replace(/'/g, "'\\''") + "'",
@@ -44,6 +44,6 @@ export function savedCommandPreview(script: Script): string {
     return `AWS Batch: ${formatArguments(["python", `/jobs/${script.repoPath}`])}\nLocal Docker command text: python /jobs/${script.repoPath}`;
   }
   if (version === 2) return commandPreview(script, false);
-  if (version === 3) return script.commandMode === "shell" ? script.shellCommand ?? "" : commandPreview(script, false);
+  if (version === 3 || version === 4) return script.commandMode === "shell" ? script.shellCommand ?? "" : commandPreview(script, false);
   return "Preview unavailable for this configuration version.";
 }

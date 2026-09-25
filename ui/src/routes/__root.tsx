@@ -1,11 +1,13 @@
+import { PageErrorBoundary, RequestErrorPage, StatePage } from "../shared/components/StatePage";
 import { useState, type ReactNode } from "react";
 import { FaGithub } from "react-icons/fa";
 import {
   createRootRoute,
   Outlet,
+  useLocation,
   type ErrorComponentProps,
 } from "@tanstack/react-router";
-import { Button, Card, Container, H1, Modal, SiteWrapper, Text } from "@usace/groundwork";
+import { Button, Container, Modal, SiteWrapper } from "@usace/groundwork";
 import { useAuth } from "@usace-watermanagement/groundwork-water";
 import AuthButton from "../features/auth/AuthButton";
 import { useRememberedOffice } from "../shared/hooks/useRememberedOffice";
@@ -13,11 +15,12 @@ import { useRepositoryFiles, useRepositoryStatus } from "../features/scripts-man
 import { WarningIndicator } from "../components/WarningIndicator";
 import useAdminOffices from "../features/scripts-manager/useAdminOffices";
 import { EnvironmentBadge } from "../components/EnvironmentBadge";
+import { useSystemAdmin } from "../features/auth/useSystemAdmin";
 
 const primaryLinks = [
   { id: "jobs", text: "Job History", href: "/jobs" },
   { id: "submit", text: "Submit Job", href: "/submit" },
-  { id: "manager", text: "Scripts Manager", href: "/scripts-manager" },
+  { id: "manager", text: "Job Manager", href: "/scripts-manager" },
 ];
 
 const publicAboutLinks = [
@@ -52,6 +55,7 @@ export const Route = createRootRoute({
   shellComponent: RootShell,
   component: RootComponent,
   errorComponent: RootErrorComponent,
+  notFoundComponent: () => <StatePage kind="missing" title="Page not found"><p>Check the address or choose a page from the navigation.</p></StatePage>,
   onCatch: (error) => {
     console.error("Unhandled application error", error);
   },
@@ -64,7 +68,9 @@ function repositoryButtonTitle(office: string | undefined, repositoryUrl: string
 }
 
 function RootShell({ children }: { children: ReactNode }) {
+  const location = useLocation();
   const auth = useAuth();
+  const systemAdmin = useSystemAdmin();
   const [githubOpen, setGithubOpen] = useState(false);
   const [selectedOffice] = useRememberedOffice([]);
   const status = useRepositoryStatus();
@@ -104,6 +110,7 @@ function RootShell({ children }: { children: ReactNode }) {
     ],
   };
   const navLinks = [...primaryLinks, aboutLink, helpLink, devLink];
+  if (auth.isAuth && systemAdmin.data === true) navLinks.push({ id: "admin", text: "Admin", href: "/admin" });
 
   return (
     <SiteWrapper links={navLinks}
@@ -111,7 +118,7 @@ function RootShell({ children }: { children: ReactNode }) {
         <span>CWMS Batch Events</span><EnvironmentBadge />
       </span>}
       missionText="Support USACE water management teams with shared tools to run district jobs and track their results."
-      aboutText="CWMS Batch Events lets authorized district users submit jobs, review job history and logs, and manage registered scripts. For access or job support, contact your district Batch Events administrator."
+      aboutText="CWMS Batch Events lets authorized district users submit jobs, review job history and logs, and manage registered jobs. For access or job support, contact your district Batch Events administrator."
       usaceLinks={[
         ...footerLinks,
         ...(auth.isAuth ? [{ text: "Version and environment", href: "/events/about/version" }] : []),
@@ -136,8 +143,8 @@ function RootShell({ children }: { children: ReactNode }) {
         <p className="my-3 break-all font-medium">{repositoryUrl}</p>
         <p>You must be logged in to GitHub with access to the repository to view it. It will open in a new tab.</p>
       </Modal>
-      <Container>
-        <div className="my-6">{children}</div>
+      <Container className="min-w-0 w-full">
+        <div className="min-w-0 my-6"><PageErrorBoundary key={location.pathname}>{children}</PageErrorBoundary></div>
       </Container>
     </SiteWrapper>
   );
@@ -147,26 +154,6 @@ function RootComponent() {
   return <Outlet />;
 }
 
-function RootErrorComponent({ error }: ErrorComponentProps) {
-  return (
-    <Card role="alert" className="mx-auto max-w-3xl border-red-200 p-6 sm:p-8">
-      <H1>We couldn't load this page</H1>
-      <Text className="mt-3">
-        An unexpected error occurred. Reload the page and try again. If the problem continues,
-        contact your Batch Events administrator.
-      </Text>
-      <Button className="mt-5" onClick={() => window.location.reload()}>
-        Reload page
-      </Button>
-
-      {import.meta.env.DEV ? (
-        <details className="mt-6 rounded border border-slate-200 bg-slate-50 p-4">
-          <summary className="cursor-pointer font-medium">Development details</summary>
-          <pre className="mt-3 overflow-auto whitespace-pre-wrap text-sm text-red-800">
-            {error instanceof Error ? error.message : String(error)}
-          </pre>
-        </details>
-      ) : null}
-    </Card>
-  );
+function RootErrorComponent({ error, reset }: ErrorComponentProps) {
+  return <RequestErrorPage error={error} onRetry={reset} />;
 }

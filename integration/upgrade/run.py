@@ -19,10 +19,12 @@ def check_api(port, database, historical):
     env = os.environ | dict(PGHOST="127.0.0.1", PGPORT=port, PGDATABASE=database,
         PGUSER="eventsapp", PGPASSWORD="local-test-only", DATABASE_SCHEMA="events",
         DEFAULT_JOB_RUNNER="batch", AWS_DEFAULT_REGION="us-gov-west-1",
-        APP_KEY="local-test-only", MOCK_USER="true",
+        APP_KEY="local-test-only", MOCK_USER="true", SCHEDULER_ENABLED="false",
         ALB_DNS_NAME="http://events", APP_SECRETS_ARN="unused")
     subprocess.run([sys.executable, str(Path(__file__).with_name("verify_api.py")),
                     "historical" if historical else "fresh"], env=env, check=True, cwd=ROOT)
+    subprocess.run([sys.executable, str(Path(__file__).with_name("verify_scheduler.py"))], env=env, check=True, cwd=ROOT)
+    subprocess.run([sys.executable, str(Path(__file__).with_name("verify_admin.py"))], env=env, check=True, cwd=ROOT)
 
 
 def main():

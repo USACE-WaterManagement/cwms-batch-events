@@ -9,7 +9,7 @@ import uuid
 from cwms_batch_events.core.auth.user.models import User
 from cwms_batch_events.core.display_names import readable_name
 from cwms_batch_events.core.batch_details import STATUS_MAP, log_stream
-from cwms_batch_events.core.execution import execution_for_config, upgrade_execution
+from cwms_batch_events.core.execution import execution_for_config, upgrade_execution, upgrade_saved_configuration
 from cwms_batch_events.core.job_database.postgres.models import (
     JobModel,
     JobRunnerModel,
@@ -25,6 +25,7 @@ from cwms_batch_events.core.models import (
     ExecutionOptions,
 )
 from cwms_batch_events.core.utils import get_runner_id
+from cwms_batch_events.core.display_names import readable_name
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +54,38 @@ def can_run_script(script: ScriptModel, roles: dict[str, list[str]]) -> bool:
 class PostgresJobDatabase:
     def __init__(self, db: Session):
         self.db = db
+
+    def claim_scheduled_dispatch(self, job_id: uuid.UUID) -> bool:
+        job = self._load_job_for_update(job_id)
+        if job.scheduled_for is None:
+            raise ValueError("Not an internal scheduled occurrence")
+        if job.dispatch_claimed_at is not None or job.external_job_id is not None:
+            self.db.commit()
+            return False
+        job.dispatch_claimed_at = datetime.now(timezone.utc)
+        self.db.commit()
+        return True
+
+    def upgrade_script_configuration(self, script_id: uuid.UUID, actor: User) -> ScriptRead:
+        with self.db.begin():
+            script = self.db.scalars(select(ScriptModel).where(ScriptModel.id == script_id).with_for_update()).one()
+            if script.office not in actor.admin_offices:
+                raise PermissionError(f"User does not have script admin access for office '{script.office}'")
+            if script.config_version != 4:
+                options = upgrade_saved_configuration(script)
+                for field, value in options.model_dump(by_alias=False).items():
+                    setattr(script, field, value)
+                # Upgrading never enables recurring execution.
+                script.schedule_enabled = False
+                script.schedule_type = "manual"
+                script.schedule_minute = None
+                script.schedule_cron = None
+                script.schedule_timezone = "UTC"
+                script.schedule_error = None
+                self._record_schedule_author(script, actor)
+                self.db.flush()
+            result = ScriptRead.model_validate(script)
+        return result
 
     def claim_batch_refresh(self, job_id: uuid.UUID) -> bool:
         # A DB claim shares the 15-second limit across API workers and viewers.
@@ -182,7 +215,9 @@ class PostgresJobDatabase:
         self.db.add(job)
         self.db.commit()
         self.db.refresh(job)
-        logger.info("Job registered", extra={"event": "job_registered", "job_id": job.id, "script_id": job.script_id, "office": job.office})
+        logger.info("Job registered", extra={"event": "job_registered", "job_id": job.id,
+            "script_id": job.script_id, "office": job.office, "run_trigger": job.run_trigger,
+            "submitted_by": readable_name(job.display_name, job.username)})
         return JobRecord.model_validate(job)
 
     def get_job_by_id(self, job_id: uuid.UUID) -> JobRecord | None:
@@ -199,17 +234,28 @@ class PostgresJobDatabase:
             return None
         return JobRecord.model_validate(job_model)
 
-    def count_jobs_for_offices(self, offices: list[str]) -> int:
+    def get_latest_jobs_for_offices(self, offices: list[str]) -> list[JobRecord]:
+        rows = self.db.scalars(select(JobModel).where(JobModel.office.in_(offices), JobModel.script_id.is_not(None))
+            .distinct(JobModel.script_id).order_by(JobModel.script_id, JobModel.created_time.desc(), JobModel.id.desc())).all()
+        return [JobRecord.model_validate(row) for row in rows]
+
+    def count_jobs_for_offices(self, offices: list[str], script_id: uuid.UUID | None = None, submitted_from: datetime | None = None, submitted_before: datetime | None = None) -> int:
         return self.db.scalar(
-            select(func.count()).select_from(JobModel).where(JobModel.office.in_(offices))
+            select(func.count()).select_from(JobModel).where(JobModel.office.in_(offices),
+                True if script_id is None else JobModel.script_id == script_id,
+                True if submitted_from is None else JobModel.created_time >= submitted_from,
+                True if submitted_before is None else JobModel.created_time < submitted_before)
         )
 
     def get_jobs_for_offices(
-        self, offices: list[str], limit: int | None = None, offset: int = 0
+        self, offices: list[str], limit: int | None = None, offset: int = 0, script_id: uuid.UUID | None = None,
+        submitted_from: datetime | None = None, submitted_before: datetime | None = None
     ) -> list[JobRecord]:
         job_models = self.db.scalars(
             select(JobModel)
-            .where(JobModel.office.in_(offices))
+            .where(JobModel.office.in_(offices), True if script_id is None else JobModel.script_id == script_id,
+                True if submitted_from is None else JobModel.created_time >= submitted_from,
+                True if submitted_before is None else JobModel.created_time < submitted_before)
             .order_by(JobModel.created_time.desc(), JobModel.id.desc())
             .limit(limit)
             .offset(offset)
@@ -262,7 +308,7 @@ class PostgresJobDatabase:
 
         return [ScriptRead.model_validate(script) for script in runnable_scripts]
 
-    def store_script(self, payload: ScriptCreate) -> ScriptRead:
+    def store_script(self, payload: ScriptCreate, actor: User | None = None) -> ScriptRead:
         try:
             with self.db.begin():
                 script = ScriptModel()
@@ -277,6 +323,12 @@ class PostgresJobDatabase:
                 script.command_args = payload.command_args
                 script.command_mode = payload.command_mode
                 script.shell_command = payload.shell_command
+                script.schedule_enabled = payload.schedule_enabled
+                script.schedule_type = payload.schedule_type
+                script.schedule_minute = payload.schedule_minute
+                script.schedule_cron = payload.schedule_cron
+                script.schedule_timezone = payload.schedule_timezone
+                self._record_schedule_author(script, actor)
                 script.active = payload.active
                 script.roles = payload.roles
 
@@ -322,14 +374,17 @@ class PostgresJobDatabase:
             logger.info("Job status updated", extra={"event": "job_status_updated", "job_id": job_id, "previous_status": previous_status, "status": status})
 
     def update_script(
-        self, script_id: uuid.UUID, payload: ScriptUpdate, admin_offices: list[str]
+        self, script_id: uuid.UUID, payload: ScriptUpdate, admin_offices: list[str], actor: User | None = None
     ) -> ScriptRead:
         with self.db.begin():
-            script = self.db.get_one(ScriptModel, script_id)
+            script = self.db.scalars(select(ScriptModel).where(ScriptModel.id == script_id).with_for_update()).one()
             if script.office not in admin_offices:
                 raise PermissionError(
                     f"User does not have script admin access for office '{script.office}'"
                 )
+            self._record_schedule_author(script, actor)
+            if payload.config_version < script.config_version:
+                raise ValueError("Configuration versions cannot be downgraded. Reload this script before saving.")
             for field, value in payload.model_dump(by_alias=False).items():
                 if field == "job_runners":
                     job_runners = self.db.scalars(
@@ -348,3 +403,12 @@ class PostgresJobDatabase:
             self.db.refresh(script)
 
         return ScriptRead.model_validate(script)
+
+    @staticmethod
+    def _record_schedule_author(script: ScriptModel, actor: User | None):
+        # Only authenticated API administrators establish recurring execution.
+        if actor is None:
+            return
+        script.schedule_updated_by = actor.username
+        script.schedule_updated_name = readable_name(actor.display_name, actor.username)
+        script.schedule_updated_at = datetime.now(timezone.utc)

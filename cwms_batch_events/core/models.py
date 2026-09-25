@@ -4,8 +4,10 @@ from typing import Literal
 from enum import Enum
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_validator
 from cwms_batch_events.core.display_names import readable_name
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from pydantic.alias_generators import to_camel
 from uuid import UUID
+from cwms_batch_events.core.schedules import validate_cron, validate_schedule_interval
 
 
 class CamelModel(BaseModel):
@@ -31,9 +33,9 @@ class ExecutionRecord(CamelModel):
 
 
 class ExecutionOptions(ExecutionRecord):
-    """Validated v2/v3 writes; persisted versions retain their execution semantics."""
+    """Validated writes. Persisted versions retain their execution semantics."""
 
-    config_version: Literal[2, 3] = 3
+    config_version: Literal[2, 3, 4] = 4
     execution_type: Literal["github_file", "command"] = "github_file"
     runtime: Literal["python", "java", "shell"] = "python"
     command_mode: Literal["arguments", "shell"] = "arguments"
@@ -116,6 +118,10 @@ class JobRecord(ExecutionRecord):
     username: str
     display_name: str | None = None
     run_trigger: Literal["manual", "scheduled", "unknown"] = "unknown"
+    scheduled_for: datetime | None = None
+    schedule_timezone: str | None = None
+    schedule_author: str | None = None
+    dispatch_claimed_at: datetime | None = None
 
     @field_serializer("username")
     def public_username(self, value: str) -> str:
@@ -180,7 +186,7 @@ class ScriptRunRequest(CamelModel):
         return values
     run_trigger: Literal["manual", "scheduled", "unknown"] = Field(
         default="unknown",
-        description="Caller-reported trigger for display only; grants no permissions. UI sends manual; cron/scheduler clients send scheduled. Omitted values remain unknown.",
+        description="Caller-reported trigger for display only. Grants no permissions. UI sends manual. Cron/scheduler clients send scheduled. Omitted values remain unknown.",
     )
 
 
@@ -205,6 +211,7 @@ class ScriptRunOptions(ExecutionRecord):
 
 class JobSource(str, Enum):
     API = "api"
+    SCHEDULER = "scheduler"
 
 
 class JobRequestedBy(BaseModel):
@@ -233,6 +240,19 @@ class BindExternalJobIdRequest(BaseModel):
     external_job_id: str
 
 
+def _validate_schedule_timezone(value: str | None) -> str:
+    timezone_name = (value or "UTC").strip()
+    if not timezone_name:
+        raise ValueError("scheduleTimezone is required")
+    try:
+        ZoneInfo(timezone_name)
+    except ZoneInfoNotFoundError as exc:
+        raise ValueError(
+            f"scheduleTimezone is not a valid timezone: {timezone_name}"
+        ) from exc
+    return timezone_name
+
+
 class ScriptBase(CamelModel):
     name: str
     description: str
@@ -240,10 +260,77 @@ class ScriptBase(CamelModel):
     active: bool = True
     roles: list[str] = []
     job_runners: list[UUID] = []
+    schedule_enabled: bool = False
+    schedule_type: str = "manual"
+    schedule_minute: int | None = None
+    schedule_cron: str | None = None
+    schedule_timezone: str = "UTC"
+
+    @field_validator("schedule_type")
+    def validate_schedule_type(cls, value: str) -> str:
+        if value not in {"manual", "hourly", "monthly", "cron"}:
+            raise ValueError("scheduleType must be one of: manual, hourly, monthly, cron")
+        return value
+
+    @field_validator("schedule_minute")
+    def validate_schedule_minute(cls, value: int | None) -> int | None:
+        if value is not None and not 0 <= value <= 59:
+            raise ValueError("scheduleMinute must be between 0 and 59")
+        return value
+
+    @field_validator("schedule_cron")
+    def validate_schedule_cron(cls, value: str | None) -> str | None:
+        if value is None or not value.strip():
+            return None
+
+        return validate_cron(value)
+
+    @field_validator("schedule_timezone")
+    def validate_schedule_timezone(cls, value: str | None) -> str:
+        return _validate_schedule_timezone(value)
+
+    def enforce_schedule_interval(self):
+        if self.schedule_enabled and self.schedule_type == "cron" and self.schedule_cron:
+            validate_schedule_interval(self.schedule_cron)
+        return self
+
+    @model_validator(mode="after")
+    def validate_enabled_schedule(self):
+        if self.schedule_type == "monthly":
+            fields = (self.schedule_cron or "").split()
+            if len(fields) != 5 or not all(field.isdigit() for field in fields[:3]) or fields[3:] != ["*", "*"]:
+                raise ValueError("Monthly schedules require a numeric minute, hour, and day followed by * *")
+        if not self.schedule_enabled:
+            return self
+
+        if self.schedule_type == "manual":
+            raise ValueError(
+                "scheduleType must be hourly, monthly, or cron when scheduleEnabled is true"
+            )
+
+        if self.schedule_type == "hourly" and self.schedule_minute is None:
+            raise ValueError(
+                "scheduleMinute is required when scheduleEnabled is true and scheduleType is hourly"
+            )
+
+        if self.schedule_type == "cron" and not self.schedule_cron:
+            raise ValueError(
+                "scheduleCron is required when scheduleEnabled is true and scheduleType is cron"
+            )
+
+        return self
 
 
 class ScriptCreate(ScriptBase, ExecutionOptions):
+    _minimum_interval = model_validator(mode="after")(ScriptBase.enforce_schedule_interval)
+
     office: str
+
+    @model_validator(mode="after")
+    def schedule_requires_v4(self):
+        if self.config_version < 4 and (self.schedule_enabled or self.schedule_type != "manual"):
+            raise ValueError("Scheduling requires configuration version 4. Use Upgrade configuration first.")
+        return self
 
 
 class ScriptRead(ScriptBase, ExecutionRecord):
@@ -254,6 +341,9 @@ class ScriptRead(ScriptBase, ExecutionRecord):
     office: str
     created_time: datetime
     updated_time: datetime
+    schedule_updated_name: str | None = None
+    schedule_updated_at: datetime | None = None
+    schedule_error: str | None = None
     job_runners: list[UUID] = []
 
     @field_validator("job_runners", mode="before")
@@ -262,4 +352,10 @@ class ScriptRead(ScriptBase, ExecutionRecord):
 
 
 class ScriptUpdate(ScriptBase, ExecutionOptions):
-    pass
+    _minimum_interval = model_validator(mode="after")(ScriptBase.enforce_schedule_interval)
+
+    @model_validator(mode="after")
+    def schedule_requires_v4(self):
+        if self.config_version < 4 and (self.schedule_enabled or self.schedule_type != "manual"):
+            raise ValueError("Scheduling requires configuration version 4. Use Upgrade configuration first.")
+        return self

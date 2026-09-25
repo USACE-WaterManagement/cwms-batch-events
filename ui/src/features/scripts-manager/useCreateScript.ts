@@ -1,3 +1,4 @@
+import { notifySuccess } from "../../utils/actionNotifications";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@usace-watermanagement/groundwork-water";
 import fetchWithAuth from "../../utils/fetchWithAuth";
@@ -12,6 +13,7 @@ export const useCreateScript = (office: string) => {
       createScript({ ...args, token: auth.token }),
 
     onSuccess: (createdScript) => {
+      notifySuccess("Script created.");
       queryClient.setQueryData<Script[]>(["scripts", office], (oldData) => {
         if (!oldData) return [createdScript];
         return [...oldData, createdScript];

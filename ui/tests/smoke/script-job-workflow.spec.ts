@@ -1,3 +1,4 @@
+import { configSection } from "../configSection";
 import { expect, test } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
@@ -7,7 +8,7 @@ test("run from a script row, inspect its runs, and switch Groundwork tabs", asyn
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
   const script = {
-    id: "script-env", name: "Inspect runner time zone", slug: "inspect-runner-time-zone",
+    id: "script-env", configVersion: 3, name: "Inspect runner time zone", slug: "inspect-runner-time-zone",
     description: "Print the runner time zone with Bash. No CDA request is made.",
     office: "SWT", executionType: "command", runtime: "shell", repoPath: "bash",
     commandArgs: ["-lc", "printf 'TZ=%s\\n' \"$TZ\""], roles: [], active: true,
@@ -74,12 +75,12 @@ test("run from a script row, inspect its runs, and switch Groundwork tabs", asyn
   await capture("onboarding-scripts-manager");
   await row.getByRole("button", { name: "Runs", exact: true }).click();
   await expect(page.getByRole("tab", { name: "Run history", exact: true })).toHaveAttribute("aria-selected", "true");
-  await expect(page.getByText("No runs yet. Open Run script to submit this script.")).toBeVisible();
-  await row.getByRole("button", { name: "Run script", exact: true }).focus();
+  await expect(page.getByText("No runs yet. Open Run job to submit this script.")).toBeVisible();
+  await row.getByRole("button", { name: "Run job", exact: true }).focus();
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("tab", { name: "Run script", exact: true })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("tab", { name: "Run job", exact: true })).toHaveAttribute("aria-selected", "true");
   expect(posts).toBe(0);
-  await expect(page.getByText("No additional CDA role required. Office access is required.")).toBeVisible();
+  await expect(page.getByText("CWMS Users satisfies this job's execution role requirements.")).toBeVisible();
   await capture("onboarding-submit-job");
   await page.getByRole("button", { name: "Submit job", exact: true }).click();
   await expect(page.getByRole("button", { name: "Submitting...", exact: true })).toBeDisabled();
@@ -91,7 +92,7 @@ test("run from a script row, inspect its runs, and switch Groundwork tabs", asyn
   await expect(page).toHaveURL(/\/events\/scripts-manager$/);
   expect(posts).toBe(1);
   await expect(page.getByRole("list").filter({ has: page.getByRole("button", { name: /Completed/ }) }).getByRole("button")).toHaveCount(1);
-  await page.getByRole("tabpanel").getByRole("button", { name: /Completed Open/ }).click();
+  await page.getByRole("tabpanel").getByRole("button", { name: /Completed/ }).click();
   await expect(page.getByRole("region", { name: "Selected job run" })).toContainText(job.id);
   await capture("onboarding-job-runs");
   await page.setViewportSize({ width: 390, height: 844 });
@@ -102,37 +103,43 @@ test("run from a script row, inspect its runs, and switch Groundwork tabs", asyn
   await page.getByRole("link", { name: "Open Job History", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Job History", exact: true })).toBeVisible();
   await capture("job-history");
-  await page.getByRole("link", { name: "Scripts Manager", exact: true }).click();
+  await page.getByRole("link", { name: "Job Manager", exact: true }).click();
   await page.locator("tr").filter({ hasText: second.name }).getByRole("button", { name: "Runs" }).click();
   await expect(page.getByRole("heading", { name: `Office runs for ${second.name}` })).toBeVisible();
   await expect(page.getByRole("region", { name: "Selected job run" })).toContainText("job-other");
-  await expect(page.locator("tr").filter({ hasText: inactive.name }).getByRole("button", { name: "Run script", exact: true })).toBeDisabled();
-  await row.getByRole("button", { name: "Run script", exact: true }).click();
+  await expect(page.locator("tr").filter({ hasText: inactive.name }).getByRole("button", { name: "Run job", exact: true })).toBeDisabled();
+  await row.getByRole("button", { name: "Run job", exact: true }).click();
   await page.getByRole("tab", { name: "Details", exact: true }).click();
   await page.getByRole("button", { name: "Edit", exact: true }).click();
   await expect(page.getByLabel("Name", { exact: true })).toHaveValue(script.name);
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   await page.getByRole("button", { name: "New +", exact: true }).click();
+  await configSection(page, "General");
   await page.getByLabel("Name", { exact: true }).fill(script.name);
+  await configSection(page, "General");
   await page.getByLabel("Description", { exact: true }).fill(script.description);
+  await configSection(page, "Command");
   await page.getByLabel("Source", { exact: true }).selectOption("command");
+  await configSection(page, "Command");
   await page.getByLabel("Executable", { exact: true }).fill("bash");
+  await configSection(page, "Command");
   await page.getByRole("button", { name: "Add arguments", exact: true }).click();
   await page.getByLabel("Arguments", { exact: true }).fill(formatArguments(script.commandArgs));
   await page.getByRole("button", { name: "Apply arguments", exact: true }).click();
-  await expect(page.getByRole("dialog").getByText("No additional CDA role required. Office access is required.")).toBeVisible();
+  await configSection(page, "Access");
+  await expect(page.getByRole("dialog").getByText("CWMS Users satisfies this job's execution role requirements.")).toBeVisible();
   await capture("onboarding-script-form");
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   failSubmission = true;
-  await row.getByRole("button", { name: "Run script", exact: true }).click();
+  await row.getByRole("button", { name: "Run job", exact: true }).click();
   await page.getByRole("button", { name: "Submit job", exact: true }).click();
-  await expect(page.getByText(/Job could not be submitted:/)).toBeVisible();
+  await expect(page.getByRole("region", { name: "Notifications" }).getByText("You do not have permission to perform this action.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Submit job", exact: true })).toBeEnabled();
   expect(posts).toBe(2);
   failHistory = true;
   await row.getByRole("button", { name: "Runs", exact: true }).click();
   await page.getByRole("button", { name: "Refresh", exact: true }).click();
-  await expect(page.getByText("Job runs could not be loaded. Use Refresh to try again.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "We couldn't load this page" })).toBeVisible();
   failHistory = false;
   await page.getByRole("button", { name: "Refresh", exact: true }).click();
   await expect(page.getByRole("button", { name: /Completed/ })).toBeVisible();

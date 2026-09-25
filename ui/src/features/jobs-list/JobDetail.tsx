@@ -17,12 +17,7 @@ const jobFields: (keyof JobDetails)[] = [
   "id",
 ];
 
-const wideFields: (keyof JobDetails)[] = [
-  "createdTime",
-  "runTime",
-  "endTime",
-  "id",
-];
+const wideFields: (keyof JobDetails)[] = ["id"];
 
 const fieldLabels: Partial<Record<keyof JobDetails, string>> = {
   scriptName: "Script", username: "Submitted by", jobStatus: "Status", office: "Office",
@@ -37,10 +32,10 @@ interface JobDetailProps {
 function JobDetail({ job }: JobDetailProps) {
   return (
     <div className="@container/job-details min-w-0 grow">
-      <div className="job-detail-fields grid min-w-0 grow grid-cols-1 gap-x-4 gap-y-1 py-3 @min-[32rem]/job-details:grid-cols-2">
+      <div className="job-detail-fields grid min-w-0 grow grid-cols-2 gap-x-3 gap-y-1 py-2 text-sm @min-[40rem]/job-details:grid-cols-3">
         {jobFields.map((field) => {
           const className = wideFields.includes(field)
-            ? "col-span-full"
+            ? "col-span-full font-mono text-xs"
             : "";
           return (
             <JobDetailField key={field} field={fieldLabels[field] ?? field} className={className}>
@@ -63,6 +58,11 @@ function JobDetail({ job }: JobDetailProps) {
         })}
       </div>
       {job.batchStatusReason && <p className="px-3 pb-3 text-sm text-gray-600">{job.batchStatusReason}</p>}
+      {job.scheduledFor && <div className="px-3 pb-3 text-sm">
+        <p><strong>Scheduled for:</strong> {new Date(job.scheduledFor).toLocaleString(undefined, { timeZone: job.scheduleTimezone || "UTC" })} ({job.scheduleTimezone || "UTC"})</p>
+        <p><strong>Schedule configured by:</strong> {job.scheduleAuthor || "Name unavailable"}</p>
+        {job.dispatchClaimedAt && !job.externalJobId && job.jobStatus === "Pending" && <p className="mt-2 text-amber-900">Dispatch was claimed, but an AWS job ID has not been recorded. If this persists, inspect dispatcher logs before rerunning.</p>}
+      </div>}
     </div>
   );
 }
@@ -77,8 +77,8 @@ const JobDetailField = ({
   className,
   children,
 }: PropsWithChildren<JobDetailFieldProps>) => (
-  <span className={`min-w-0 [overflow-wrap:anywhere] px-3 py-1.5 ${className}`}>
-    <strong className="block">{field}:</strong> {children}
+  <span className={`min-w-0 [overflow-wrap:anywhere] px-1 py-1 ${className}`}>
+    <strong className="mr-1 font-medium text-slate-500">{field}:</strong> {children}
   </span>
 );
 

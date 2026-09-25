@@ -161,6 +161,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/scripts/{script_id}/upgrade": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upgrade Script Configuration */
+        post: operations["upgrade_script_configuration_scripts__script_id__upgrade_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/scripts/{script_id}": {
         parameters: {
             query?: never;
@@ -191,6 +208,23 @@ export interface paths {
         put?: never;
         /** Post Script */
         post: operations["post_script_scripts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scripts/scheduled": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Scheduled Scripts */
+        get: operations["get_scheduled_scripts_scripts_scheduled_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -239,6 +273,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/users/me/offices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Offices */
+        get: operations["get_offices_users_me_offices_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/me/system-admin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get System Admin */
+        get: operations["get_system_admin_users_me_system_admin_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/me/admin-offices": {
         parameters: {
             query?: never;
@@ -248,6 +316,57 @@ export interface paths {
         };
         /** Get Admin Offices */
         get: operations["get_admin_offices_users_me_admin_offices_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scripts/{script_id}/schedule-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Script Schedule Status */
+        get: operations["script_schedule_status_scripts__script_id__schedule_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scheduler/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Scheduler Status */
+        get: operations["scheduler_status_scheduler_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Operations */
+        get: operations["operations_admin_operations_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -279,6 +398,35 @@ export interface components {
             /** Rootpath */
             rootPath: string;
             user: components["schemas"]["UserAccess"];
+        };
+        /** AttentionJob */
+        AttentionJob: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Office */
+            office: string;
+            /** Name */
+            name: string;
+            /** Status */
+            status: string;
+            /** Ageminutes */
+            ageMinutes: number;
+            /** Batchcheckedat */
+            batchCheckedAt: string | null;
+            /** Reason */
+            reason?: string | null;
+        };
+        /** DailyUsage */
+        DailyUsage: {
+            /** Day */
+            day: string;
+            /** Runs */
+            runs: number;
+            /** Failed */
+            failed: number;
         };
         /** DefaultJobRunner */
         DefaultJobRunner: {
@@ -379,6 +527,14 @@ export interface components {
              * @enum {string}
              */
             runTrigger: "manual" | "scheduled" | "unknown";
+            /** Scheduledfor */
+            scheduledFor?: string | null;
+            /** Scheduletimezone */
+            scheduleTimezone?: string | null;
+            /** Scheduleauthor */
+            scheduleAuthor?: string | null;
+            /** Dispatchclaimedat */
+            dispatchClaimedAt?: string | null;
             /** Office */
             office: string;
             /**
@@ -411,6 +567,54 @@ export interface components {
          * @enum {string}
          */
         JobStatus: "Failed" | "Pending" | "Running" | "Completed";
+        /** OperationsSummary */
+        OperationsSummary: {
+            /**
+             * Asof
+             * Format: date-time
+             */
+            asOf: string;
+            /**
+             * Since
+             * Format: date-time
+             */
+            since: string;
+            /** Offices */
+            offices: string[];
+            /** Usage */
+            usage: components["schemas"]["Usage"][];
+            /** Topjobs */
+            topJobs: components["schemas"]["Usage"][];
+            /** Daily */
+            daily: components["schemas"]["DailyUsage"][];
+            /** Attention */
+            attention: components["schemas"]["AttentionJob"][];
+            /** Failures */
+            failures: components["schemas"]["AttentionJob"][];
+            /** Attentiontotal */
+            attentionTotal: number;
+            /** Queued */
+            queued: number;
+            /** Running */
+            running: number;
+            /** Registered */
+            registered: number;
+            /** Automatic */
+            automatic: number;
+        };
+        /** SchedulerStatus */
+        SchedulerStatus: {
+            /** Enabled */
+            enabled: boolean;
+            /** Tasks */
+            tasks: components["schemas"]["TaskHealth"][];
+            /** Pendingdelivery */
+            pendingDelivery: number;
+            /** Needsattention */
+            needsAttention: number;
+            /** Invalidschedules */
+            invalidSchedules: number;
+        };
         /** SchemaInfo */
         SchemaInfo: {
             /** Name */
@@ -429,10 +633,10 @@ export interface components {
         ScriptCreate: {
             /**
              * Configversion
-             * @default 3
+             * @default 4
              * @enum {integer}
              */
-            configVersion: 2 | 3;
+            configVersion: 2 | 3 | 4;
             /**
              * Executiontype
              * @default github_file
@@ -476,6 +680,25 @@ export interface components {
              * @default []
              */
             jobRunners: string[];
+            /**
+             * Scheduleenabled
+             * @default false
+             */
+            scheduleEnabled: boolean;
+            /**
+             * Scheduletype
+             * @default manual
+             */
+            scheduleType: string;
+            /** Scheduleminute */
+            scheduleMinute?: number | null;
+            /** Schedulecron */
+            scheduleCron?: string | null;
+            /**
+             * Scheduletimezone
+             * @default UTC
+             */
+            scheduleTimezone: string;
             /** Office */
             office: string;
         };
@@ -527,6 +750,25 @@ export interface components {
              */
             jobRunners: string[];
             /**
+             * Scheduleenabled
+             * @default false
+             */
+            scheduleEnabled: boolean;
+            /**
+             * Scheduletype
+             * @default manual
+             */
+            scheduleType: string;
+            /** Scheduleminute */
+            scheduleMinute?: number | null;
+            /** Schedulecron */
+            scheduleCron?: string | null;
+            /**
+             * Scheduletimezone
+             * @default UTC
+             */
+            scheduleTimezone: string;
+            /**
              * Id
              * Format: uuid
              */
@@ -545,6 +787,12 @@ export interface components {
              * Format: date-time
              */
             updatedTime: string;
+            /** Scheduleupdatedname */
+            scheduleUpdatedName?: string | null;
+            /** Scheduleupdatedat */
+            scheduleUpdatedAt?: string | null;
+            /** Scheduleerror */
+            scheduleError?: string | null;
         };
         /** ScriptRunRequest */
         ScriptRunRequest: {
@@ -566,20 +814,31 @@ export interface components {
             commandArgs?: string[] | null;
             /**
              * Runtrigger
-             * @description Caller-reported trigger for display only; grants no permissions. UI sends manual; cron/scheduler clients send scheduled. Omitted values remain unknown.
+             * @description Caller-reported trigger for display only. Grants no permissions. UI sends manual. Cron/scheduler clients send scheduled. Omitted values remain unknown.
              * @default unknown
              * @enum {string}
              */
             runTrigger: "manual" | "scheduled" | "unknown";
         };
+        /** ScriptScheduleStatus */
+        ScriptScheduleStatus: {
+            /** Nextrunat */
+            nextRunAt: string | null;
+            /** Lastfinishedat */
+            lastFinishedAt: string | null;
+            /** Lastrunstatus */
+            lastRunStatus: string | null;
+            /** Lastruntrigger */
+            lastRunTrigger: string | null;
+        };
         /** ScriptUpdate */
         ScriptUpdate: {
             /**
              * Configversion
-             * @default 3
+             * @default 4
              * @enum {integer}
              */
-            configVersion: 2 | 3;
+            configVersion: 2 | 3 | 4;
             /**
              * Executiontype
              * @default github_file
@@ -623,6 +882,25 @@ export interface components {
              * @default []
              */
             jobRunners: string[];
+            /**
+             * Scheduleenabled
+             * @default false
+             */
+            scheduleEnabled: boolean;
+            /**
+             * Scheduletype
+             * @default manual
+             */
+            scheduleType: string;
+            /** Scheduleminute */
+            scheduleMinute?: number | null;
+            /** Schedulecron */
+            scheduleCron?: string | null;
+            /**
+             * Scheduletimezone
+             * @default UTC
+             */
+            scheduleTimezone: string;
         };
         /** ServerLogEntry */
         ServerLogEntry: {
@@ -661,6 +939,36 @@ export interface components {
              * @enum {string}
              */
             level: "ALL" | "TRACE" | "DEBUG" | "INFO" | "WARNING" | "ERROR" | "CRITICAL" | "UNKNOWN";
+        };
+        /** TaskHealth */
+        TaskHealth: {
+            /** Name */
+            name: string;
+            /** Lastsuccess */
+            lastSuccess: string | null;
+            /** Healthy */
+            healthy: boolean;
+        };
+        /** Usage */
+        Usage: {
+            /** Office */
+            office: string;
+            /** Scriptid */
+            scriptId?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Runs */
+            runs: number;
+            /** Failed */
+            failed: number;
+            /** Completed */
+            completed: number;
+            /** Users */
+            users: number;
+            /** Runtimeminutes */
+            runtimeMinutes: number;
+            /** Missingduration */
+            missingDuration: number;
         };
         /** UserAccess */
         UserAccess: {
@@ -764,6 +1072,12 @@ export interface operations {
                 limit?: number | null;
                 /** @description Number of jobs to skip, newest first. */
                 offset?: number;
+                scriptId?: string | null;
+                submittedFrom?: string | null;
+                submittedBefore?: string | null;
+                latestPerScript?: boolean;
+                /** @description Offices to include. Defaults to all accessible offices. */
+                office?: string[] | null;
             };
             header?: never;
             path?: never;
@@ -774,7 +1088,7 @@ export interface operations {
             /** @description Successful Response */
             200: {
                 headers: {
-                    /** @description Total jobs in the user offices when pagination is requested. */
+                    /** @description Total jobs in the user's CWMS offices when pagination is requested. */
                     "X-Total-Count"?: number;
                     [name: string]: unknown;
                 };
@@ -972,6 +1286,37 @@ export interface operations {
             };
         };
     };
+    upgrade_script_configuration_scripts__script_id__upgrade_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                script_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScriptRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     put_script_scripts__script_id__put: {
         parameters: {
             query?: never;
@@ -1100,6 +1445,26 @@ export interface operations {
             };
         };
     };
+    get_scheduled_scripts_scripts_scheduled_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScriptRead"][];
+                };
+            };
+        };
+    };
     get_user_scripts_catalog_scripts_catalog_get: {
         parameters: {
             query?: never;
@@ -1126,7 +1491,7 @@ export interface operations {
                 cursor?: string | null;
                 start_time?: number | null;
                 end_time?: number | null;
-                /** @description CloudWatch JSON level; ALL includes historical text. UNKNOWN scans a bounded page for unclassified entries. */
+                /** @description CloudWatch JSON level. ALL includes historical text. UNKNOWN scans a bounded page for unclassified entries. */
                 level?: "ALL" | "TRACE" | "DEBUG" | "INFO" | "WARNING" | "ERROR" | "CRITICAL" | "UNKNOWN";
             };
             header?: never;
@@ -1155,6 +1520,46 @@ export interface operations {
             };
         };
     };
+    get_offices_users_me_offices_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
+                };
+            };
+        };
+    };
+    get_system_admin_users_me_system_admin_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": boolean;
+                };
+            };
+        };
+    };
     get_admin_offices_users_me_admin_offices_get: {
         parameters: {
             query?: never;
@@ -1171,6 +1576,102 @@ export interface operations {
                 };
                 content: {
                     "application/json": string[];
+                };
+            };
+        };
+    };
+    script_schedule_status_scripts__script_id__schedule_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                script_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScriptScheduleStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    scheduler_status_scheduler_status_get: {
+        parameters: {
+            query?: {
+                office?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchedulerStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    operations_admin_operations_get: {
+        parameters: {
+            query?: {
+                days?: number;
+                office?: string | null;
+                queueMinutes?: number;
+                runMinutes?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationsSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

@@ -8,17 +8,20 @@ const message = (error: unknown) => error instanceof SyntaxError
 
 export const queryClient = new QueryClient({
   queryCache: new QueryCache({
-    onError: (error, query) => notifyError({
-      id: query.queryHash,
-      message: message(error),
-      retry: () => query.fetch(),
-    }),
+    onError: (error, query) => {
+      if (query.meta?.inlineError) return;
+      if (query.meta?.pageError && error instanceof ApiError && [401, 403, 404, 422].includes(error.status)) return;
+      notifyError({ id: query.queryHash, message: message(error), retry: () => query.fetch() });
+    },
     onSuccess: (data, query) => reportWarnings(query.queryHash, data, () => query.fetch()),
   }),
   mutationCache: new MutationCache({
-    onError: (error, _variables, _context, mutation) => notifyError({
+    onError: (error, _variables, _context, mutation) => {
+      if (mutation.meta?.inlineError) return;
+      notifyError({
       id: `mutation-${JSON.stringify(mutation.options.mutationKey ?? [])}-${message(error)}`, message: message(error),
-    }),
+      });
+    },
   }),
   defaultOptions: {
     queries: {

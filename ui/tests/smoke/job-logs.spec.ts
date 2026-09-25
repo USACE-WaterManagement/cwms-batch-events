@@ -5,7 +5,7 @@ import { join } from "node:path";
 async function viewer(page: Page, initialStatus = "Running", available = true, live = true, endTime?: string) {
   const state = {
     status: initialStatus, requests: [] as (string | null)[], failure: 0,
-    live, available, more: false, reset: false,
+    live, available, more: false, reset: false, cursor: true,
     message: null as string | null,
     output: undefined as string | undefined,
   };
@@ -17,7 +17,7 @@ async function viewer(page: Page, initialStatus = "Running", available = true, l
       if (state.failure) return route.fulfill({ status: state.failure, json: { detail: "Invalid log cursor. Refresh the logs." } });
       return route.fulfill({ json: {
         logs: state.available ? state.output ?? `line ${state.requests.length}` : "",
-        nextCursor: `cursor-${state.requests.length}`, hasMore: state.more,
+        nextCursor: state.cursor ? `cursor-${state.requests.length}` : null, hasMore: state.more,
         reset: state.reset, available: state.available, supportsLive: state.live,
         message: state.message,
       } });
@@ -89,6 +89,25 @@ test("completed and failed jobs load once; pagination requires explicit action",
   await expect(page.getByLabel("Job output")).toHaveValue("line 1\nline 2\nline 3");
 });
 
+test("snapshot refresh replaces output while incremental repeated lines are preserved", async ({ page }) => {
+  const state = await viewer(page, "Completed", true, false);
+  state.cursor = false;
+  state.reset = true;
+  state.output = "Help output\nSame line\nSame line";
+  await page.getByRole("button", { name: "Refresh logs" }).click();
+  await expect(page.getByLabel("Job output")).toHaveValue(state.output);
+  state.reset = false;
+  for (let count = 0; count < 3; count++) {
+    await page.getByRole("button", { name: "Refresh logs" }).click();
+    await expect(page.getByLabel("Job output")).toHaveValue(state.output);
+  }
+  expect(state.requests.at(-1)).toBe(null);
+  state.cursor = true;
+  await page.getByRole("button", { name: "Refresh logs" }).click();
+  await page.getByRole("button", { name: "Refresh logs" }).click();
+  await expect(page.getByLabel("Job output")).toHaveValue(`${state.output}\n${state.output}`);
+});
+
 test("pending and completion-only jobs do not repeatedly request logs", async ({ page }) => {
   const state = await viewer(page, "Pending");
   await page.clock.runFor(10000);
@@ -124,7 +143,7 @@ test("hidden tabs and closed viewers stop polling", async ({ page }) => {
   });
   await page.clock.runFor(2100);
   await expect.poll(() => state.requests.length).toBe(2);
-  await page.getByRole("link", { name: "Scripts Manager", exact: true }).click();
+  await page.getByRole("link", { name: "Job Manager", exact: true }).click();
   await expect(page.getByLabel("Job output")).toHaveCount(0);
   const closedCount = state.requests.length;
   await page.clock.runFor(10000);

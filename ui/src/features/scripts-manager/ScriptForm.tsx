@@ -1,4 +1,4 @@
-import dayjs from "dayjs";
+import { ScheduleTiming } from "./ScheduleTiming";
 import { ViewField } from "./ViewField";
 import {
   Button,
@@ -10,27 +10,36 @@ import {
   Text,
 } from "@usace/groundwork";
 import type { Script, ScriptFormData } from "../scripts-manager/types";
-import { MdErrorOutline } from "react-icons/md";
 import { useState } from "react";
+import { ScriptSections, ConfigSection } from "./ScriptSections";
+import { fieldSections, type ScriptSection } from "./configurationSections";
+import { validateScriptForm } from "./validateScriptForm";
+import { ApiError } from "../../utils/fetchWithAuth";
 import { RoleMultiSelect } from "./RoleMultiSelect";
 import { allRoles } from "./utils";
 import { RepositoryPathPicker } from "./RepositoryPathPicker";
 import { FieldHelp } from "./FieldHelp";
 import { Link } from "@tanstack/react-router";
 import { CommandSettings } from "./CommandSettings";
-import { ScriptVersionHelp } from "./CommandModal";
-import { CURRENT_SCRIPT_VERSION, savedCommandPreview, supportsScriptVersion } from "./commandArguments";
+import { CURRENT_SCRIPT_VERSION, supportsScriptVersion } from "./commandArguments";
 import { ScriptVersionNotice } from "./ScriptVersionNotice";
+import { ScriptVersionHelp } from "./CommandModal";
+
+import { schedulePreset, presetCron } from './schedulePresets';
 
 const fieldHelp: Record<string, React.ReactNode> = {
+  scheduleType: "Batch Events queues enabled schedules automatically while the API is running. Disable any equivalent Airflow or legacy trigger before enabling this schedule.",
+  scheduleMinute: "Minute of each hour, from 0 through 59, in the selected timezone.",
+  scheduleCron: "Five numeric fields: minute, hour, day of month, month, and day of week. Supports lists, ranges, and steps.",
+  scheduleTimezone: "An IANA timezone such as America/Chicago. Missing daylight-saving times are skipped and repeated times run once.",
   name: "A descriptive name for this job. Its slug is generated from the name when you create it.",
   description: "Describe what this job does and when someone should run it.",
-  repoPath: <>Enter a path relative to /jobs. Repository files are checked out there. With the Java artifact loader deployed, enabled pins in java/artifacts.json download release JARs into java-artifacts/ before the job runs. Enter those generated paths manually; Browse lists only files committed to GitHub. Files and directories cannot be created here. <Link to="/help/script-files" target="_blank" rel="noopener noreferrer">Script setup (new tab)</Link>. For an installed command, enter its executable; that mode skips checkout and artifact downloads.</>,
+  repoPath: <>Enter a path relative to /jobs. Repository files are checked out there. With the Java artifact loader deployed, enabled pins in java/artifacts.json download release JARs into java-artifacts/ before the job runs. Enter those generated paths manually. Browse lists only files committed to GitHub. Files and directories cannot be created here. <Link to="/help/script-files" target="_blank" rel="noopener noreferrer">Script setup (new tab)</Link>. For an installed command, enter its executable. That mode skips checkout and artifact downloads.</>,
   executionType: (
     <div className="space-y-4">
       <section className="space-y-2">
         <h3 className="font-semibold">District GitHub repository</h3>
-        <p>Downloads the selected office’s repository before running a Python file, Bash script, or Java JAR. Paths are relative to <code>/jobs</code>. Enabled Java artifact pins also download their release JARs.</p>
+        <p>Downloads the selected office's repository before running a Python file, Bash script, or Java JAR. Paths are relative to <code>/jobs</code>. Enabled Java artifact pins also download their release JARs.</p>
         <div className="space-y-2 rounded-md border border-blue-200 bg-blue-50 p-3 text-blue-950">
           <p className="font-semibold">Example: SWT Java release</p>
           <p>Runtime: <strong>Java JAR</strong><br />JAR Path:</p>
@@ -45,7 +54,7 @@ const fieldHelp: Record<string, React.ReactNode> = {
           <p className="font-semibold">Example: JAR already in the container</p>
           <p>Executable: <code className="font-mono font-semibold">java</code><br />Arguments:</p>
           <pre className="whitespace-pre-wrap break-all rounded bg-white p-2 font-mono text-blue-950"><code>-jar /opt/reports/report.jar</code></pre>
-          <p>Replace this example path with an existing JAR in the image or a mounted directory. Use the repository source for SWT’s downloaded release JAR.</p>
+          <p>Replace this example path with an existing JAR in the image or a mounted directory. Use the repository source for SWT's downloaded release JAR.</p>
         </div>
       </section>
       <p>Quote arguments that contain spaces. For shell operations such as <code>&amp;&amp;</code> or <code>||</code>, select Bash command mode and enter the complete command.</p>
@@ -65,7 +74,7 @@ const slugify = (str: string) => {
 };
 
 const FormRow = ({ children }: React.PropsWithChildren) => {
-  return <Field className="grid grid-cols-1 gap-2 sm:grid-cols-[120px_minmax(0,1fr)] sm:gap-6">{children}</Field>;
+  return <Field className="grid min-w-0 grid-cols-1 gap-2">{children}</Field>;
 };
 
 const InputLabel = ({
@@ -86,27 +95,44 @@ function scriptPathLabel(form: ScriptFormData): string {
   return "GitHub Repo Path";
 }
 
+function displayedRuntime(form: ScriptFormData): string {
+  if (form.commandMode === "shell") return "shell";
+  if (form.executionType === "command") return "installed";
+  return form.runtime ?? "python";
+}
+
+function editableVersion(script?: Script): 2 | 3 | 4 {
+  if (script?.configVersion === 2) return 2;
+  if (script?.configVersion === 3) return 3;
+  return CURRENT_SCRIPT_VERSION;
+}
+
 interface ScriptFormProps {
   office: string;
   script?: Script;
   isPending: boolean;
   mutationError: Error | null;
   onDelete: (scriptId: string) => void;
-  onSave: (data: ScriptFormData) => void;
+  onSave: (data: ScriptFormData) => void | Promise<void>;
+  onValidationChange?: (invalid: boolean) => void;
   onCancelEdit: () => void;
+  initialSection?: ScriptSection;
+  onSectionChange?: (section: ScriptSection) => void;
 }
 
 export const ScriptForm = ({
   office,
   script,
   isPending,
-  mutationError,
   onDelete,
   onSave,
   onCancelEdit,
+  onValidationChange,
+  initialSection = "general",
+  onSectionChange,
 }: ScriptFormProps) => {
   const [form, setForm] = useState<ScriptFormData>({
-    configVersion: CURRENT_SCRIPT_VERSION,
+    configVersion: editableVersion(script),
     name: script?.name ?? "",
     description: script?.description ?? "",
     active: script?.active ?? true,
@@ -117,46 +143,99 @@ export const ScriptForm = ({
     commandMode: script?.commandMode === "shell" ? "shell" : "arguments",
     shellCommand: script?.shellCommand ?? null,
     roles: script?.roles ?? [],
+    scheduleEnabled: script?.scheduleEnabled ?? false,
+    scheduleType: script?.scheduleType ?? "manual",
+    scheduleMinute: script?.scheduleMinute ?? 0,
+    scheduleCron: script?.scheduleCron ?? "",
+    scheduleTimezone: script?.scheduleTimezone ?? "UTC",
   });
 
-  const handleSubmit = () => { onSave({ ...form, repoPath: form.repoPath.trim() }); };
+  const [sourcePaths, setSourcePaths] = useState<Record<string, string>>({
+    [form.executionType ?? "github_file"]: form.repoPath,
+  });
+  const changeSource = (executionType: "github_file" | "command") => {
+    setSourcePaths(previous => ({ ...previous, [form.executionType ?? "github_file"]: form.repoPath }));
+    changeForm({ ...form, executionType, repoPath: sourcePaths[executionType] ?? "" });
+  };
+  const [preset, setPreset] = useState(() => schedulePreset(form));
+  const initialFields = (form.scheduleCron ?? '').split(/\s+/);
+  const [scheduleTime, setScheduleTime] = useState(() => {
+    if (preset === "daily" || preset === "monthly") return `${initialFields[1].padStart(2, "0")}:${initialFields[0].padStart(2, "0")}`;
+    return "08:00";
+  });
+  const [scheduleDay, setScheduleDay] = useState(() => preset === 'monthly' ? initialFields[2] : '1');
+
+  const [section, setLocalSection] = useState<ScriptSection>(initialSection);
+  const setSection = (next: ScriptSection) => { setLocalSection(next); onSectionChange?.(next); };
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitted, setSubmitted] = useState(false);
+  const showErrors = (next: Record<string, string>) => {
+    setErrors(next);
+    onValidationChange?.(Object.keys(next).length > 0);
+    const first = Object.keys(next)[0];
+    if (first) {
+      setSection(fieldSections[first] ?? "general");
+      requestAnimationFrame(() => document.getElementById(first)?.focus());
+    }
+  };
+  const handleSubmit = async () => {
+    setSubmitted(true);
+    const next = validateScriptForm(form);
+    showErrors(next);
+    if (Object.keys(next).length) return;
+    try { await onSave({ ...form, repoPath: form.repoPath.trim() }); }
+    catch (error) {
+      if (error instanceof ApiError && error.fields) showErrors(error.fields);
+    }
+  };
+  const validation = (field: string) => ({
+    invalid: Boolean(errors[field]),
+    "aria-invalid": Boolean(errors[field]),
+    "aria-describedby": errors[field] ? `${field}-error` : undefined,
+    className: errors[field] ? "rounded border-2 border-red-600 bg-red-50 p-2" : "rounded border p-2",
+  });
+  const errorFor = (field: string) => errors[field] && <p id={`${field}-error`} className="text-sm text-red-800">{errors[field]}</p>;
+  const changeForm = (next: ScriptFormData) => {
+    setForm(next);
+    if (submitted) {
+      const nextErrors = validateScriptForm(next);
+      setErrors(nextErrors);
+      onValidationChange?.(Object.keys(nextErrors).length > 0);
+    }
+  };
 
   const update = <K extends keyof typeof form>(
     key: K,
     value: (typeof form)[K],
   ) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    changeForm({ ...form, [key]: value });
   };
 
-  if (script && !supportsScriptVersion(script.configVersion ?? 1)) return <div className="space-y-4 p-4">
+  if (script && ((script.configVersion ?? 1) === 1 || !supportsScriptVersion(script.configVersion ?? 1))) return <div className="space-y-4 p-4">
     <ScriptVersionNotice version={script.configVersion ?? 1} />
     <Button type="button" onClick={onCancelEdit}>Cancel</Button>
   </div>;
 
   return (
     <form
-      className="script-form"
+      className="script-form @container/script-panel" noValidate
       onSubmit={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        handleSubmit();
+        void handleSubmit();
       }}
     >
       <div className="script-form-layout flex flex-col gap-y-2">
-        {script && (script.configVersion ?? 1) < CURRENT_SCRIPT_VERSION && <div className="rounded border border-blue-300 bg-blue-50 p-3 text-sm">
-          Saving upgrades this script from version {script.configVersion ?? 1} to version {CURRENT_SCRIPT_VERSION}. Review the command preview before saving. Existing jobs keep their original version.
-          <div className="mt-2"><ScriptVersionHelp /></div>
-          <p className="mt-2 font-semibold">Before upgrade</p>
-          <pre className="whitespace-pre-wrap break-all">{savedCommandPreview(script)}</pre>
-          {(script.configVersion ?? 1) === 1 && <p>Version 1 ignores saved runtime and separate arguments. Review these fields below because version 3 uses them.</p>}
-        </div>}
+        {Object.keys(errors).length > 0 && <div role="alert" className="rounded border border-red-500 bg-red-50 p-3 text-sm text-red-800">Review the highlighted sections and fields before saving.</div>}
         <div className="script-form-fields">
+        <ScriptSections active={section} onSelect={setSection} errors={errors}>
         <Fieldset disabled={isPending} className="flex min-w-0 flex-col gap-1">
+          <ConfigSection id="general" active={section}>
           {script && <ViewField label="Id">{script.id}</ViewField>}
           <FormRow>
             <InputLabel htmlFor="name">Name</InputLabel>
             <Input
-              id="name"
+              id="name" {...validation("name")}
               name="name"
               value={form.name}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
@@ -165,6 +244,7 @@ export const ScriptForm = ({
               required
             />
           </FormRow>
+          {errorFor("name")}
           {script && <ViewField label="Slug">{script.slug ?? slugify(form.name)}</ViewField>}
           <FormRow>
             <InputLabel htmlFor="description">Description</InputLabel>
@@ -177,12 +257,28 @@ export const ScriptForm = ({
               }
             />
           </FormRow>
-          {form.commandMode !== "shell" && <FormRow>
+          </ConfigSection>
+          <ConfigSection id="source" active={section}>
+          <FormRow>
+            <InputLabel htmlFor="executionType">Source</InputLabel>
+            <select
+              id="executionType"
+              value={form.executionType}
+              onChange={(e) =>
+                changeSource(e.target.value as "github_file" | "command")
+              }
+              className="rounded border p-2"
+            >
+              <option value="github_file">District GitHub repository</option>
+              <option value="command">Installed command</option>
+            </select>
+          </FormRow>
+          <div className="min-h-24">{form.commandMode !== "shell" && <FormRow>
             <InputLabel htmlFor="repoPath">
               {scriptPathLabel(form)}
             </InputLabel>
             {form.executionType === "command" ? <Input
-              id="repoPath"
+              id="repoPath" {...validation("repoPath")}
               name="repoPath"
               value={form.repoPath}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -193,33 +289,20 @@ export const ScriptForm = ({
               key={`${office}:${form.runtime}`}
               office={office}
               runtime={form.runtime ?? "python"}
+              error={errors.repoPath}
               value={form.repoPath}
               onChange={(path) => update("repoPath", path)}
             />}
           </FormRow>}
-          <FormRow>
-            <InputLabel htmlFor="executionType">Source</InputLabel>
-            <select
-              id="executionType"
-              value={form.executionType}
-              onChange={(e) =>
-                update(
-                  "executionType",
-                  e.target.value as "github_file" | "command",
-                )
-              }
-              className="rounded border p-2"
-            >
-              <option value="github_file">District GitHub repository</option>
-              <option value="command">Installed command</option>
-            </select>
-          </FormRow>
-          {form.commandMode !== "shell" && form.executionType !== "command" && (
+          {form.commandMode === "shell" && <p className="text-sm text-slate-600">The Bash command below includes its own executable and paths.</p>}
+          {errorFor("repoPath")}</div>
+          <div>
             <FormRow>
               <InputLabel htmlFor="runtime">Runtime</InputLabel>
               <select
                 id="runtime"
-                value={form.runtime}
+                value={displayedRuntime(form)}
+                disabled={form.executionType === "command" || form.commandMode === "shell"}
                 onChange={(e) =>
                   update(
                     "runtime",
@@ -228,49 +311,180 @@ export const ScriptForm = ({
                 }
                 className="rounded border p-2"
               >
+                {form.executionType === "command" && <option value="installed">Provided by the executable</option>}
                 <option value="python">Python</option>
                 <option value="java">Java JAR</option>
                 <option value="shell">Bash</option>
               </select>
             </FormRow>
-          )}
-          <div className="my-3 rounded-lg border border-gray-300 bg-white p-3">
-            <CommandSettings value={form} onChange={setForm} disabled={isPending} />
           </div>
+
+          <div className="my-3 rounded-lg border border-gray-300 bg-white p-3">
+            <CommandSettings value={form} onChange={changeForm} disabled={isPending} />
+          </div>
+          {errorFor("commandMode")}{errorFor("shellCommand")}{errorFor("commandArgs")}
+          </ConfigSection>
+          <ConfigSection id="schedule" active={section}>
+          {script && <ScheduleTiming script={script} enabled={section === "schedule"} editing />}
+          {(form.configVersion ?? 1) < 4 && <p className="rounded border border-blue-300 bg-blue-50 p-3 text-sm">Scheduling requires version 4. Cancel editing and choose Upgrade configuration in Details.</p>}
+          {errorFor("scheduleType")}
+          <fieldset disabled={(form.configVersion ?? 1) < 4} className="space-y-4">
           <FormRow>
-            <InputLabel htmlFor="roles">Roles (optional)</InputLabel>
-            <RoleMultiSelect
+            <InputLabel htmlFor="scheduleType">Schedule</InputLabel>
+            <select
+              id="scheduleType"
+              className="rounded border p-2"
+              value={preset}
+              onChange={(e) => {
+                const selected = e.target.value;
+                setPreset(selected);
+                if (selected === "daily" || selected === "monthly") {
+                  changeForm({ ...form, scheduleType: selected === "monthly" ? "monthly" : "cron", scheduleCron: presetCron(selected, scheduleTime, scheduleDay) });
+                  return;
+                }
+                changeForm({ ...form, scheduleType: selected, scheduleEnabled: selected === "manual" ? false : form.scheduleEnabled });
+              }}
+            >
+              <option value="manual">Manual only</option>
+              <option value="hourly">Every hour</option>
+              <option value="daily">Every day</option>
+              <option value="monthly">Every month</option>
+              <option value="cron">Cron expression</option>
+            </select>
+          </FormRow>
+          {form.scheduleType !== "manual" && (
+            <>
+              {(preset === "daily" || preset === "monthly") && <div className="space-y-4">
+                {preset === "monthly" && <FormRow>
+                  <Label htmlFor="scheduleDay">Day of month</Label>
+                  <select id="scheduleDay" className="rounded border p-2" value={scheduleDay} onChange={event => {
+                    setScheduleDay(event.target.value);
+                    update("scheduleCron", presetCron(preset, scheduleTime, event.target.value));
+                  }}>
+                    {Array.from({ length: 31 }, (_, index) => index + 1).map(day => <option key={day} value={day}>{day}</option>)}
+                  </select>
+                </FormRow>}
+                <FormRow>
+                  <Label htmlFor="scheduleCron">Run at</Label>
+                  <input id="scheduleCron" type="time" required {...validation("scheduleCron")} value={scheduleTime} onChange={event => {
+                    setScheduleTime(event.target.value);
+                    update("scheduleCron", presetCron(preset, event.target.value, scheduleDay));
+                  }} />
+                </FormRow>
+                {errorFor("scheduleCron")}
+                <Text>Time is in the timezone selected below.</Text>
+                {preset === "monthly" && Number(scheduleDay) > 28 && <Text>In shorter months, runs on the last day of the month.</Text>}
+              </div>}
+              {preset === "hourly" && (
+                <FormRow>
+                  <InputLabel htmlFor="scheduleMinute">Minute</InputLabel>
+                  <Input
+                    id="scheduleMinute" {...validation("scheduleMinute")}
+                    type="number"
+                    min={0}
+                    max={59}
+                    required
+                    value={form.scheduleMinute ?? ""}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      update(
+                        "scheduleMinute",
+                        e.target.value === "" ? null : Number(e.target.value),
+                      )
+                    }
+                  />
+                </FormRow>
+              )}
+              {preset === "cron" && (
+                <FormRow>
+                  <InputLabel htmlFor="scheduleCron">
+                    Cron expression
+                  </InputLabel>
+                  <div>
+                    <Input
+                      id="scheduleCron" {...validation("scheduleCron")}
+                      placeholder="0 8 * * 1-5"
+                      required
+                      value={form.scheduleCron ?? ""}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        update("scheduleCron", e.target.value)
+                      }
+                    />
+                    {errorFor("scheduleCron")}
+                    <Text>
+                      The minimum schedule interval is 5 minutes. Minute, hour, day of month, month, day of week. For
+                      example: <strong className="font-mono font-bold">0 8 * * 1-5</strong>.
+                    </Text>
+                    <a className="inline-block py-2 font-medium text-blue-700 underline" href="https://crontab.guru/" target="_blank" rel="noopener noreferrer">Open cron calculator (new tab)</a>
+                    <Text>Use numeric five-field expressions here. Names and shortcuts such as @daily are not supported.</Text>
+                  </div>
+                </FormRow>
+              )}
+              {errorFor("scheduleMinute")}
+              <FormRow>
+                <InputLabel htmlFor="scheduleTimezone">Timezone</InputLabel>
+                <div>
+                  <Input
+                    id="scheduleTimezone" {...validation("scheduleTimezone")}
+                    required
+                    list="schedule-timezones"
+                    value={form.scheduleTimezone}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      update("scheduleTimezone", e.target.value)
+                    }
+                  />
+                  <datalist id="schedule-timezones">
+                    {[
+                      "UTC",
+                      "America/New_York",
+                      "America/Chicago",
+                      "America/Denver",
+                      "America/Los_Angeles",
+                      "America/Anchorage",
+                      "Pacific/Honolulu",
+                    ].map((zone) => (
+                      <option key={zone} value={zone} />
+                    ))}
+                  </datalist>
+                  <Text>
+                    Use an IANA timezone. Missing daylight-saving times are
+                    skipped. Repeated times run once.
+                  </Text>
+                </div>
+              </FormRow>
+          {errorFor("scheduleTimezone")}
+              <p className="text-sm text-slate-600">Choose Automatic below to enable this schedule. Manual keeps it paused.</p>
+            </>
+          )}
+          </fieldset>
+          </ConfigSection>
+          <ConfigSection id="access" active={section}>
+            <RoleMultiSelect office={office}
               allRoles={allRoles}
               initialSelectedRoles={form.roles}
               onChange={(selectedRoles) => update("roles", selectedRoles)}
             />
-          </FormRow>
-          {script && (
-            <>
-              <ViewField label="Created At">
-                {dayjs(script?.createdTime).toString()}
-              </ViewField>
-              <ViewField label="Last Update">
-                {dayjs(script?.updatedTime).toString()}
-              </ViewField>
-            </>
-          )}
+          </ConfigSection>
+          <ConfigSection id="upgrade" active={section}>
+            <ScriptVersionNotice version={form.configVersion ?? 1} />
+            <p className="text-sm">Save or cancel editing before upgrading the saved configuration.</p>
+            <ScriptVersionHelp />
+          </ConfigSection>
         </Fieldset>
-        {mutationError && (
-          <div role="alert" className="mt-3 flex gap-2">
-            <MdErrorOutline className="text-red-500 flex-none size-6" />
-            <Text className="text-red-500">{mutationError.message}</Text>
-          </div>
-        )}
+        </ScriptSections>
+
         </div>
-        <div className="script-form-actions flex w-full flex-wrap items-center justify-between gap-3 bg-white">
+        <div className="script-form-actions mt-4 flex w-full flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
           <div className="flex items-center gap-2">
-            <label className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 font-semibold ${form.active ? "border-green-600 bg-green-50 text-green-800" : "border-gray-300 bg-gray-100 text-gray-700"}`}>
-              <input id="active" type="checkbox" checked={form.active} disabled={isPending}
-                onChange={event => update("active", event.target.checked)} className="size-5 accent-green-700" />
-              Active
-            </label>
-            <FieldHelp label="Active">Active scripts are available to run. Clear this option to keep the script definition while disabling it.</FieldHelp>
+            <fieldset className="flex flex-wrap gap-3" disabled={isPending}>
+              <legend className="mb-1 text-xs text-slate-600">Run mode</legend>
+              <label className="flex cursor-pointer items-center gap-2"><input type="radio" name="runMode" checked={!form.scheduleEnabled} onChange={() => update("scheduleEnabled", false)} />Manual</label>
+              <label className="flex cursor-pointer items-center gap-2"><input type="radio" name="runMode" checked={form.scheduleEnabled} disabled={(form.configVersion ?? 1) < 4} onChange={() => {
+                changeForm({ ...form, scheduleEnabled: true, scheduleType: form.scheduleType === "manual" ? "hourly" : form.scheduleType });
+                if (preset === "manual") setPreset("hourly");
+                setSection("schedule");
+              }} />Automatic</label>
+            </fieldset>
+            {!form.active && <label className="text-sm"><input type="checkbox" checked={false} onChange={() => update("active", true)} /> Reactivate inactive script</label>}
           </div>
           {script && <DeleteConfirm onDelete={() => onDelete(script?.id)} />}
           <div className="ml-auto flex justify-between gap-3">

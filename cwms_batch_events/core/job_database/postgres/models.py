@@ -44,6 +44,10 @@ class JobModel(Base):
     username: Mapped[str]
     display_name: Mapped[str | None]
     run_trigger: Mapped[str] = mapped_column(default="unknown", server_default="unknown")
+    scheduled_for: Mapped[datetime.datetime | None]
+    schedule_timezone: Mapped[str | None]
+    schedule_author: Mapped[str | None]
+    dispatch_claimed_at: Mapped[datetime.datetime | None]
     office: Mapped[str]
     repo_path: Mapped[str]
     config_version: Mapped[int] = mapped_column(default=1, server_default="1")
@@ -109,6 +113,19 @@ class ScriptModel(Base):
     execution_type: Mapped[str]
     command_mode: Mapped[str] = mapped_column(default="arguments", server_default="arguments")
     shell_command: Mapped[str | None]
+    schedule_enabled: Mapped[bool] = mapped_column(
+        default=False, server_default="false"
+    )
+    schedule_type: Mapped[str] = mapped_column(
+        default="manual", server_default="manual"
+    )
+    schedule_minute: Mapped[int | None]
+    schedule_cron: Mapped[str | None]
+    schedule_timezone: Mapped[str] = mapped_column(default="UTC", server_default="UTC")
+    schedule_updated_by: Mapped[str | None]
+    schedule_updated_name: Mapped[str | None]
+    schedule_updated_at: Mapped[datetime.datetime | None]
+    schedule_error: Mapped[str | None]
     active: Mapped[bool]
     roles: Mapped[list[str]] = mapped_column(ARRAY(String))
     created_time: Mapped[datetime.datetime] = mapped_column(

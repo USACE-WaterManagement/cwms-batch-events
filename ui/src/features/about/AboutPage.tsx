@@ -143,9 +143,9 @@ const controls = [
   { action: "Review office runs and logs", access: "CWMS Users in the job's office",
     result: "Job History shares office runs and shows who submitted them. Manual and Scheduled badges identify the trigger when recorded." },
   { action: "Execute a job", access: "Office access, plus a matching execution role when the script specifies roles",
-    result: "An empty script role list requires no additional CDA role. Run active scripts from Submit Job or Scripts Manager." },
+    result: "An empty script role list requires no additional CDA role. Run active scripts from Submit Job or Job Manager." },
   { action: "Define or change a job", access: "Data Acquisition Mgr or Data Exchange Mgr for the office",
-    result: "Scripts Manager provides Details, Run job, and Job runs tabs. Editing still requires office administrator access." },
+    result: "Job Manager provides Details, Run job, and Job runs tabs. Editing still requires office administrator access." },
 ];
 
 const ControlsPane = ({ user }: { user?: ApplicationInfo["user"] }) => {
@@ -154,13 +154,11 @@ const ControlsPane = ({ user }: { user?: ApplicationInfo["user"] }) => {
     <div><H2 id="controls-heading">Controls</H2>
       <Text>Batch Events uses office roles from your CDA profile. It does not assign or change roles.</Text>
     </div>
-    <div className="overflow-x-auto rounded-lg border border-slate-200"><Table>
-      <TableHead><TableRow><TableHeader>Action</TableHeader><TableHeader>Required access</TableHeader>
-        <TableHeader>What happens</TableHeader></TableRow></TableHead>
-      <TableBody>{controls.map((control) => <TableRow key={control.action}>
-        <TableCell className="font-medium">{control.action}</TableCell><TableCell>{control.access}</TableCell>
-        <TableCell>{control.result}</TableCell></TableRow>)}</TableBody>
-    </Table></div>
+    <div className="grid min-w-0 gap-4 lg:grid-cols-3">{controls.map(control => <Card key={control.action} className="min-w-0 border-t-4 border-t-red-700 p-5">
+      <H3>{control.action}</H3><dl className="mt-4 space-y-4 text-sm">
+        <div><dt className="font-semibold text-slate-700">Required access</dt><dd className="mt-1 whitespace-normal text-slate-600">{control.access}</dd></div>
+        <div><dt className="font-semibold text-slate-700">What happens</dt><dd className="mt-1 whitespace-normal text-slate-600">{control.result}</dd></div>
+      </dl></Card>)}</div>
     <Card className="p-6"><H3>How roles are set</H3>
       <div className="mt-3 space-y-3 text-sm text-slate-700">
         <p>Roles are managed in the CDA user profile and grouped by office.</p>
@@ -168,7 +166,7 @@ const ControlsPane = ({ user }: { user?: ApplicationInfo["user"] }) => {
           that role or another role assigned to you for the same office. Leave the script roles empty
           when no additional execution role is needed. Office access is still required.</p>
         <p><strong>Data Acquisition Mgr</strong> or <strong>Data Exchange Mgr</strong> allows you to
-          define and maintain scripts for that office in Scripts Manager.</p>
+          define and maintain scripts for that office in Job Manager.</p>
         <p>The <strong>Roles</strong> field on each script definition controls who may execute it.</p>
         <p>See the <ExternalLink href={github.cda}>CWMS Data API repository</ExternalLink> for the
           source of CDA profile behavior and the{" "}
@@ -298,13 +296,13 @@ const OnboardingPane = ({ user }: { user?: ApplicationInfo["user"] }) => {
           <ExternalLink href={github.application + "#readme"}>Batch Events README</ExternalLink>.</p>
       </OnboardingStep>
       <OnboardingStep number={3} title="Define the job">
-        <p>Use Scripts Manager to add the office script in two parts.</p>
+        <p>Use Job Manager to add the office script in two parts.</p>
         <ol className="mt-4 space-y-5">
           <OnboardingSubstep number="3.1" title="Choose the office and start a definition">
-            <p>Open <strong>Scripts Manager</strong>, choose {officeLabel}, then select <strong>New +</strong>.</p>
+            <p>Open <strong>Job Manager</strong>, choose {officeLabel}, then select <strong>New +</strong>.</p>
             <OnboardingScreenshot
               src="/events/about/onboarding-scripts-manager.png"
-              alt="Scripts Manager with row actions and Details, Run job, and Job runs tabs."
+              alt="Job Manager with row actions and Details, Run job, and Job runs tabs."
               frameClassName="aspect-[16/10]"
               callouts={[]}
             />
@@ -318,7 +316,7 @@ const OnboardingPane = ({ user }: { user?: ApplicationInfo["user"] }) => {
               or select roles to restrict who can run it. Keep the script active and save.</p>
             <OnboardingScreenshot
               src="/events/about/onboarding-script-form.png"
-              alt="New script form with source, runtime, arguments, and optional roles."
+              alt="New job form with source, runtime, arguments, and optional roles."
               frameClassName="aspect-[16/9]"
               callouts={[]}
             />
@@ -328,7 +326,7 @@ const OnboardingPane = ({ user }: { user?: ApplicationInfo["user"] }) => {
       <OnboardingStep number={4} title="Execute the job">
         <ol className="mt-4 space-y-5">
           <OnboardingSubstep number="4.1" title="Choose the office and script">
-            <p>In <strong>Scripts Manager</strong>, select <strong>Run job</strong> at the end of the
+            <p>In <strong>Job Manager</strong>, select <strong>Run job</strong> at the end of the
               script row. The script opens with its <strong>Run job</strong> tab selected.
               You can also switch between <strong>Details</strong>, <strong>Run job</strong>, and
               <strong> Job runs</strong> in the selected script.</p>
@@ -350,11 +348,11 @@ const OnboardingPane = ({ user }: { user?: ApplicationInfo["user"] }) => {
       </OnboardingStep>
       <OnboardingStep number={5} title="Review the result">
         <p>Select <strong>View job runs</strong> at the end of a script row to open its <strong>Job runs</strong>{" "}
-          tab. Select a run to view status and output; use <strong>Refresh</strong> to reload the list.
+          tab. Select a run to view status and output. Use <strong>Refresh</strong> to reload the list.
           The selected run updates until it finishes, then loads its output.</p>
         <p>Open <strong>Job History</strong> to review runs across scripts in your offices. Both lists
           share office runs and show who submitted them. <strong>Manual</strong> and <strong>Scheduled</strong>{" "}
-          badges distinguish the trigger; older runs may show <strong>Unknown</strong>.</p>
+          badges distinguish the trigger. Older runs may show <strong>Unknown</strong>.</p>
         <p>Script rows show a spinner for queued or running office jobs and a <strong>Recent failure</strong>{" "}
           warning for a failure in the past 24 hours. Select either indicator to open that exact run.
           The manager refreshes status every five seconds while visible. If status cannot be loaded,

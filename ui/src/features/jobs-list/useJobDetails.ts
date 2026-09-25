@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useAuth } from "@usace-watermanagement/groundwork-water";
 import fetchWithAuth from "../../utils/fetchWithAuth";
@@ -12,6 +12,8 @@ const useJobDetails = (jobId: string) => {
 
   const query = useQuery({
     queryKey: ["job", jobId],
+    meta: { pageError: true },
+    enabled: auth.isAuth,
     queryFn: () => fetchJob(jobId, auth.token),
     refetchInterval: (query) => {
       if (query.state.status === "error") return false;
@@ -28,11 +30,13 @@ const useJobDetails = (jobId: string) => {
     if (!query.data) return;
     const fresh = query.data;
     // Reuse the selected job's poll in run lists and history, with no extra GET.
-    client.setQueriesData<JobDetails[] | { jobs: JobDetails[]; total: number }>(
+    client.setQueriesData<JobDetails[] | { jobs: JobDetails[]; total: number } | InfiniteData<{ jobs: JobDetails[]; total: number; offset: number }>>(
       { queryKey: ["jobs"] }, cached => {
         if (!cached) return cached;
         const update = (jobs: JobDetails[]) => jobs.map(job => job.id === fresh.id ? fresh : job);
-        return Array.isArray(cached) ? update(cached) : { ...cached, jobs: update(cached.jobs) };
+        if (Array.isArray(cached)) return update(cached);
+        if ("pages" in cached) return { ...cached, pages: cached.pages.map(page => ({ ...page, jobs: update(page.jobs) })) };
+        return { ...cached, jobs: update(cached.jobs) };
       },
     );
   }, [client, query.data, query.dataUpdatedAt]);

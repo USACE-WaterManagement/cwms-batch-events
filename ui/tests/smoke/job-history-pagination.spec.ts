@@ -23,7 +23,7 @@ test("job history requests pages and lets All scroll with the document", async (
   await page.goto("/events/jobs");
   await page.getByRole("button", { name: "Login", exact: true }).first().click();
   const results = page.getByRole("region", { name: "Job history results" });
-  const rows = results.getByRole("button", { name: /History script/ });
+  const rows = results.getByRole("link", { name: /^Open History script/ });
   await expect(rows).toHaveCount(10);
   await expect(results.getByRole("link", { name: /^Open History script/ })).toHaveCount(10);
   await expect(results.getByRole("link", { name: /^Open History script 1 run/ })).toBeVisible();
@@ -55,8 +55,6 @@ test("job history requests pages and lets All scroll with the document", async (
   await expect(rows).toHaveCount(10);
   await expect(rows.first()).toContainText("History script 1");
   await page.setViewportSize({ width: 390, height: 844 });
-  await rows.first().click();
-  await expect(results.getByRole("link", { name: "Details", exact: true }).first()).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await results.getByRole("link", { name: /^Open History script 1 run/ }).click();
   await expect(page).toHaveURL(/\/events\/jobs\/job-1$/);

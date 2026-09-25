@@ -47,11 +47,11 @@ for (const { width, largeText } of [
     if (largeText) await page.addStyleTag({ content: "html { font-size: 200%; }" });
     await page.getByRole("button", { name: "Login", exact: true }).first().click();
     await page.getByRole("combobox").selectOption("SWT");
-    const list = page.getByRole("region", { name: "SWT scripts list" });
+    const list = page.getByRole("region", { name: "SWT jobs list" });
     await expect(list.locator("tbody tr")).toHaveCount(scripts.length);
     await fits(list.locator(".scripts-list-scroll, table, tbody, tbody tr, td"));
     for (const row of await list.locator("tbody tr").all()) {
-      for (const action of await row.getByRole("button", { name: /^(Run script|Runs)$/ }).all()) {
+      for (const action of await row.getByRole("button", { name: /^(Run job|Runs)$/ }).all()) {
         await action.scrollIntoViewIfNeeded();
         const box = (await action.boundingBox())!;
         const container = (await list.boundingBox())!;
@@ -60,9 +60,9 @@ for (const { width, largeText } of [
       }
     }
     const row = list.locator("tr").filter({ hasText: script.name });
-    await row.getByRole("button", { name: "Run script", exact: true }).click();
+    await row.getByRole("button", { name: "Run job", exact: true }).click();
     await expect(page.getByRole("button", { name: "Submit job", exact: true })).toBeVisible();
-    await fits(page.locator(".script-workspace-panel, .script-workspace-panel pre"));
+    await fits(page.locator(".script-workspace-panel"));
     await page.getByRole("tab", { name: "Details", exact: true }).click();
     await fits(page.locator(".script-view-field, .script-view-field > div"));
     await row.getByRole("button", { name: `View active run for ${script.name}` }).click();

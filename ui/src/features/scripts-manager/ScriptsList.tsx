@@ -37,7 +37,7 @@ export const ScriptsList = ({
 }: ScriptsListProps) => {
   return (
     <div className="scripts-list-scroll @container/scripts max-h-[65vh] overflow-y-auto overscroll-contain">
-    <table className="block w-full" aria-label="Scripts">
+    <table className="block w-full" aria-label="Jobs">
       <thead className="sr-only"><tr><th scope="col">Script</th><th scope="col">Actions</th></tr></thead>
       <tbody className="block w-full">
         {[...scripts]
@@ -71,9 +71,10 @@ export const ScriptsList = ({
                 </div>
                 <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-600">
                   <span>{script.runtime}</span>
+                  {script.active && script.scheduleEnabled && <span className="rounded bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-800">Automatic</span>}
                   <span className="inline-flex items-center gap-1"><ActiveIcon isActive={script.active} />{script.active ? "Active" : "Inactive"}</span>
                 </div>
-                <span className="mt-1 block text-sm text-gray-600">{script.repoPath}</span>
+                <span title={script.repoPath} className="mt-1 block truncate font-mono text-sm text-gray-600">{script.repoPath}</span>
                 <LatestScriptRun
                   jobs={jobs.filter(job => job.scriptId === script.id && job.office === script.office)}
                   now={jobsUpdatedAt} scriptName={script.name} state={runHistoryState}
@@ -83,7 +84,7 @@ export const ScriptsList = ({
                 <div className="flex flex-wrap gap-2" onClick={(event) => event.stopPropagation()}>
                   <button type="button" disabled={!script.active} onClick={() => selectScript(script.id, 1)}
                     className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500 disabled:shadow-none">
-                    <FaPlay aria-hidden="true" className="text-xs" /> Run script
+                    <FaPlay aria-hidden="true" className="text-xs" /> Run job
                   </button>
                   <button type="button" onClick={() => selectScript(script.id, 2)}
                     className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:border-blue-400 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">

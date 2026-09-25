@@ -18,6 +18,18 @@ router = APIRouter(prefix="/internal", include_in_schema=False)
 logger = logging.getLogger(__name__)
 
 
+@router.post("/jobs/{job_id}/claim-scheduled-dispatch")
+def claim_scheduled_dispatch(
+    job_id: UUID,
+    _=Depends(require_internal_auth),
+    job_db: JobDatabase = Depends(get_job_database),
+):
+    try:
+        return {"claimed": job_db.claim_scheduled_dispatch(job_id)}
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
 @router.post(
     "/batch-jobs/{batch_job_id}/status",
     status_code=status.HTTP_204_NO_CONTENT,

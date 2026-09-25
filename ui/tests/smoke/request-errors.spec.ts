@@ -1,3 +1,4 @@
+import { configSection } from "../configSection";
 import { expect, test } from "@playwright/test";
 
 test("server errors retry once, show one toast, and recover on explicit retry", async ({ page }) => {
@@ -5,6 +6,7 @@ test("server errors retry once, show one toast, and recover on explicit retry", 
   let recovered = false;
   await page.route("**/api/**", route => {
     const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/scheduler/status")) return route.fulfill({ json: { enabled: false, tasks: [], pendingDelivery: 0, needsAttention: 0, invalidSchedules: 0 } });
     if (path.endsWith("/admin-offices")) return route.fulfill({ json: ["SWT"] });
     if (path.endsWith("/job-runners/default")) return route.fulfill({ json: { id: "runner-1", slug: "batch" } });
     if (path.endsWith("/scripts")) {
@@ -24,7 +26,7 @@ test("server errors retry once, show one toast, and recover on explicit retry", 
   expect(requests).toBe(2);
   recovered = true;
   await notifications.getByRole("button", { name: "Try again" }).click();
-  await expect(page.getByRole("heading", { name: "No scripts yet for SWT" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "No jobs yet for SWT" })).toBeVisible();
   await expect(notifications.getByRole("alert")).toHaveCount(0);
   expect(requests).toBe(3);
 });
@@ -33,6 +35,7 @@ test("client errors show the API detail without retrying and can be dismissed", 
   let requests = 0;
   await page.route("**/api/**", route => {
     const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/scheduler/status")) return route.fulfill({ json: { enabled: false, tasks: [], pendingDelivery: 0, needsAttention: 0, invalidSchedules: 0 } });
     if (path.endsWith("/admin-offices")) return route.fulfill({ json: ["SWT"] });
     if (path.endsWith("/job-runners/default")) return route.fulfill({ json: { id: "runner-1", slug: "batch" } });
     if (path.endsWith("/repository-files")) {
@@ -55,6 +58,7 @@ test("failed saves show a toast, retain the form, and are not automatically repe
   let saves = 0;
   await page.route("**/api/**", route => {
     const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/scheduler/status")) return route.fulfill({ json: { enabled: false, tasks: [], pendingDelivery: 0, needsAttention: 0, invalidSchedules: 0 } });
     if (path.endsWith("/admin-offices")) return route.fulfill({ json: ["SWT"] });
     if (path.endsWith("/job-runners/default")) return route.fulfill({ json: { id: "runner-1", slug: "batch" } });
     if (path.endsWith("/scripts") && route.request().method() === "POST") {
@@ -67,8 +71,10 @@ test("failed saves show a toast, retain the form, and are not automatically repe
   await page.goto("/events/scripts-manager");
   await page.getByRole("button", { name: "Login", exact: true }).first().click();
   await page.getByRole("combobox").selectOption("SWT");
-  await page.getByRole("button", { name: "Create first script" }).click();
+  await page.getByRole("button", { name: "Create first job" }).click();
+  await configSection(page, "General");
   await page.getByLabel("Name", { exact: true }).fill("SWT report");
+  await configSection(page, "Command");
   await page.getByLabel("GitHub Repo Path", { exact: true }).fill("python/report.py");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("region", { name: "Notifications" })).toContainText("The server could not complete the request");

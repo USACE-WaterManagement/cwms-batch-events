@@ -1,3 +1,4 @@
+import { notifySuccess } from "../../utils/actionNotifications";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import fetchWithAuth from "../../utils/fetchWithAuth";
 import { useAuth } from "@usace-watermanagement/groundwork-water";
@@ -16,6 +17,7 @@ const useExecuteScript = (onSubmitted?: (job: JobDetails) => void) => {
     mutationFn: (payload: ExecuteScriptPayload) =>
       executeScript(payload, auth.token),
     onSuccess: (job: JobDetails, payload) => {
+      notifySuccess("Job submitted.");
       queryClient.setQueryData(["job", job.id], job);
       void queryClient.invalidateQueries({ queryKey: ["jobs"] });
       if (payload.upgradeToVersion) {
