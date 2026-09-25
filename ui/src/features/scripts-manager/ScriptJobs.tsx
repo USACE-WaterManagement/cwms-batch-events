@@ -4,6 +4,7 @@ import { RequestErrorPage } from "../../shared/components/StatePage";
 import { RequiredRoles } from "./RequiredRoles";
 import { Button, H3 } from "@usace/groundwork";
 import { Link } from "@tanstack/react-router";
+import { MdArrowBack } from "react-icons/md";
 import useExecuteScript from "../script-picker/useExecuteScript";
 import type { ExecuteScriptPayload } from "../script-picker/useExecuteScript";
 import { useJobsPage } from "../jobs-list/useJobsList";
@@ -102,7 +103,12 @@ export const ScriptJobRuns = ({ script, selectedJobId, onSelectJob, latestRunId 
   const uniqueRuns = new Map(jobs.data?.jobs.map(job => [job.id, job]));
   const runs = [...uniqueRuns.values()].filter(job => job.scriptId === script.id && job.office === script.office)
     .sort((a, b) => new Date(b.createdTime).getTime() - new Date(a.createdTime).getTime());
-  const displayedJobId = selectedJobId ?? runs?.[0]?.id;
+  if (selectedJobId) return <section aria-label="Selected job run" className="min-w-0 space-y-3 p-4">
+    <Button size="sm" onClick={() => onSelectJob(undefined)}>
+      <MdArrowBack aria-hidden /> Back to office runs for {script.name}
+    </Button>
+    <JobDetailFull key={selectedJobId} jobId={selectedJobId} />
+  </section>;
   return <div className="min-w-0 max-w-full space-y-4 p-4">
     <div className="flex flex-wrap items-center justify-between gap-2">
       <H3>Office runs for {script.name}</H3>
@@ -115,10 +121,10 @@ export const ScriptJobRuns = ({ script, selectedJobId, onSelectJob, latestRunId 
     {loading && <LoadingRows label="Loading job runs" />}
     {jobs.isError && <RequestErrorPage error={jobs.error} onRetry={() => void refresh()} />}
     {!loading && !jobs.isError && runs?.length === 0 && <p>No runs yet. Open Run job to submit this script.</p>}
-    {!loading && !jobs.isError && runs.length > 0 && <ul aria-label="Script run history" className="min-h-64 space-y-2">
+    {!loading && !jobs.isError && runs.length > 0 && <ul aria-label="Script run history" tabIndex={0} className="min-h-64 max-h-[60vh] space-y-2 overflow-y-auto overscroll-contain [scrollbar-gutter:stable]">
       {runs.map(job => <li key={job.id}>
-        <button type="button" aria-pressed={displayedJobId === job.id} onClick={() => onSelectJob(job.id)}
-          className={`flex w-full flex-wrap justify-between gap-2 rounded border p-3 text-left hover:bg-blue-50 ${displayedJobId === job.id ? "border-blue-600 bg-blue-50" : "border-gray-300"}`}>
+        <button type="button" onClick={() => onSelectJob(job.id)}
+          className="flex w-full flex-wrap justify-between gap-2 rounded border border-gray-300 p-3 text-left hover:bg-blue-50">
           <span>{new Date(job.createdTime).toLocaleString()}<span className="block text-sm text-gray-600">{submittedBy(job)}</span></span><span className="inline-flex items-center gap-2 font-semibold">
             <RunTriggerBadge job={job} />
             {(job.jobStatus === "Running" || job.jobStatus === "Pending") && <span aria-hidden="true"><LoadingSpinner /></span>}
@@ -129,8 +135,5 @@ export const ScriptJobRuns = ({ script, selectedJobId, onSelectJob, latestRunId 
       </li>)}
     </ul>}
 
-    {!loading && displayedJobId && <section aria-label="Selected job run" className="min-w-0 border-t border-gray-200 pt-4">
-      <JobDetailFull key={displayedJobId} jobId={displayedJobId} />
-    </section>}
   </div>;
 };

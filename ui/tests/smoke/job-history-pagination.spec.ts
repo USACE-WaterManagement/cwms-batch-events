@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("job history requests pages and lets All scroll with the document", async ({ page }) => {
+test("job history requests pages and keeps All in a scrollable results panel", async ({ page }) => {
   const jobs = Array.from({ length: 23 }, (_, index) => ({
     id: `job-${index + 1}`, scriptName: `History script ${index + 1}`,
     username: "dev-user", office: "SWT", jobStatus: "Completed",
@@ -47,10 +47,10 @@ test("job history requests pages and lets All scroll with the document", async (
   await expect(rows).toHaveCount(23);
   await expect(page.getByText("Showing all 23 jobs")).toBeVisible();
   expect(requests).toContain("");
-  await expect(results).toHaveCSS("overflow-y", "visible");
-  expect(await page.evaluate(() => document.documentElement.scrollHeight > window.innerHeight)).toBe(true);
+  await expect(results).toHaveCSS("overflow-y", "auto");
+  expect(await results.evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true);
   await rows.last().scrollIntoViewIfNeeded();
-  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  expect(await results.evaluate(element => element.scrollTop)).toBeGreaterThan(0);
   await page.getByLabel("Jobs per page").selectOption("10");
   await expect(rows).toHaveCount(10);
   await expect(rows.first()).toContainText("History script 1");

@@ -81,8 +81,8 @@ const JobsList = () => {
           <Button type="button" disabled={loading || page >= pages} onClick={() => setPage(page + 1)}>Next</Button>
         </>}
       </nav>
-      <div role="region" aria-label="Job history results" tabIndex={pageSize === "all" ? undefined : 0}
-        className={pageSize === "all" ? "space-y-4" : "min-h-64 h-[60vh] space-y-4 overflow-auto overscroll-contain"}>
+      <div role="region" aria-label="Job history results" tabIndex={0}
+        className="min-h-64 h-[60vh] space-y-4 overflow-y-auto overscroll-contain [scrollbar-gutter:stable]">
       {!loading && !isError && jobs.length === 0 && <p>No jobs found for this selection.</p>}
       {loading && <LoadingRows label="Loading job history" />}
       {!loading && jobs.map((job) => {

@@ -87,10 +87,11 @@ test("run from a script row, inspect its runs, and switch Groundwork tabs", asyn
   await page.locator("tr").filter({ hasText: second.name }).click();
   finishSubmission();
   await expect(page.getByRole("tab", { name: "Run history", exact: true })).toHaveAttribute("aria-selected", "true");
-  await expect(page.getByRole("heading", { name: `Office runs for ${script.name}` })).toBeVisible();
+  await expect(page.getByRole("button", { name: `Back to office runs for ${script.name}` })).toBeVisible();
   await expect(page.getByRole("textbox", { name: "Job output" })).toHaveValue("TZ=America/Chicago\n");
   await expect(page).toHaveURL(/\/events\/scripts-manager$/);
   expect(posts).toBe(1);
+  await page.getByRole("button", { name: `Back to office runs for ${script.name}` }).click();
   await expect(page.getByRole("list").filter({ has: page.getByRole("button", { name: /Completed/ }) }).getByRole("button")).toHaveCount(1);
   await page.getByRole("tabpanel").getByRole("button", { name: /Completed/ }).click();
   await expect(page.getByRole("region", { name: "Selected job run" })).toContainText(job.id);
@@ -100,12 +101,14 @@ test("run from a script row, inspect its runs, and switch Groundwork tabs", asyn
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await capture("mobile-job-workspace");
   await page.setViewportSize({ width: 1600, height: 1000 });
+  await page.getByRole("button", { name: `Back to office runs for ${script.name}` }).click();
   await page.getByRole("link", { name: "Open Job History", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Job History", exact: true })).toBeVisible();
   await capture("job-history");
   await page.getByRole("link", { name: "Job Manager", exact: true }).click();
   await page.locator("tr").filter({ hasText: second.name }).getByRole("button", { name: "Runs" }).click();
   await expect(page.getByRole("heading", { name: `Office runs for ${second.name}` })).toBeVisible();
+  await page.getByRole("list", { name: "Script run history" }).getByRole("button").click();
   await expect(page.getByRole("region", { name: "Selected job run" })).toContainText("job-other");
   await expect(page.locator("tr").filter({ hasText: inactive.name }).getByRole("button", { name: "Run job", exact: true })).toBeDisabled();
   await row.getByRole("button", { name: "Run job", exact: true }).click();
