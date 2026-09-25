@@ -33,7 +33,7 @@ class ExecutionRecord(CamelModel):
 
 
 class ExecutionOptions(ExecutionRecord):
-    """Validated writes; persisted versions retain their execution semantics."""
+    """Validated writes. Persisted versions retain their execution semantics."""
 
     config_version: Literal[2, 3, 4] = 4
     execution_type: Literal["github_file", "command"] = "github_file"
@@ -186,7 +186,7 @@ class ScriptRunRequest(CamelModel):
         return values
     run_trigger: Literal["manual", "scheduled", "unknown"] = Field(
         default="unknown",
-        description="Caller-reported trigger for display only; grants no permissions. UI sends manual; cron/scheduler clients send scheduled. Omitted values remain unknown.",
+        description="Caller-reported trigger for display only. Grants no permissions. UI sends manual. Cron/scheduler clients send scheduled. Omitted values remain unknown.",
     )
 
 

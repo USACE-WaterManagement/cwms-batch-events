@@ -39,7 +39,7 @@ git push -u origin add-daily-report`}</code></pre>
     <p>This command does not need CDA credentials. Office sign-in and script administration access still apply. Commands that call CDA need the appropriate credentials in the job environment.</p>
     <H2>Java programs from release artifacts</H2>
     <p>With the Java artifact loader deployed, the runner reads <code>java/artifacts.json</code> in the district repository, downloads each enabled release JAR, and verifies its checksum before running the job. These JARs are downloaded at startup, not stored in the image or committed to the repository.</p>
-    <p>For SWT, select <strong>District GitHub repository</strong> and <strong>Java JAR</strong>, then enter <code>java-artifacts/BuildWSmetadataViaCDA.jar</code> in <strong>JAR Path</strong>. This path is relative to <code>/jobs</code>. Enter it manually because the file browser lists only committed GitHub files. Enable the registration after the loader is deployed and the artifact pin is promoted; a disabled pin does not provide a JAR.</p>
+    <p>For SWT, select <strong>District GitHub repository</strong> and <strong>Java JAR</strong>, then enter <code>java-artifacts/BuildWSmetadataViaCDA.jar</code> in <strong>JAR Path</strong>. This path is relative to <code>/jobs</code>. Enter it manually because the file browser lists only committed GitHub files. Enable the registration after the loader is deployed and the artifact pin is promoted. A disabled pin does not provide a JAR.</p>
     <p>Jobs that use an <strong>Installed command</strong> skip repository checkout and artifact downloads. Select that source only when the command and its files are already available in the container.</p>
   </article>;
 }

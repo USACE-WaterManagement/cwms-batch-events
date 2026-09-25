@@ -1,4 +1,4 @@
-"""Loopback demo: real PostgreSQL and scheduler; simulated queue and job output.
+"""Loopback demo: real PostgreSQL and scheduler. Simulated queue and job output.
 
 Run python -m tools.scheduler_demo, then point Vite at http://127.0.0.1:8019.
 Only the isolated batch-scheduler-demo database is used. No scripts execute.

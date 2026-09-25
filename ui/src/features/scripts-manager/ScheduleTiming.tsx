@@ -21,7 +21,7 @@ export function ScheduleTiming({ script, enabled, editing = false }: { script: S
   const timezone = script.scheduleTimezone || "UTC";
   const format = (value: string) => new Date(value).toLocaleString(undefined, { timeZone: timezone });
   let next = "Manual — no automatic run scheduled";
-  if (script.scheduleEnabled && script.active) next = "No occurrence in the next eight years; review the schedule";
+  if (script.scheduleEnabled && script.active) next = "No occurrence in the next eight years. Review the schedule";
   if (data?.nextRunAt) next = format(data.nextRunAt);
   let last = "No finished runs recorded";
   if (data?.lastFinishedAt) last = `${format(data.lastFinishedAt)} · ${data.lastRunStatus} · ${data.lastRunTrigger}`;

@@ -1,4 +1,4 @@
-"""Real PostgreSQL coordination/outbox checks; SQS delivery is a controlled fake."""
+"""Real PostgreSQL coordination/outbox checks. SQS delivery is a controlled fake."""
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from pathlib import Path

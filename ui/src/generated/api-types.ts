@@ -814,7 +814,7 @@ export interface components {
             commandArgs?: string[] | null;
             /**
              * Runtrigger
-             * @description Caller-reported trigger for display only; grants no permissions. UI sends manual; cron/scheduler clients send scheduled. Omitted values remain unknown.
+             * @description Caller-reported trigger for display only. Grants no permissions. UI sends manual. Cron/scheduler clients send scheduled. Omitted values remain unknown.
              * @default unknown
              * @enum {string}
              */
@@ -1076,7 +1076,7 @@ export interface operations {
                 submittedFrom?: string | null;
                 submittedBefore?: string | null;
                 latestPerScript?: boolean;
-                /** @description Offices to include; defaults to all accessible offices. */
+                /** @description Offices to include. Defaults to all accessible offices. */
                 office?: string[] | null;
             };
             header?: never;
@@ -1491,7 +1491,7 @@ export interface operations {
                 cursor?: string | null;
                 start_time?: number | null;
                 end_time?: number | null;
-                /** @description CloudWatch JSON level; ALL includes historical text. UNKNOWN scans a bounded page for unclassified entries. */
+                /** @description CloudWatch JSON level. ALL includes historical text. UNKNOWN scans a bounded page for unclassified entries. */
                 level?: "ALL" | "TRACE" | "DEBUG" | "INFO" | "WARNING" | "ERROR" | "CRITICAL" | "UNKNOWN";
             };
             header?: never;

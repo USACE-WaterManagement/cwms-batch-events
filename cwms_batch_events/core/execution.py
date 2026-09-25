@@ -63,13 +63,13 @@ def upgrade_saved_configuration(config) -> ExecutionOptions:
     # A historical local runner split this string on whitespace. Do not guess
     # a replacement for paths whose historical meaning differs across runners.
     if path.startswith("/") or ".." in PurePosixPath(path).parts or any(char.isspace() for char in path):
-        raise ValueError("This legacy path needs administrator review. Create a version 4 replacement with a verified path; the existing script was not changed.")
+        raise ValueError("This legacy path needs administrator review. Create a version 4 replacement with a verified path. The existing script was not changed.")
     return ExecutionOptions(config_version=4, repo_path=path, runtime="python",
                             execution_type="github_file", command_args=[])
 
 
 def command_for_v1(options: ExecutionRecord, runner: Literal["batch", "local"]):
-    # Reproduce 3c830a4^ exactly: AWS received argv; Docker received a string
+    # Reproduce 3c830a4^ exactly: AWS received argv. Docker received a string
     # (split by the Docker SDK). Even duplicate slashes and dot segments matter.
     if runner == "local":
         return f"python /jobs/{options.repo_path}"
@@ -91,7 +91,7 @@ def command_for_payload(payload, *, runner: Literal["batch", "local"] = "batch")
     options = execution_for_config(payload)
     if options.config_version == 1:
         return command_for_v1(options, runner)
-    # Validation above rejects unknown schemas; supported future schemas can
+    # Validation above rejects unknown schemas. Supported future schemas can
     # inherit Bash mode without another version-specific dispatch branch.
     if options.config_version >= 3 and options.command_mode == "shell":
         return ["bash", "-c", options.shell_command]

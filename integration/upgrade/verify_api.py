@@ -1,4 +1,4 @@
-"""Exercise real API/ORM/database paths; isolate only authentication and queue delivery."""
+"""Exercise real API/ORM/database paths. Isolate only authentication and queue delivery."""
 from pathlib import Path
 import sys
 from datetime import datetime, timezone

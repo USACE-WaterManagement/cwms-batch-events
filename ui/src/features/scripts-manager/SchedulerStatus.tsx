@@ -30,7 +30,7 @@ export function SchedulerStatus({ office }: { office?: string }) {
   else if (healthy) title = "Scheduler is running";
   return <section aria-label="Scheduler status" className="m-2 rounded border border-gray-300 bg-slate-50 p-3 text-sm">
     <strong>{title}</strong>
-    <p>Schedules use each script’s timezone. After downtime, up to five minutes are recovered; older runs are skipped.</p>
+    <p>Schedules use each script’s timezone. After downtime, up to five minutes are recovered. Older runs are skipped.</p>
     <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1">
       {data.tasks.map(task => <span key={task.name}>
         {task.name === "schedules" ? "Schedule check" : "Queue delivery"}: {task.lastSuccess ? new Date(task.lastSuccess).toLocaleTimeString() : "Not yet checked"}

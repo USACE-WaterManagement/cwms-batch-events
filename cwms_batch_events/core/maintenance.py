@@ -1,4 +1,3 @@
-"""API-owned scheduling and durable queue delivery, coordinated by PostgreSQL."""
 import asyncio
 import json
 import logging
@@ -20,6 +19,10 @@ from cwms_batch_events.core.settings import get_settings
 from cwms_batch_events.core.utils import get_runner_id
 
 logger = logging.getLogger(__name__)
+# Stable PostgreSQL advisory-lock IDs shared by every API replica.
+# These identify workers, not job counts or limits. Keep the values unchanged
+# across deployments so old and new replicas coordinate during rolling updates.
+# Separate IDs let scheduling and queue delivery run independently.
 TASK_LOCKS = {"schedules": 730181, "queue_delivery": 730182}
 
 
@@ -84,7 +87,7 @@ def register_due_jobs(now=None, session_factory=create_session):
                 logger.exception("Schedule could not be evaluated", extra={"event": "schedule_failed", "script_id": script.id, "office": script.office})
         db.execute(text("UPDATE maintenance_tasks SET last_success=:now, last_checked=:now WHERE name='schedules'"), {"now": now})
         if last and now - last > timedelta(minutes=5):
-            logger.warning("Scheduler downtime exceeded five-minute catch-up window; older occurrences skipped", extra={"event": "schedule_window_skipped"})
+            logger.warning("Scheduler downtime exceeded five-minute catch-up window. Older occurrences skipped", extra={"event": "schedule_window_skipped"})
         logger.debug("Schedule scan complete", extra={"event": "maintenance_tick", "task": "schedules", "count": count})
 
 
@@ -125,7 +128,7 @@ def deliver_pending_jobs(now=None, session_factory=create_session, queue_factory
 
 
 async def supervise(stop, tasks=None, interval=15):
-    """One bounded worker per task; never spawn replacements for a hung thread."""
+    """One bounded worker per task. Never spawn replacements for a hung thread."""
     tasks = tasks or {"schedules": register_due_jobs, "queue_delivery": deliver_pending_jobs}
     running = {}
     started = {}
@@ -140,7 +143,7 @@ async def supervise(stop, tasks=None, interval=15):
                 try:
                     previous.result()
                 except Exception:
-                    logger.exception("Maintenance task failed; watchdog is restarting it", extra={"event": "maintenance_restarted", "task": name})
+                    logger.exception("Maintenance task failed. Watchdog is restarting it", extra={"event": "maintenance_restarted", "task": name})
             running[name] = asyncio.create_task(asyncio.to_thread(callback))
             started[name] = asyncio.get_running_loop().time()
         try:

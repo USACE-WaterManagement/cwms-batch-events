@@ -348,11 +348,11 @@ const OnboardingPane = ({ user }: { user?: ApplicationInfo["user"] }) => {
       </OnboardingStep>
       <OnboardingStep number={5} title="Review the result">
         <p>Select <strong>View job runs</strong> at the end of a script row to open its <strong>Job runs</strong>{" "}
-          tab. Select a run to view status and output; use <strong>Refresh</strong> to reload the list.
+          tab. Select a run to view status and output. Use <strong>Refresh</strong> to reload the list.
           The selected run updates until it finishes, then loads its output.</p>
         <p>Open <strong>Job History</strong> to review runs across scripts in your offices. Both lists
           share office runs and show who submitted them. <strong>Manual</strong> and <strong>Scheduled</strong>{" "}
-          badges distinguish the trigger; older runs may show <strong>Unknown</strong>.</p>
+          badges distinguish the trigger. Older runs may show <strong>Unknown</strong>.</p>
         <p>Script rows show a spinner for queued or running office jobs and a <strong>Recent failure</strong>{" "}
           warning for a failure in the past 24 hours. Select either indicator to open that exact run.
           The manager refreshes status every five seconds while visible. If status cannot be loaded,

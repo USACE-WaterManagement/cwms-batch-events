@@ -60,7 +60,7 @@ def get_jobs_for_user(
     submitted_from: datetime | None = Query(default=None, alias="submittedFrom"),
     submitted_before: datetime | None = Query(default=None, alias="submittedBefore"),
     latest_per_script: bool = Query(default=False, alias="latestPerScript"),
-    office: list[str] | None = Query(default=None, description="Offices to include; defaults to all accessible offices."),
+    office: list[str] | None = Query(default=None, description="Offices to include. Defaults to all accessible offices."),
     user: User = Depends(get_current_user),
     job_db: JobDatabase = Depends(get_job_database),
 ) -> list[JobRecord]:

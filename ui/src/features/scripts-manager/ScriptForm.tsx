@@ -34,7 +34,7 @@ const fieldHelp: Record<string, React.ReactNode> = {
   scheduleTimezone: "An IANA timezone such as America/Chicago. Missing daylight-saving times are skipped and repeated times run once.",
   name: "A descriptive name for this job. Its slug is generated from the name when you create it.",
   description: "Describe what this job does and when someone should run it.",
-  repoPath: <>Enter a path relative to /jobs. Repository files are checked out there. With the Java artifact loader deployed, enabled pins in java/artifacts.json download release JARs into java-artifacts/ before the job runs. Enter those generated paths manually; Browse lists only files committed to GitHub. Files and directories cannot be created here. <Link to="/help/script-files" target="_blank" rel="noopener noreferrer">Script setup (new tab)</Link>. For an installed command, enter its executable; that mode skips checkout and artifact downloads.</>,
+  repoPath: <>Enter a path relative to /jobs. Repository files are checked out there. With the Java artifact loader deployed, enabled pins in java/artifacts.json download release JARs into java-artifacts/ before the job runs. Enter those generated paths manually. Browse lists only files committed to GitHub. Files and directories cannot be created here. <Link to="/help/script-files" target="_blank" rel="noopener noreferrer">Script setup (new tab)</Link>. For an installed command, enter its executable. That mode skips checkout and artifact downloads.</>,
   executionType: (
     <div className="space-y-4">
       <section className="space-y-2">
@@ -415,7 +415,7 @@ export const ScriptForm = ({
                       example: <strong className="font-mono font-bold">0 8 * * 1-5</strong>.
                     </Text>
                     <a className="inline-block py-2 font-medium text-blue-700 underline" href="https://crontab.guru/" target="_blank" rel="noopener noreferrer">Open cron calculator (new tab)</a>
-                    <Text>Use numeric five-field expressions here; names and shortcuts such as @daily are not supported.</Text>
+                    <Text>Use numeric five-field expressions here. Names and shortcuts such as @daily are not supported.</Text>
                   </div>
                 </FormRow>
               )}
@@ -447,7 +447,7 @@ export const ScriptForm = ({
                   </datalist>
                   <Text>
                     Use an IANA timezone. Missing daylight-saving times are
-                    skipped; repeated times run once.
+                    skipped. Repeated times run once.
                   </Text>
                 </div>
               </FormRow>

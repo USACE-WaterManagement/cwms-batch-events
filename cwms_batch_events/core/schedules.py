@@ -86,7 +86,7 @@ def is_due(script, minute: datetime) -> bool:
 
 
 def due_minutes(script, last_checked: datetime | None, now: datetime):
-    """At most five UTC minutes; edits never retroactively create occurrences."""
+    """At most five UTC minutes. Edits never retroactively create occurrences."""
     end = now.astimezone(timezone.utc).replace(second=0, microsecond=0)
     start = end
     if last_checked is not None:
@@ -98,10 +98,10 @@ def due_minutes(script, last_checked: datetime | None, now: datetime):
 
 
 def next_run(script, after: datetime) -> datetime | None:
-    """Next occurrence, using dispatcher rules; search eight years for leap days.
+    """Next occurrence, using dispatcher rules. Search eight years for leap days.
 
     Filter dates before enumerating times, so impossible cron dates are bounded.
-    Round-trip local times to exclude DST gaps; only fold zero is considered.
+    Round-trip local times to exclude DST gaps. Only fold zero is considered.
     """
     if not script.active or not script.schedule_enabled or script.config_version != 4:
         return None

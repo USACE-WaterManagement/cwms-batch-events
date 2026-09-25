@@ -111,7 +111,7 @@ def _dispatch_and_bind(message, headers):
         )
         claim.raise_for_status()
         if not claim.json()["claimed"]:
-            logger.info("Scheduled occurrence already claimed; suppressing duplicate dispatch", extra={"event": "scheduled_dispatch_duplicate", "job_id": message.job_id})
+            logger.info("Scheduled occurrence already claimed. Suppressing duplicate dispatch", extra={"event": "scheduled_dispatch_duplicate", "job_id": message.job_id})
             return
     logger.debug("Dispatching job", extra={"event": "job_dispatching"})
     try:
