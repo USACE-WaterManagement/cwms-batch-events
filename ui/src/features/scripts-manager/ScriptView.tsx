@@ -1,3 +1,4 @@
+import { RequiredRoles } from "./RequiredRoles";
 import dayjs from "dayjs";
 import { ScheduleTiming } from "./ScheduleTiming";
 import { ViewField } from "./ViewField";
@@ -9,20 +10,6 @@ import { ScriptSections, ConfigSection } from "./ScriptSections";
 import type { ScriptSection } from "./configurationSections";
 import { UpgradeConfiguration } from "./UpgradeConfiguration";
 import { schedulePreset } from "./schedulePresets";
-
-export const RoleList = ({ roles }: { roles: string[] }) => {
-  if (roles.length) {
-    return (
-      <ul>
-        {roles.map((role) => (
-          <li key={role}>{role}</li>
-        ))}
-      </ul>
-    );
-  } else {
-    return "No additional CDA role required. Office access is required.";
-  }
-};
 
 function scriptSource(script: Script): string {
   if ((script.configVersion ?? 1) === 1) return "District GitHub repository (historical)";
@@ -77,7 +64,7 @@ export const ScriptView = ({ script, onEdit, section, onSectionChange }: ScriptV
                 : "GitHub Repo Path"
             }
           >
-            <span className="block font-mono [overflow-wrap:anywhere]">{script.repoPath}</span>
+            <span tabIndex={0} aria-label="Job path" className="block overflow-x-auto whitespace-nowrap rounded bg-slate-50 p-2 font-mono">{script.repoPath}</span>
           </ViewField>
           <ViewField label="Source">
             {scriptSource(script)}
@@ -86,8 +73,8 @@ export const ScriptView = ({ script, onEdit, section, onSectionChange }: ScriptV
             {scriptRuntime(script)}
           </ViewField>
 
-          <ViewField label={`Command (version ${script.configVersion ?? 1})`}>
-            <pre className="whitespace-pre-wrap">
+          <ViewField label={<span>Command<span className="block text-xs font-normal text-slate-500">v{script.configVersion ?? 1}</span></span>}>
+            <pre tabIndex={0} className="overflow-x-auto whitespace-pre rounded bg-slate-50 p-2">
               {savedCommandPreview(script)}
             </pre>
           </ViewField>
@@ -108,7 +95,7 @@ export const ScriptView = ({ script, onEdit, section, onSectionChange }: ScriptV
           {script.scheduleError && <p role="alert" className="text-amber-900">{script.scheduleError}</p>}
           </ConfigSection>
           <ConfigSection id="access" active={section}>
-            <RoleList roles={script.roles} />
+            <RequiredRoles office={script.office} roles={script.roles} />
           </ConfigSection>
           <ConfigSection id="upgrade" active={section}><UpgradeConfiguration key={script.id} script={script} /></ConfigSection>
         </div>
@@ -119,6 +106,6 @@ export const ScriptView = ({ script, onEdit, section, onSectionChange }: ScriptV
       </div>
     );
   } else {
-    return <Text>No script has been selected.</Text>;
+    return <Text>No job has been selected.</Text>;
   }
 };

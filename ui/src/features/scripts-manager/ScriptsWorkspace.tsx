@@ -1,3 +1,4 @@
+import { LoadingRows } from "../../shared/components/LoadingRows";
 import { ScriptDetailPanel } from "./ScriptDetailPanel";
 import { ScriptForm } from "./ScriptForm";
 import { ScriptsList } from "./ScriptsList";
@@ -44,13 +45,13 @@ export const ScriptsWorkspace = ({ office, initialScriptId, initialEdit, initial
   const [selectedJobId, setSelectedJobId] = useState<string | undefined>(initialJobId);
   const showTab = (index: number) => setPanelTab(previous => ({ index, revision: previous.revision + 1 }));
 
-  if (scripts.isLoading) return <span>Loading scripts...</span>;
-  if (defaultJobRunner.isLoading) return <span>Loading job runner...</span>;
+  if (scripts.isLoading) return <LoadingRows label="Loading job definitions" />;
+  if (defaultJobRunner.isLoading) return <LoadingRows label="Loading job runner" />;
   if (scripts.isError)
     return <span>Error occurred while loading scripts.</span>;
   if (defaultJobRunner.isError || !defaultJobRunner.data)
     return <span>Error occurred while loading the default job runner.</span>;
-  if (!scripts.data) return <span>No scripts found!</span>;
+  if (!scripts.data) return <span>No jobs found!</span>;
 
   const selectedScript = scripts.data.find(
     (script) => script.id === selectedScriptId,
@@ -135,27 +136,27 @@ export const ScriptsWorkspace = ({ office, initialScriptId, initialEdit, initial
     <div className="scripts-workspace mt-4 grid w-full grid-cols-[repeat(auto-fit,minmax(min(100%,36rem),1fr))] gap-6">
       <div className="min-w-0">
         <header className="flex justify-between">
-          <H2>{office.toUpperCase()} Scripts</H2>
+          <H2>{office.toUpperCase()} Jobs</H2>
           {scripts.data.length > 0 && <Button onClick={onNew}>New +</Button>}
         </header>
         {scripts.data.length > 0 && <div className="mt-3 space-y-2">
-          <label htmlFor="script-search" className="text-sm font-medium text-slate-700">Search scripts</label>
+          <label htmlFor="script-search" className="text-sm font-medium text-slate-700">Search jobs</label>
           <div className="flex gap-2"><input id="script-search" type="search" value={search} onChange={event => onSearch(event.target.value)}
             placeholder="Name, description, path, or runtime" className="min-h-11 min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 focus:outline-2 focus:outline-blue-600" />
             {search && <Button type="button" onClick={() => onSearch("")}>Clear</Button>}
           </div>
-          <p role="status" className="text-xs text-slate-500">{filteredScripts.length} of {scripts.data.length} scripts</p>
+          <p role="status" className="text-xs text-slate-500">{filteredScripts.length} of {scripts.data.length} jobs</p>
         </div>}
         {scripts.data.length === 0 ? (
           <div className="mt-3 flex min-h-48 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-gray-300 bg-gray-50 px-6 py-10 text-center">
             <MdCode aria-hidden className="text-4xl text-gray-400" />
-            <h3 className="text-lg font-semibold text-gray-900">No scripts yet for {office.toUpperCase()}</h3>
-            <p className="max-w-md text-sm text-gray-600">Create a script to define what this office can run, including its runtime, file path, and arguments.</p>
-            <Button onClick={onNew}>Create first script</Button>
+            <h3 className="text-lg font-semibold text-gray-900">No jobs yet for {office.toUpperCase()}</h3>
+            <p className="max-w-md text-sm text-gray-600">Define a Python program, Java JAR, Bash script, or installed command for this office.</p>
+            <Button onClick={onNew}>Create first job</Button>
           </div>
         ) : <div
           role="region"
-          aria-label={`${office.toUpperCase()} scripts list`}
+          aria-label={`${office.toUpperCase()} jobs list`}
           tabIndex={0}
           className="mt-3 min-w-0 rounded border border-gray-200"
         >
@@ -175,7 +176,7 @@ export const ScriptsWorkspace = ({ office, initialScriptId, initialEdit, initial
             jobsUpdatedAt={jobs.dataUpdatedAt}
             runHistoryState={jobs.isError ? "unavailable" : jobs.isPending ? "loading" : "ready"}
           />
-          {filteredScripts.length === 0 && <p className="p-5 text-sm text-slate-600">No scripts match your search.</p>}
+          {filteredScripts.length === 0 && <p className="p-5 text-sm text-slate-600">No jobs match your search. Try a name, command, path, or runtime.</p>}
         </div>}
       </div>
       {scripts.data.length > 0 && <div className="script-workspace-panel @container/script-panel min-w-0 self-start rounded-xl border border-gray-200 bg-white p-3 [overflow-wrap:anywhere]">
@@ -190,7 +191,7 @@ export const ScriptsWorkspace = ({ office, initialScriptId, initialEdit, initial
             office={office} script={selectedScript} mode={panelMode} isPending={isPending}
             mutationError={mutationError} onDelete={onDelete} onEdit={onEdit}
             onSave={onSave} onCancelEdit={onCancelEdit} onValidationChange={setInvalidDetails} /> },
-          { name: "Run script", content: <ScriptRunJob script={selectedScript} onEdit={() => { showTab(0); onEdit(); }} onSubmitted={job => {
+          { name: "Run job", content: <ScriptRunJob script={selectedScript} onEdit={() => { showTab(0); onEdit(); }} onSubmitted={job => {
             setSelectedScriptId(job.scriptId ?? selectedScript.id);
             setPanelMode("view");
             setSelectedJobId(job.id);
@@ -217,7 +218,7 @@ export const ScriptsWorkspace = ({ office, initialScriptId, initialEdit, initial
       />}
       </div>}
       <Modal opened={creating} onClose={onCancelCreate}
-        dialogTitle={`New script · ${office.toUpperCase()}`} size="3xl"
+        dialogTitle={`New job · ${office.toUpperCase()}`} size="3xl"
         className="[&_[id^=headlessui-dialog-panel]]:w-[min(48rem,100%)]! [&_[id^=headlessui-dialog-panel]]:min-w-0 [&_[id^=headlessui-dialog-panel]]:p-4! [&_[id^=headlessui-dialog-panel]]:max-h-[calc(100dvh-2rem)] [&_[id^=headlessui-dialog-panel]]:overscroll-contain sm:[&_[id^=headlessui-dialog-panel]]:p-6! [&_[id^=headlessui-dialog-panel]]:flex [&_[id^=headlessui-dialog-panel]]:flex-col [&_[id^=headlessui-dialog-panel]]:overflow-hidden [&_.script-form]:flex [&_.script-form]:flex-col [&_.script-form]:min-h-0 [&_.script-form]:overflow-hidden [&_.script-form-layout]:flex [&_.script-form-layout]:flex-col [&_.script-form-layout]:min-h-0 [&_.script-form-layout]:overflow-hidden [&_.script-form-fields]:min-h-0 [&_.script-form-fields]:overflow-y-auto [&_.script-form-fields]:overscroll-contain [&_.script-form-fields]:p-1 [&_.script-form-fields]:[scrollbar-gutter:stable] [&_.script-form-actions]:shrink-0 [&_.script-form-actions]:border-t [&_.script-form-actions]:border-gray-200 [&_.script-form-actions]:pt-4">
         {creating && <ScriptForm
           office={office}

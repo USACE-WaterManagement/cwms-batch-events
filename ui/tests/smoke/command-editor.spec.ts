@@ -44,7 +44,7 @@ test("UI adapts to legacy and unknown versions without a version selector", asyn
   await page.getByRole("button", { name: "Custom run", exact: true }).click();
   await expect(page.getByRole("option", { name: "Bash command (requires version 3 upgrade)", exact: true })).toBeAttached();
   await expect(page.getByRole("combobox", { name: /version/i })).toHaveCount(0);
-  await page.getByRole("link", { name: "Scripts Manager", exact: true }).click();
+  await page.getByRole("link", { name: "Job Manager", exact: true }).click();
   await page.locator("tr").filter({ hasText: "Report version 99" }).getByRole("button", { name: "Edit Report version 99", exact: true }).click();
   await expect(page.getByRole("note")).toContainText("does not support");
   await expect(page.getByRole("button", { name: "Save", exact: true })).toHaveCount(0);

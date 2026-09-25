@@ -22,8 +22,8 @@ test("script search debounces, handles empty results, and retains selection", as
   await page.getByRole("combobox").first().selectOption("SWT");
   await page.getByText(script.name, { exact: true }).click();
   await page.clock.pauseAt(new Date("2026-09-24T12:01:00Z"));
-  const rows = page.getByRole("table", { name: "Scripts", exact: true }).locator("tbody tr");
-  const search = page.getByRole("searchbox", { name: "Search scripts" });
+  const rows = page.getByRole("table", { name: "Jobs", exact: true }).locator("tbody tr");
+  const search = page.getByRole("searchbox", { name: "Search jobs" });
   await search.fill("FORECAST java");
   await page.clock.runFor(299);
   await expect(rows).toHaveCount(2);
@@ -33,7 +33,7 @@ test("script search debounces, handles empty results, and retains selection", as
   await expect(page.locator(".script-workspace-panel").getByRole("heading", { name: script.name, exact: true })).toBeVisible();
   await search.fill("does not exist");
   await page.clock.runFor(300);
-  await expect(page.getByText("No scripts match your search.")).toBeVisible();
+  await expect(page.getByText("No jobs match your search. Try a name, command, path, or runtime.")).toBeVisible();
   await page.getByRole("button", { name: "Clear", exact: true }).click();
   await page.clock.runFor(300);
   await expect(rows).toHaveCount(2);

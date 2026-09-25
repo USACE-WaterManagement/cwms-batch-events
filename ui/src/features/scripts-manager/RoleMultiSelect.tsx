@@ -1,14 +1,17 @@
+import { RequiredRoles } from "./RequiredRoles";
 import { useState } from "react";
 import { Button, Dropdown } from "@usace/groundwork";
 import { MdAdd, MdClose } from "react-icons/md";
 
 type RoleMultiSelectProps = {
+  office: string;
   allRoles: string[];
   initialSelectedRoles?: string[];
   onChange?: (selectedRoles: string[]) => void;
 };
 
 export const RoleMultiSelect = ({
+  office,
   allRoles,
   initialSelectedRoles = [],
   onChange,
@@ -45,7 +48,7 @@ export const RoleMultiSelect = ({
         <div role="region" aria-label="Selected roles" tabIndex={0}
           className="max-h-32 overflow-y-auto overscroll-contain focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:-outline-offset-2">
           {selectedRoles.length === 0 ? (
-        <p className="px-3 py-3 text-sm text-gray-500">No additional CDA role required. Office access is required.</p>
+        <p className="px-3 py-3 text-sm text-gray-500">Only the base office role is required.</p>
           ) : <ul className="divide-y divide-gray-100">
             {selectedRoles.map((role) => (
               <li key={role} className="flex items-center justify-between gap-3 px-3 py-1.5">
@@ -82,6 +85,7 @@ export const RoleMultiSelect = ({
           </div>
         )}
       </div>
+      <RequiredRoles office={office} roles={selectedRoles} />
     </div>
   );
 };

@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 
-test("Scripts Manager argument modal applies drafts, cancels edits, without upgrading on ordinary edits", async ({ page }) => {
+test("Job Manager argument modal applies drafts, cancels edits, without upgrading on ordinary edits", async ({ page }) => {
   const script = { id: "daily-report", name: "Daily reservoir report", slug: "daily-reservoir-report", configVersion: 2,
     description: "Build the daily reservoir report for the selected date and office.", office: "SWT", active: true, roles: [],
     repoPath: "python/daily_report.py", executionType: "github_file", runtime: "python", commandArgs: [],

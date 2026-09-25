@@ -24,6 +24,7 @@ def check_api(port, database, historical):
     subprocess.run([sys.executable, str(Path(__file__).with_name("verify_api.py")),
                     "historical" if historical else "fresh"], env=env, check=True, cwd=ROOT)
     subprocess.run([sys.executable, str(Path(__file__).with_name("verify_scheduler.py"))], env=env, check=True, cwd=ROOT)
+    subprocess.run([sys.executable, str(Path(__file__).with_name("verify_admin.py"))], env=env, check=True, cwd=ROOT)
 
 
 def main():

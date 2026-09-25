@@ -23,7 +23,7 @@ const ScriptPicker = () => {
     return (
       <LoginPrompt
         title="Sign in to submit a job"
-        description="Choose an approved office script and provide the inputs it needs to run."
+        description="Choose an approved office job and provide the inputs it needs to run."
       />
     );
   }
@@ -40,7 +40,7 @@ const ScriptPicker = () => {
   };
 
   return (
-    <div className="flex flex-col">
+    <div className="flex min-w-0 flex-col">
       <OfficeSelector
         offices={offices}
         value={office}
@@ -49,14 +49,14 @@ const ScriptPicker = () => {
       <div className="mt-4">
         <Dropdown
           className="w-full max-w-96"
-          label="Script"
+          label="Job"
           value={scriptId}
           onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
             setScriptId(e.target.value);
           }}
           options={[
             <option key="" value="">
-              Script...
+              Job...
             </option>,
             ...scriptsForOffice
               .sort((a, b) => a.name.localeCompare(b.name))
@@ -69,7 +69,7 @@ const ScriptPicker = () => {
         />
       </div>
       {selectedScript && (
-        <div className="mt-8">
+        <div className="min-w-0 mt-8">
           <ScriptExecutor key={selectedScript.id} script={selectedScript} />
         </div>
       )}

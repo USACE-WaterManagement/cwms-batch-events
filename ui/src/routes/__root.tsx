@@ -18,7 +18,7 @@ import { useSystemAdmin } from "../features/auth/useSystemAdmin";
 const primaryLinks = [
   { id: "jobs", text: "Job History", href: "/jobs" },
   { id: "submit", text: "Submit Job", href: "/submit" },
-  { id: "manager", text: "Scripts Manager", href: "/scripts-manager" },
+  { id: "manager", text: "Job Manager", href: "/scripts-manager" },
 ];
 
 const publicAboutLinks = [
@@ -114,7 +114,7 @@ function RootShell({ children }: { children: ReactNode }) {
         <span>CWMS Batch Events</span><EnvironmentBadge />
       </span>}
       missionText="Support USACE water management teams with shared tools to run district jobs and track their results."
-      aboutText="CWMS Batch Events lets authorized district users submit jobs, review job history and logs, and manage registered scripts. For access or job support, contact your district Batch Events administrator."
+      aboutText="CWMS Batch Events lets authorized district users submit jobs, review job history and logs, and manage registered jobs. For access or job support, contact your district Batch Events administrator."
       usaceLinks={[
         ...footerLinks,
         ...(auth.isAuth ? [{ text: "Version and environment", href: "/events/about/version" }] : []),
@@ -139,8 +139,8 @@ function RootShell({ children }: { children: ReactNode }) {
         <p className="my-3 break-all font-medium">{repositoryUrl}</p>
         <p>You must be logged in to GitHub with access to the repository to view it. It will open in a new tab.</p>
       </Modal>
-      <Container>
-        <div className="my-6">{children}</div>
+      <Container className="min-w-0 w-full">
+        <div className="min-w-0 my-6">{children}</div>
       </Container>
     </SiteWrapper>
   );

@@ -118,7 +118,7 @@ dispatch claims while queue messages may still be redelivered.
 
 ## Deployment and rollback
 
-1. Apply migrations through **1.01.20** using the existing pipeline, after office history
+1. Apply migrations through **1.01.21** using the existing pipeline, after office history
    1.01.17. Do not renumber applied migrations.
 2. Deploy the API, updated dispatcher Lambda/local dispatcher, and UI. Keep schedules
    disabled until all are updated: old dispatchers reject the scheduler message source.
@@ -139,3 +139,16 @@ Run Vite with `VITE_API_PROXY_TARGET=http://127.0.0.1:8019`. Open Scripts Manage
 use the local demo login, and choose SWT. Submit manually to compare the trigger and
 submitter with automatic runs. Stop API/Vite and `docker stop batch-scheduler-demo`
 when finished; the database remains for inspection.
+
+## Administration reporting
+
+HQ CWMS Admin users can review office usage, recent failures, and queue age in Admin.
+Reports aggregate stored job records for 7, 30, or 90 days. Recorded runtime covers
+finished runs with valid timestamps. Active-job alerts include older submissions.
+AWS status can lag until the existing status updater observes it.
+
+Charts use Recharts. Cost planning multiplies recorded hours by an entered rate and
+is not AWS billing data. Opening logs still requires office access. Migration
+1.01.21 adds reporting indexes to the existing PostgreSQL database. Schedule the
+migration during a suitable deployment window because index creation takes a table
+write lock. No additional AWS resources or billing permissions are required.

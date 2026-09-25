@@ -26,7 +26,7 @@ test("server errors retry once, show one toast, and recover on explicit retry", 
   expect(requests).toBe(2);
   recovered = true;
   await notifications.getByRole("button", { name: "Try again" }).click();
-  await expect(page.getByRole("heading", { name: "No scripts yet for SWT" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "No jobs yet for SWT" })).toBeVisible();
   await expect(notifications.getByRole("alert")).toHaveCount(0);
   expect(requests).toBe(3);
 });
@@ -71,7 +71,7 @@ test("failed saves show a toast, retain the form, and are not automatically repe
   await page.goto("/events/scripts-manager");
   await page.getByRole("button", { name: "Login", exact: true }).first().click();
   await page.getByRole("combobox").selectOption("SWT");
-  await page.getByRole("button", { name: "Create first script" }).click();
+  await page.getByRole("button", { name: "Create first job" }).click();
   await configSection(page, "General");
   await page.getByLabel("Name", { exact: true }).fill("SWT report");
   await configSection(page, "Command");

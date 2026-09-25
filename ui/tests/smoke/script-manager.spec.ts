@@ -25,9 +25,9 @@ test("browse files, field help, responsive footer, and help navigation", async (
   await page.goto("/events/scripts-manager");
   await page.getByRole("button",{name:"Login",exact:true}).first().click();
   await page.getByRole("combobox").selectOption("SWT");
-  await expect(page.getByRole("heading",{name:"No scripts yet for SWT"})).toBeVisible();
+  await expect(page.getByRole("heading",{name:"No jobs yet for SWT"})).toBeVisible();
   await capture("empty-office");
-  await page.getByRole("button",{name:"Create first script"}).click();
+  await page.getByRole("button",{name:"Create first job"}).click();
   await configSection(page, "General");
   await page.getByLabel("Name",{exact:true}).fill("Daily report");
   await configSection(page, "Command");

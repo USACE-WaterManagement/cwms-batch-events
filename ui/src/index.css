@@ -49,3 +49,10 @@ code, pre, .font-mono, #repoPath, #shellCommand, #scheduleCron, [aria-label="Job
 }
 .action-link:hover { background: #eff6ff; border-color: #60a5fa; color: #1d4ed8; }
 .action-link:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+
+/* Keep intrinsic table and command widths inside the app viewport. */
+#root { min-width: 0; width: 100%; }
+#root > div { min-width: 0; max-width: 100%; }
+
+#root > .gw-grid { grid-template-columns: minmax(0, 1fr); }
+#root > .gw-grid > div { min-width: 0; }

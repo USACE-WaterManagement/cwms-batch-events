@@ -48,7 +48,7 @@ test("custom arguments apply once, cancel restores defaults, and role help expla
   await page.getByRole("button", { name: "Add role", exact: true }).click();
   await capture("execution-role-help");
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
-  await row.getByRole("button", { name: "Run script", exact: true }).click();
+  await row.getByRole("button", { name: "Run job", exact: true }).click();
   await page.getByRole("button", { name: "Custom run", exact: true }).click();
   await expect(page.getByLabel("Arguments for this run")).toHaveValue(script.commandArgs.join(" "));
   await page.getByLabel("Arguments for this run").fill("--start-date 2026-09-01 --end-date 2026-09-07   ");
@@ -65,12 +65,12 @@ test("custom arguments apply once, cancel restores defaults, and role help expla
   await page.getByRole("button", { name: "Submit custom run", exact: true }).click();
   await expect(page.getByLabel("Job output")).toHaveValue("Report complete.");
   expect(submissions[1]).toEqual({ runTrigger: "manual", scriptId: script.id, commandArgs: [] });
-  await row.getByRole("button", { name: "Run script", exact: true }).click();
+  await row.getByRole("button", { name: "Run job", exact: true }).click();
   await page.getByRole("button", { name: "Submit job", exact: true }).click();
   await expect.poll(() => submissions.length).toBe(3);
   expect(submissions[2]).toEqual({ runTrigger: "manual", scriptId: script.id });
   expect(scriptWrites).toEqual([]);
-  await page.locator("tr").filter({ hasText: "Legacy report" }).getByRole("button", { name: "Run script", exact: true }).click();
+  await page.locator("tr").filter({ hasText: "Legacy report" }).getByRole("button", { name: "Run job", exact: true }).click();
   await expect(page.getByRole("button", { name: "Custom run", exact: true })).toBeDisabled();
   await expect(page.getByText(/must use Upgrade configuration in Details first/)).toBeVisible();
   await page.getByRole("link", { name: "Submit Job", exact: true }).click();
@@ -78,7 +78,7 @@ test("custom arguments apply once, cancel restores defaults, and role help expla
   await page.getByRole("button", { name: "Custom run", exact: true }).click();
   await page.getByLabel("Arguments for this run").fill('"two words" \'\' --literal');
   await page.setViewportSize({ width: 390, height: 844 });
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.getByRole("button", { name: "Submit custom run", exact: true }).click();
   await expect(page).toHaveURL(/\/jobs\/custom-job$/);
   expect(submissions[3]).toEqual({ runTrigger: "manual", scriptId: script.id, commandArgs: ["two words", "", "--literal"] });

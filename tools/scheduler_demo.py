@@ -46,9 +46,11 @@ def create_demo():
     from cwms_batch_events.core.job_database.postgres.models import ScriptModel
     from cwms_batch_events.core.job_database.postgres.session import create_session
     from cwms_batch_events.core.job_database.postgres.postgres import PostgresJobDatabase
-    from cwms_batch_events.core.models import JobMessage, JobLogPage, JobLogs, JobStatus, ScriptCreate
+    from cwms_batch_events.core.models import JobMessage, JobLogPage, JobStatus, ScriptCreate
     from cwms_batch_events.core.queue import JobQueue
     from cwms_batch_events.core.maintenance import supervise, register_due_jobs, deliver_pending_jobs
+    from cwms_batch_events.core.execution import command_for_payload
+    import shlex
     actor = User(username="demo-operator", display_name="Demo Operator", offices=["SWT"],
                  admin_offices=["SWT"], roles={"SWT": ["CWMS Users"], "HQ": ["CWMS Admin"]})
 
@@ -71,12 +73,13 @@ def create_demo():
 
     class DemoLogs:
         def get_logs_for_job(self, job_id):
-            return JobLogs(logs=self.get_log_page(job_id).logs)
+            return self.get_log_page(job_id).logs
 
         def get_log_page(self, job_id, cursor=None):
             with create_session() as db:
                 job = PostgresJobDatabase(db).get_job_by_id(job_id)
-            return JobLogPage(logs=f"LOCAL DEMO: simulated execution; no district script ran.\nOffice: {job.office}\nTrigger: {job.run_trigger}\nSubmitted by: {job.display_name}\nScheduled for: {job.scheduled_for}\nExample report completed.\n", has_more=False, supports_live=False)
+            command = shlex.join(command_for_payload(job))
+            return JobLogPage(logs=f"LOCAL DEMO — execution is simulated.\nJob: {job.script_name}\nRun ID: {job.id}\nOffice: {job.office}\nRequested command: {command}\nTrigger: {job.run_trigger}\nSubmitted by: {job.display_name}\n\nNo command was executed. Actual help text and program output require a real job runner.\n", has_more=False, supports_live=False, reset=True)
 
     queue = DemoQueue()
     app.dependency_overrides[get_current_user] = lambda: actor

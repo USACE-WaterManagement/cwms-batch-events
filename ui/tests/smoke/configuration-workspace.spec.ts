@@ -49,7 +49,7 @@ test("explicit upgrade shows progress, recoverable failure, success, and stays u
   await expect(page.getByRole("note")).toContainText("version 4");
   expect(jobs).toBe(0);
   expect(script.commandArgs).toEqual(original.commandArgs);
-  await page.getByRole("tab", { name: "Run script", exact: true }).click();
+  await page.getByRole("tab", { name: "Run job", exact: true }).click();
   await page.getByRole("tab", { name: "Details", exact: true }).click();
   await expect(page.getByRole("button", { name: "Upgrade configuration", exact: true })).toHaveCount(0);
   await page.reload();

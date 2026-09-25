@@ -33,7 +33,7 @@ test("registers and edits an installed Java command with separate arguments", as
     .first()
     .click();
   await page.getByRole("combobox").selectOption("SWT");
-  await page.getByRole("button", { name: "Create first script", exact: true }).click();
+  await page.getByRole("button", { name: "Create first job", exact: true }).click();
   await configSection(page, "General");
   await page.getByLabel("Name", { exact: true }).fill("Synthetic Java");
   await configSection(page, "Command");

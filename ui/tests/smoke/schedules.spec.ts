@@ -38,7 +38,7 @@ test("saves timezone schedules and disables scheduling when switched to manual",
     .click();
   await page.getByRole("combobox").selectOption("SWT");
   await expect(page.getByText("Scheduler is running", { exact: true })).toHaveCount(0);
-  await page.getByRole("button", { name: "Create first script", exact: true }).click();
+  await page.getByRole("button", { name: "Create first job", exact: true }).click();
   await configSection(page, "General");
   await page.getByLabel("Name", { exact: true }).fill("Synthetic Schedule");
   await configSection(page, "Command");

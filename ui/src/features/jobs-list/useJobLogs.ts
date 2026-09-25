@@ -31,7 +31,10 @@ const useJobLogs = (jobId: string, status: string, interval: number, endTime?: s
       );
       const page: JobLogPage = await response.json();
       startFromBeginning.current = false;
-      const combined = page.reset ? page.logs
+      // A request without a cursor returns a snapshot, not an incremental page.
+      // Never deduplicate by text: a real job may emit identical lines twice.
+      const replace = page.reset || !previous?.nextCursor;
+      const combined = replace ? page.logs
         : [previous?.logs, page.logs].filter(Boolean).join("\n");
       return {
         ...page,
@@ -40,7 +43,7 @@ const useJobLogs = (jobId: string, status: string, interval: number, endTime?: s
           || !combined || (endTime && Date.now() - Date.parse(endTime) < 60_000))
           ? (previous?.completionChecks ?? -1) + 1 : undefined,
         logs: combined.slice(-MAX_VISIBLE_CHARACTERS),
-        truncated: combined.length > MAX_VISIBLE_CHARACTERS || (!page.reset && !!previous?.truncated),
+        truncated: combined.length > MAX_VISIBLE_CHARACTERS || (!replace && !!previous?.truncated),
       };
     },
     enabled: status !== "Pending",

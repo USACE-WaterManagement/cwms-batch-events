@@ -22,8 +22,8 @@ export const ScriptsManager = () => {
   if (!auth.isAuth) {
     return (
       <LoginPrompt
-        title="Sign in to manage scripts"
-        description="Script administrators can define and maintain jobs for their offices."
+        title="Sign in to manage jobs"
+        description="Office administrators can define and maintain jobs for their offices."
       />
     );
   }
@@ -31,7 +31,7 @@ export const ScriptsManager = () => {
   if (isLoading) return <span>Admin office list is loading...</span>;
   if (isError) return <span>Error fetching admin office list for user</span>;
   if (!data || data.length < 1)
-    return <span>You do not have script admin rights for any offices.</span>;
+    return <span>You do not have job administrator rights for any offices.</span>;
 
   return (
     <>

@@ -1,3 +1,4 @@
+import { RequiredRoles } from "./RequiredRoles";
 import { Button, H3 } from "@usace/groundwork";
 import { Link } from "@tanstack/react-router";
 import useExecuteScript from "../script-picker/useExecuteScript";
@@ -50,14 +51,14 @@ export const ScriptRunJob = ({ script, onSubmitted, onEdit }: {
       ...customRunOptions(custom, command, script),
     });
   };
-  return <div className="space-y-4 p-4">
+  return <div className="min-w-0 max-w-full space-y-4 p-4">
     <H3>Run {script.name}</H3>
     <p>{script.description}</p>
     {!supportsScriptVersion(version) && <p role="alert">This app does not support configuration version {version}. Running is unavailable.</p>}
     <dl className="space-y-2 text-sm">
-      <div><dt className="font-semibold">{script.executionType === "command" ? "Executable" : "File"}</dt><dd className="break-all font-mono">{script.repoPath}</dd></div>
-      <div><dt className="font-semibold">Saved command · version {version}</dt><dd><pre className="whitespace-pre-wrap break-all">{savedCommandPreview(script)}</pre></dd></div>
-      <div><dt className="font-semibold">Execution roles</dt><dd>{script.roles.length ? script.roles.join(", ") : "No additional CDA role required. Office access is required."}</dd></div>
+      <div><dt className="font-semibold">{script.executionType === "command" ? "Executable" : "File"}</dt><dd tabIndex={0} className="overflow-x-auto whitespace-nowrap font-mono">{script.repoPath}</dd></div>
+      <div><dt className="font-semibold">Saved command<span className="block text-xs font-normal text-slate-500">v{version}</span></dt><dd><pre tabIndex={0} className="overflow-x-auto whitespace-pre">{savedCommandPreview(script)}</pre></dd></div>
+      <div><dt className="font-semibold">Execution roles</dt><dd><RequiredRoles office={script.office} roles={script.roles} /></dd></div>
     </dl>
     {custom && <div className="space-y-2 rounded border border-blue-300 bg-blue-50 p-3">
       <CommandEditor value={command} onChange={setCommand} onValidityChange={setCommandValid} disabled={run.isPending} argumentsAvailable={!!script.repoPath.trim()} shellRequiresUpgrade={version === 2} label="Arguments for this run" />
@@ -95,7 +96,7 @@ export const ScriptJobRuns = ({ script, selectedJobId, onSelectJob, latestRunId 
   const runs = [...uniqueRuns.values()].filter(job => job.scriptId === script.id && job.office === script.office)
     .sort((a, b) => new Date(b.createdTime).getTime() - new Date(a.createdTime).getTime());
   const displayedJobId = selectedJobId ?? runs?.[0]?.id;
-  return <div className="space-y-4 p-4">
+  return <div className="min-w-0 max-w-full space-y-4 p-4">
     <div className="flex flex-wrap items-center justify-between gap-2">
       <H3>Office runs for {script.name}</H3>
       <Button size="sm" disabled={jobs.isFetching} onClick={() => void jobs.refetch()}>Refresh</Button>
@@ -103,7 +104,7 @@ export const ScriptJobRuns = ({ script, selectedJobId, onSelectJob, latestRunId 
     <p className="text-sm text-gray-600">Runs are shared with CWMS users in {script.office}. <Link to="/jobs" className="text-blue-700 underline">Open Job History</Link> for all scripts in your offices.</p>
     {jobs.isLoading && <p role="status">Loading job runs...</p>}
     {jobs.isError && <p role="alert">Job runs could not be loaded. Use Refresh to try again.</p>}
-    {!jobs.isError && runs?.length === 0 && <p>No runs yet. Open Run script to submit this script.</p>}
+    {!jobs.isError && runs?.length === 0 && <p>No runs yet. Open Run job to submit this script.</p>}
     {runs && runs.length > 0 && <ul aria-label="Script run history" className="max-h-64 space-y-2 overflow-y-auto" onScroll={event => {
       const list = event.currentTarget;
       if (list.scrollHeight - list.scrollTop - list.clientHeight < 80 && jobs.hasNextPage && !jobs.isFetching && !jobs.isFetchNextPageError) void jobs.fetchNextPage();

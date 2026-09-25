@@ -33,7 +33,7 @@ for (const warning of [
   await page.getByRole("button", { name: "SWT GitHub", exact: true }).click();
   await expect(page.getByText("https://github.com/USACE-WaterManagement/swt-wm-cwbi-jobs", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
-  await page.getByRole("button", { name: "Create first script" }).click();
+  await page.getByRole("button", { name: "Create first job" }).click();
   await configSection(page, "General");
   await page.getByLabel("Name", { exact: true }).fill("Manual SWT report");
   await configSection(page, "Command");

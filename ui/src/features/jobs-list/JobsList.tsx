@@ -1,5 +1,6 @@
 import { useAuth } from "@usace-watermanagement/groundwork-water";
-import { Button, H1 } from "@usace/groundwork";
+import { LoadingRows } from "../../shared/components/LoadingRows";
+import { Button, H1, UsaceBox } from "@usace/groundwork";
 import { useQuery } from "@tanstack/react-query";
 import fetchWithAuth from "../../utils/fetchWithAuth";
 import { useState } from "react";
@@ -21,7 +22,8 @@ const JobsList = () => {
   const [offices, setOffices] = useState<string[]>([]);
   const accessible = useQuery<string[]>({ queryKey: ["accessibleOffices"], enabled: auth.isAuth,
     queryFn: async () => (await fetchWithAuth("/api/users/me/offices", {}, auth.token)).json() });
-  const { data, isLoading, isError } = useJobsPage(page, pageSize, offices);
+  const { data, isLoading, isPlaceholderData, isError } = useJobsPage(page, pageSize, offices);
+  const loading = isLoading || isPlaceholderData;
   const jobs = data?.jobs ?? [];
   const total = data?.total ?? 0;
   const pages = pageSize === "all" ? 1 : Math.max(1, Math.ceil(total / pageSize));
@@ -37,8 +39,9 @@ const JobsList = () => {
 
   return (
     <div className="mx-auto min-w-0 max-w-4xl space-y-4">
-      <H1>Job History</H1>
-      <p className="text-sm text-slate-600">Click a job to open it</p>
+      <header><H1>Job History</H1><p className="mt-1 text-sm text-slate-600">Click a job to open it</p></header>
+      <UsaceBox title="Office runs" className="mb-0!">
+      <div className="space-y-4">
       <fieldset className="rounded-lg border border-slate-200 bg-slate-50 p-3">
         <legend className="px-1 text-sm font-semibold">Filter offices</legend>
         <p className="mb-2 text-xs text-slate-500">Select one or more offices. With none selected, all your offices are included.</p>
@@ -52,11 +55,10 @@ const JobsList = () => {
         </div>
       </fieldset>
       {isError && <p role="alert">Error occurred while fetching job history.</p>}
-      {isLoading && <p role="status">Loading job history...</p>}
       <nav aria-label="Job history pagination" className="flex flex-wrap items-center gap-3">
         <label className="flex items-center gap-2">
           Jobs per page
-          <select className="rounded border border-gray-400 bg-white px-2 py-1 text-gray-900"
+          <select className="rounded border border-gray-400 bg-white min-w-20 pl-3 pr-9 py-2 text-gray-900"
             value={pageSize} onChange={event => {
               setPageSize(event.target.value === "all" ? "all" : Number(event.target.value));
               setPage(1);
@@ -69,14 +71,15 @@ const JobsList = () => {
         </label>
         <span role="status">{pageSize === "all" ? `Showing all ${total} jobs` : `Page ${page} of ${pages} (${total} jobs)`}</span>
         {pageSize !== "all" && <>
-          <Button type="button" disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</Button>
-          <Button type="button" disabled={page >= pages} onClick={() => setPage(page + 1)}>Next</Button>
+          <Button type="button" disabled={loading || page <= 1} onClick={() => setPage(page - 1)}>Previous</Button>
+          <Button type="button" disabled={loading || page >= pages} onClick={() => setPage(page + 1)}>Next</Button>
         </>}
       </nav>
       <div role="region" aria-label="Job history results" tabIndex={pageSize === "all" ? undefined : 0}
-        className={pageSize === "all" ? "space-y-4" : "min-h-64 max-h-[60vh] space-y-4 overflow-auto overscroll-contain"}>
-      {!isLoading && !isError && jobs.length === 0 && <p>No jobs found for this selection.</p>}
-      {jobs.map((job) => {
+        className={pageSize === "all" ? "space-y-4" : "min-h-64 h-[60vh] space-y-4 overflow-auto overscroll-contain"}>
+      {!loading && !isError && jobs.length === 0 && <p>No jobs found for this selection.</p>}
+      {loading && <LoadingRows label="Loading job history" />}
+      {!loading && jobs.map((job) => {
         const dateAgo = dayjs(job.createdTime).fromNow();
         return (
           <Link key={job.id} to="/jobs/$jobId" params={{ jobId: job.id }}
@@ -96,6 +99,8 @@ const JobsList = () => {
         );
       })}
       </div>
+      </div>
+      </UsaceBox>
     </div>
   );
 };

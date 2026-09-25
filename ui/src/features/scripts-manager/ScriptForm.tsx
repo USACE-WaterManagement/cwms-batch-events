@@ -457,7 +457,7 @@ export const ScriptForm = ({
           </fieldset>
           </ConfigSection>
           <ConfigSection id="access" active={section}>
-            <RoleMultiSelect
+            <RoleMultiSelect office={office}
               allRoles={allRoles}
               initialSelectedRoles={form.roles}
               onChange={(selectedRoles) => update("roles", selectedRoles)}

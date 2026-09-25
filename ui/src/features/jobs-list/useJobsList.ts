@@ -1,4 +1,4 @@
-import { useQuery, useInfiniteQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { useQuery, keepPreviousData, useInfiniteQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useAuth } from "@usace-watermanagement/groundwork-water";
 import fetchWithAuth from "../../utils/fetchWithAuth";
 import { JobDetails } from "./useJobDetails";
@@ -64,6 +64,7 @@ export const useJobsPage = (page: number, pageSize: number | "all", offices: str
   const client = useQueryClient();
   return useQuery({
     queryKey: ["jobs", "page", page, pageSize, offices],
+    placeholderData: keepPreviousData,
     enabled: auth.isAuth,
     queryFn: async () => {
       const params = new URLSearchParams();

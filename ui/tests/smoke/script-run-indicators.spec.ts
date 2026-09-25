@@ -44,9 +44,9 @@ test("modern script actions keep submission explicit and open the latest run", a
   const row = page.getByRole("row").filter({ hasText: script.name });
   const summary = row.getByRole("button", { name: `View latest run for ${script.name}` });
   await expect(summary).toHaveText("Latest run: Completed · 8 minutes ago");
-  await row.getByRole("button", { name: "Run script", exact: true }).focus();
+  await row.getByRole("button", { name: "Run job", exact: true }).focus();
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("tab", { name: "Run script", exact: true })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("tab", { name: "Run job", exact: true })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("button", { name: "Submit job", exact: true })).toBeVisible();
   expect(submissions).toBe(0);
   await row.getByRole("button", { name: "Runs", exact: true }).click();
@@ -58,7 +58,7 @@ test("modern script actions keep submission explicit and open the latest run", a
   expect(submissions).toBe(0);
   if (process.env.PR_SCREENSHOT_DIR) {
     await mkdir(process.env.PR_SCREENSHOT_DIR, { recursive: true });
-    await page.getByRole("region", { name: "SWT scripts list" }).screenshot({ path: join(process.env.PR_SCREENSHOT_DIR, "script-actions-desktop.png") });
+    await page.getByRole("region", { name: "SWT jobs list" }).screenshot({ path: join(process.env.PR_SCREENSHOT_DIR, "script-actions-desktop.png") });
   }
   await page.setViewportSize({ width: 390, height: 844 });
   await row.scrollIntoViewIfNeeded();
