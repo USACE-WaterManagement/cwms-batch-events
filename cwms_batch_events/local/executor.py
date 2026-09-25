@@ -4,6 +4,8 @@ from cwms_batch_events.core.job_logger.base import JobLogger
 from cwms_batch_events.core.execution import command_for_payload, skips_repository_checkout
 from cwms_batch_events.core.models import JobMessage, JobStatus
 from cwms_batch_events.core.settings import ExecutorSettings, get_settings
+from cwms_batch_events.core.release_jars import jar_command
+import os
 
 from cwms_batch_events.core.job_correlation import runner_environment
 from cwms_batch_events.core.logging_config import bind_log_context
@@ -31,9 +33,12 @@ class LocalExecutor:
         container = None
 
         try:
+            command = command_for_payload(message.payload, runner="local")
+            if message.payload.release_jar:
+                command = jar_command(message, os.environ.get("ARTIFACT_API_URL"), os.environ.get("APP_KEY"))
             container = client.containers.run(
                 image=f"{message.payload.office}-jobs",
-                command=command_for_payload(message.payload, runner="local"),
+                command=command,
                 detach=True,
                 stderr=True,
                 environment=[

@@ -28,9 +28,10 @@ export function parseArguments(text: string): string[] {
   return tokens as string[];
 }
 
-export function commandPreview(script: Pick<Script, "executionType" | "repoPath" | "runtime" | "commandArgs">, trimTarget = true): string {
+export function commandPreview(script: Pick<Script, "executionType" | "repoPath" | "runtime" | "commandArgs" | "releaseJar">, trimTarget = true): string {
   const target = trimTarget ? script.repoPath.trim() : script.repoPath;
   const args = script.commandArgs ?? [];
+  if (script.releaseJar) return formatArguments(["java", "-jar", `<downloaded:${script.releaseJar.name}>`, ...args]);
   if (script.executionType === "command") return formatArguments([target, ...args]);
   const path = `/jobs/${target.replace(/^\/jobs\//, "")}`;
   if (script.runtime === "java") return formatArguments(["java", "-jar", path, ...args]);

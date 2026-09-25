@@ -375,6 +375,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/repository-releases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Releases */
+        get: operations["releases_repository_releases_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/repository-releases/{release_id}/jars": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Jars */
+        get: operations["jars_repository_releases__release_id__jars_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/release-jars/jobs/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download */
+        get: operations["download_release_jars_jobs__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -505,6 +556,7 @@ export interface components {
             commandMode: string;
             /** Shellcommand */
             shellCommand?: string | null;
+            releaseJar?: components["schemas"]["ReleaseJar"] | null;
             /**
              * Id
              * Format: uuid
@@ -602,6 +654,23 @@ export interface components {
             /** Automatic */
             automatic: number;
         };
+        /** ReleaseJar */
+        ReleaseJar: {
+            /** Repository */
+            repository: string;
+            /** Releaseid */
+            releaseId: number;
+            /** Assetid */
+            assetId: number;
+            /** Tag */
+            tag: string;
+            /** Name */
+            name: string;
+            /** Sha256 */
+            sha256: string;
+            /** Size */
+            size: number;
+        };
         /** SchedulerStatus */
         SchedulerStatus: {
             /** Enabled */
@@ -661,6 +730,7 @@ export interface components {
             commandMode: "arguments" | "shell";
             /** Shellcommand */
             shellCommand?: string | null;
+            releaseJar?: components["schemas"]["ReleaseJar"] | null;
             /** Name */
             name: string;
             /** Description */
@@ -730,6 +800,7 @@ export interface components {
             commandMode: string;
             /** Shellcommand */
             shellCommand?: string | null;
+            releaseJar?: components["schemas"]["ReleaseJar"] | null;
             /** Name */
             name: string;
             /** Description */
@@ -863,6 +934,7 @@ export interface components {
             commandMode: "arguments" | "shell";
             /** Shellcommand */
             shellCommand?: string | null;
+            releaseJar?: components["schemas"]["ReleaseJar"] | null;
             /** Name */
             name: string;
             /** Description */
@@ -1491,7 +1563,7 @@ export interface operations {
                 cursor?: string | null;
                 start_time?: number | null;
                 end_time?: number | null;
-                /** @description CloudWatch JSON level. ALL includes historical text. UNKNOWN scans a bounded page for unclassified entries. */
+                /** @description CloudWatch JSON level; ALL includes historical text. UNKNOWN scans a bounded page for unclassified entries. */
                 level?: "ALL" | "TRACE" | "DEBUG" | "INFO" | "WARNING" | "ERROR" | "CRITICAL" | "UNKNOWN";
             };
             header?: never;
@@ -1663,6 +1735,105 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OperationsSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    releases_repository_releases_get: {
+        parameters: {
+            query: {
+                office: string;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    jars_repository_releases__release_id__jars_get: {
+        parameters: {
+            query: {
+                office: string;
+                page?: number;
+            };
+            header?: never;
+            path: {
+                release_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_release_jars_jobs__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-artifact-ticket"?: string;
+            };
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

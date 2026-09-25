@@ -24,8 +24,9 @@ export function CommandEditor({ value, onChange, onValidityChange, disabled, arg
         onValidityChange(!nextShell || !!shellText.trim());
       }}>
       <option value="arguments" disabled={!argumentsAvailable}>Executable with arguments{!argumentsAvailable ? " (no saved executable)" : ""}</option>
-      <option value="shell">Bash command ({shellRequiresUpgrade ? "requires version 3 upgrade" : "supports && and ||"})</option>
+      <option value="shell" disabled={!!value.releaseJar}>Bash command ({shellRequiresUpgrade ? "requires version 3 upgrade" : "supports && and ||"})</option>
     </select>
+    {value.releaseJar && <p className="text-sm text-slate-600">Release JARs run Java directly. Change arguments here, or remove the release selection before using Bash mode.</p>}
     {shell ? <>
       <label htmlFor={`${id}-shell`} className="block font-semibold">Bash command</label>
       <textarea id={`${id}-shell`} rows={5} disabled={disabled} value={value.shellCommand ?? ""}

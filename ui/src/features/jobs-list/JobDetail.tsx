@@ -5,7 +5,7 @@ import { jobStatusLabel } from "./jobStatus";
 import { RunTriggerBadge } from "./RunAttribution";
 import { submittedBy } from "./submittedBy";
 
-const jobFields: (keyof JobDetails)[] = [
+const jobFields = [
   "scriptName",
   "username",
   "runTrigger",
@@ -15,7 +15,7 @@ const jobFields: (keyof JobDetails)[] = [
   "runTime",
   "endTime",
   "id",
-];
+] as const satisfies readonly (keyof JobDetails)[];
 
 const wideFields: (keyof JobDetails)[] = ["id"];
 

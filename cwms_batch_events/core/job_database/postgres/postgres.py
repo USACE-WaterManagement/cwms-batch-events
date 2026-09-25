@@ -55,6 +55,10 @@ class PostgresJobDatabase:
     def __init__(self, db: Session):
         self.db = db
 
+    def get_script_by_id(self, script_id):
+        with self.db.begin():
+            return ScriptRead.model_validate(self.db.get_one(ScriptModel, script_id))
+
     def claim_scheduled_dispatch(self, job_id: uuid.UUID) -> bool:
         job = self._load_job_for_update(job_id)
         if job.scheduled_for is None:
@@ -204,6 +208,7 @@ class PostgresJobDatabase:
         job.command_args = list(options.command_args)
         job.command_mode = options.command_mode
         job.shell_command = options.shell_command
+        job.release_jar = options.release_jar.model_dump(by_alias=False) if options.release_jar else None
         job.job_runner_id = get_runner_id()
 
         # Persist only the schema conversion, never custom-run overrides.
@@ -323,6 +328,7 @@ class PostgresJobDatabase:
                 script.command_args = payload.command_args
                 script.command_mode = payload.command_mode
                 script.shell_command = payload.shell_command
+                script.release_jar = payload.release_jar.model_dump(by_alias=False) if payload.release_jar else None
                 script.schedule_enabled = payload.schedule_enabled
                 script.schedule_type = payload.schedule_type
                 script.schedule_minute = payload.schedule_minute
