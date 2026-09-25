@@ -18,13 +18,24 @@ Legacy v1 upgrades keep effective Python execution and clear ignored runtime/arg
 fields. Ambiguous historical paths require a reviewed replacement rather than a guessed
 conversion. Existing job snapshots remain unchanged, and stale writes cannot downgrade v4.
 
-Details has General, Source, Command, Access, Schedule, and Upgrade sections.
+Details has General, Command, Access, Schedule, and Upgrade sections.
+Command combines source, executable/file, runtime, and optional arguments with a
+live preview. Switching sources preserves each source's draft path. Command text,
+paths, and output use the Cascadia/Consolas monospace font stack.
 The sidebar connects to its content panel; small screens use a dropdown. Edit retains
 the selected section. The version guide lives in Upgrade and uses client routing.
 Script search filters the loaded office list after a 300 ms debounce by name, description,
 path, or runtime; it does not issue a new API request for each search. Run selections
 have client-side URLs. Share job log copies the canonical `/jobs/{jobId}` URL; recipients
 must sign in with office access. Back to script view restores the script and selected run.
+Action feedback, including copied links and configuration upgrades, uses toasts.
+Job History supports multiple office filters; the API checks access before applying
+the filters and pagination. An empty selection includes all accessible offices.
+Schedule shows the next queue time and most recent finished run in the saved timezone.
+The API calculates the next occurrence with the dispatcher's DST and calendar rules,
+searching up to eight years for leap-day schedules. Editing explicitly labels these
+times as belonging to the saved schedule; saving refreshes them. They refresh every
+30 seconds while Schedule is open and stop polling after a read error.
 Manual/Automatic radio controls pause or enable scheduling; automatic scripts have a
 list badge. Legacy inactive scripts remain inactive until explicitly reactivated.
 Save highlights sections and inputs needing correction while retaining the draft.

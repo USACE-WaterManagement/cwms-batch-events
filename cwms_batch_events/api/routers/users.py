@@ -7,6 +7,11 @@ from cwms_batch_events.core.auth.user.models import User
 router = APIRouter(prefix="/users", tags=["scripts"])
 
 
+@router.get("/me/offices")
+def get_offices(user: User = Depends(get_current_user)) -> list[str]:
+    return user.offices
+
+
 @router.get("/me/system-admin")
 def get_system_admin(user: User = Depends(get_current_user)) -> bool:
     return "CWMS Admin" in user.roles.get("HQ", [])

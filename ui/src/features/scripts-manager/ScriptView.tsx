@@ -1,4 +1,5 @@
 import dayjs from "dayjs";
+import { ScheduleTiming } from "./ScheduleTiming";
 import { ViewField } from "./ViewField";
 import { Button, Text } from "@usace/groundwork";
 import type { Script } from "../scripts-manager/types";
@@ -76,7 +77,7 @@ export const ScriptView = ({ script, onEdit, section, onSectionChange }: ScriptV
                 : "GitHub Repo Path"
             }
           >
-            <span className="block [overflow-wrap:anywhere]">{script.repoPath}</span>
+            <span className="block font-mono [overflow-wrap:anywhere]">{script.repoPath}</span>
           </ViewField>
           <ViewField label="Source">
             {scriptSource(script)}
@@ -84,8 +85,7 @@ export const ScriptView = ({ script, onEdit, section, onSectionChange }: ScriptV
           <ViewField label="Runtime">
             {scriptRuntime(script)}
           </ViewField>
-          </ConfigSection>
-          <ConfigSection id="arguments" active={section}>
+
           <ViewField label={`Command (version ${script.configVersion ?? 1})`}>
             <pre className="whitespace-pre-wrap">
               {savedCommandPreview(script)}
@@ -96,9 +96,10 @@ export const ScriptView = ({ script, onEdit, section, onSectionChange }: ScriptV
           </ViewField>}
           </ConfigSection>
           <ConfigSection id="schedule" active={section}>
+          {script && <ScheduleTiming script={script} enabled={section === "schedule"} />}
           {(script.configVersion ?? 1) < 4 && <p>Upgrade configuration to version 4 to configure a schedule.</p>}
           <ViewField label="Schedule">
-            {scheduleDescription(script)}
+            <span className={schedulePreset(script) === "cron" ? "font-mono" : ""}>{scheduleDescription(script)}</span>
           </ViewField>
           <ViewField label="Timezone">
             {script.scheduleTimezone ?? "UTC"}

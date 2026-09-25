@@ -36,7 +36,7 @@ for (const warning of [
   await page.getByRole("button", { name: "Create first script" }).click();
   await configSection(page, "General");
   await page.getByLabel("Name", { exact: true }).fill("Manual SWT report");
-  await configSection(page, "Source");
+  await configSection(page, "Command");
   await page.getByLabel("GitHub Repo Path", { exact: true }).fill("python/report.py");
   await expect(page.getByRole("button", { name: "Browse", exact: true })).toBeDisabled();
   await page.getByRole("button", { name: "Save", exact: true }).click();

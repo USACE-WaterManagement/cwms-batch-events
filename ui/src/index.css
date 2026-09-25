@@ -36,3 +36,16 @@ header span:has(> .batch-header-actions) {
     flex-basis: 100%;
   }
 }
+
+html { scrollbar-gutter: stable; }
+code, pre, .font-mono, #repoPath, #shellCommand, #scheduleCron, [aria-label="Job log link"] {
+  font-family: "Cascadia Code", "Cascadia Mono", Consolas, "Liberation Mono", monospace;
+}
+.action-link {
+  display: inline-flex; align-items: center; gap: .5rem; min-height: 2.5rem;
+  padding: .5rem .75rem; border: 1px solid #cbd5e1; border-radius: .5rem;
+  background: white; color: #334155; font-size: .875rem; font-weight: 600;
+  text-decoration: none; user-select: none;
+}
+.action-link:hover { background: #eff6ff; border-color: #60a5fa; color: #1d4ed8; }
+.action-link:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }

@@ -1,7 +1,6 @@
 export const scriptSections = [
   { id: "general", label: "General" },
-  { id: "source", label: "Source" },
-  { id: "arguments", label: "Command" },
+  { id: "source", label: "Command" },
   { id: "access", label: "Access" },
   { id: "schedule", label: "Schedule" },
   { id: "upgrade", label: "Upgrade" },
@@ -10,7 +9,7 @@ export type ScriptSection = typeof scriptSections[number]["id"];
 export const fieldSections: Record<string, ScriptSection> = {
   name: "general", description: "general", active: "general",
   repoPath: "source", executionType: "source", runtime: "source",
-  commandArgs: "arguments", commandMode: "arguments", shellCommand: "arguments",
+  commandArgs: "source", commandMode: "source", shellCommand: "source",
   roles: "access", scheduleType: "schedule", scheduleMinute: "schedule",
   scheduleCron: "schedule", scheduleTimezone: "schedule", scheduleEnabled: "schedule",
 };

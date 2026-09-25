@@ -1,5 +1,7 @@
 import { useAuth } from "@usace-watermanagement/groundwork-water";
 import { Button, H1 } from "@usace/groundwork";
+import { useQuery } from "@tanstack/react-query";
+import fetchWithAuth from "../../utils/fetchWithAuth";
 import { useState } from "react";
 import { useJobsPage } from "./useJobsList";
 import { Link } from "@tanstack/react-router";
@@ -16,8 +18,11 @@ const JobsList = () => {
   const auth = useAuth();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number | "all">(10);
-  const { data, isLoading, isError } = useJobsPage(page, pageSize);
-  const jobs = data?.jobs;
+  const [offices, setOffices] = useState<string[]>([]);
+  const accessible = useQuery<string[]>({ queryKey: ["accessibleOffices"], enabled: auth.isAuth,
+    queryFn: async () => (await fetchWithAuth("/api/users/me/offices", {}, auth.token)).json() });
+  const { data, isLoading, isError } = useJobsPage(page, pageSize, offices);
+  const jobs = data?.jobs ?? [];
   const total = data?.total ?? 0;
   const pages = pageSize === "all" ? 1 : Math.max(1, Math.ceil(total / pageSize));
 
@@ -30,25 +35,24 @@ const JobsList = () => {
     );
   }
 
-  if (isError) return <section><H1>Job History</H1><p role="alert">Error occurred while fetching job history.</p></section>;
-
-  if (isLoading) return <section><H1>Job History</H1><p role="status">Loading job history...</p></section>;
-
-  if (!jobs || (total === 0 && page === 1))
-    return (
-      <section><H1>Job History</H1><p className="mt-4">
-        No jobs found! You can submit a job{" "}
-        <span className="underline">
-          <Link to="/submit">here</Link>
-        </span>
-        .
-      </p></section>
-    );
-
   return (
     <div className="mx-auto min-w-0 max-w-4xl space-y-4">
       <H1>Job History</H1>
-      <p>Runs shared across your offices, with who submitted them, their status, and output.</p>
+      <p className="text-sm text-slate-600">Click a job to open it</p>
+      <fieldset className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+        <legend className="px-1 text-sm font-semibold">Filter offices</legend>
+        <p className="mb-2 text-xs text-slate-500">Select one or more offices. With none selected, all your offices are included.</p>
+        <div className="flex flex-wrap gap-3">
+          {(accessible.data ?? []).map(office => <label key={office} className="flex cursor-pointer select-none items-center gap-2 rounded border border-slate-300 bg-white px-3 py-2 text-sm">
+            <input type="checkbox" checked={offices.includes(office)} onChange={event => {
+              setOffices(current => event.target.checked ? [...current, office].sort() : current.filter(item => item !== office)); setPage(1);
+            }} />{office}
+          </label>)}
+          {offices.length > 0 && <button type="button" className="action-link" onClick={() => { setOffices([]); setPage(1); }}>All offices</button>}
+        </div>
+      </fieldset>
+      {isError && <p role="alert">Error occurred while fetching job history.</p>}
+      {isLoading && <p role="status">Loading job history...</p>}
       <nav aria-label="Job history pagination" className="flex flex-wrap items-center gap-3">
         <label className="flex items-center gap-2">
           Jobs per page
@@ -70,8 +74,8 @@ const JobsList = () => {
         </>}
       </nav>
       <div role="region" aria-label="Job history results" tabIndex={pageSize === "all" ? undefined : 0}
-        className={pageSize === "all" ? "space-y-4" : "max-h-[60vh] space-y-4 overflow-auto overscroll-contain"}>
-      {jobs.length === 0 && <p>No jobs on this page. Select Previous to return to earlier results.</p>}
+        className={pageSize === "all" ? "space-y-4" : "min-h-64 max-h-[60vh] space-y-4 overflow-auto overscroll-contain"}>
+      {!isLoading && !isError && jobs.length === 0 && <p>No jobs found for this selection.</p>}
       {jobs.map((job) => {
         const dateAgo = dayjs(job.createdTime).fromNow();
         return (

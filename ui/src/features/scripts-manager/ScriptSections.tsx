@@ -1,14 +1,13 @@
 import { useId, type ReactNode } from "react";
-import { MdTune, MdFolderOpen, MdTerminal, MdShield, MdSchedule, MdUpgrade, MdErrorOutline } from "react-icons/md";
+import { MdTune, MdTerminal, MdShield, MdSchedule, MdUpgrade, MdErrorOutline } from "react-icons/md";
 import { FieldHelp } from "./FieldHelp";
 
 import { scriptSections, fieldSections, type ScriptSection } from "./configurationSections";
 
-const sectionIcons = { general: MdTune, source: MdFolderOpen, arguments: MdTerminal, access: MdShield, schedule: MdSchedule, upgrade: MdUpgrade };
+const sectionIcons = { general: MdTune, source: MdTerminal, access: MdShield, schedule: MdSchedule, upgrade: MdUpgrade };
 const descriptions = {
   general: "Name your script and describe what it does.",
   source: "Choose where the script comes from and how it runs.",
-  arguments: "Review the command and the values passed to your script.",
   access: "Choose who can run this script in your office.",
   schedule: "Choose when this script runs and the timezone it follows.",
   upgrade: "Review and upgrade this script's configuration version.",
@@ -51,7 +50,7 @@ export function ScriptSections({ active, onSelect, errors = {}, children }: {
       </div>
       </div>
     </nav>
-    <div className="min-w-0 bg-white p-4">
+    <div className="h-[clamp(32rem,65dvh,44rem)] min-w-0 overflow-y-auto overscroll-contain bg-white p-4 [scrollbar-gutter:stable]">
       <header className="mb-5 border-b border-slate-100 pb-4">
         <div className="flex items-center gap-2"><h3 className="text-lg font-semibold text-slate-900">{scriptSections.find(section => section.id === active)?.label}</h3>
           {active === "access" && <FieldHelp label="Execution roles">Optional. Leave empty to allow users with office access to run this script. Selected roles restrict execution to users with at least one of those roles in this office.</FieldHelp>}

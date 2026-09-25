@@ -116,7 +116,7 @@ def get_scheduled_scripts(
     return [
         script
         for script in job_db.retrieve_script_catalog(user.roles)
-        if script.config_version == 4 and script.schedule_enabled and script.schedule_type in {"hourly", "cron"}
+        if script.config_version == 4 and script.schedule_enabled and script.schedule_type in {"hourly", "monthly", "cron"}
     ]
 
 

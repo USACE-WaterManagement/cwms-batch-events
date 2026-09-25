@@ -54,20 +54,26 @@ def get_jobs_for_user(
     ),
     script_id: UUID | None = Query(default=None, alias="scriptId"),
     latest_per_script: bool = Query(default=False, alias="latestPerScript"),
+    office: list[str] | None = Query(default=None, description="Offices to include; defaults to all accessible offices."),
     user: User = Depends(get_current_user),
     job_db: JobDatabase = Depends(get_job_database),
 ) -> list[JobRecord]:
+    offices = user.offices
+    if office:
+        offices = sorted(set(value.upper() for value in office))
+        if not set(offices).issubset(user.offices):
+            raise HTTPException(403, "Office access required")
     if latest_per_script:
         if script_id is not None or limit is not None or offset:
             raise HTTPException(422, "latestPerScript cannot be combined with pagination or scriptId")
-        return job_db.get_latest_jobs_for_offices(user.offices)
+        return job_db.get_latest_jobs_for_offices(offices)
     if script_id is not None:
-        response.headers["X-Total-Count"] = str(job_db.count_jobs_for_offices(user.offices, script_id=script_id))
-        return job_db.get_jobs_for_offices(user.offices, limit=limit or 10, offset=offset, script_id=script_id)
+        response.headers["X-Total-Count"] = str(job_db.count_jobs_for_offices(offices, script_id=script_id))
+        return job_db.get_jobs_for_offices(offices, limit=limit or 10, offset=offset, script_id=script_id)
     if limit is not None or offset:
-        response.headers["X-Total-Count"] = str(job_db.count_jobs_for_offices(user.offices))
-        return job_db.get_jobs_for_offices(user.offices, limit=limit, offset=offset)
-    job_list = job_db.get_jobs_for_offices(user.offices)
+        response.headers["X-Total-Count"] = str(job_db.count_jobs_for_offices(offices))
+        return job_db.get_jobs_for_offices(offices, limit=limit, offset=offset)
+    job_list = job_db.get_jobs_for_offices(offices)
     return job_list
 
 

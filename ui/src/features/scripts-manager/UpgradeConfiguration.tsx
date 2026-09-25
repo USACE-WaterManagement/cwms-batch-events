@@ -1,3 +1,4 @@
+import { notifySuccess } from "../../utils/actionNotifications";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@usace-watermanagement/groundwork-water";
 import { Button } from "@usace/groundwork";
@@ -12,12 +13,12 @@ export function UpgradeConfiguration({ script }: { script: Script }) {
   const auth = useAuth();
   const cache = useQueryClient();
   const upgrade = useMutation({
-    meta: { inlineError: true },
     mutationFn: async (): Promise<Script> => {
       const response = await fetchWithAuth(`/api/scripts/${script.id}/upgrade`, { method: "POST" }, auth.token);
       return response.json();
     },
     onSuccess: updated => {
+      notifySuccess(`Configuration upgraded successfully to version ${CURRENT_SCRIPT_VERSION}. Scheduling remains disabled until you enable it.`);
       cache.setQueryData<Script[]>(["scripts", script.office], old => old?.map(item => item.id === updated.id ? updated : item));
       void cache.invalidateQueries({ queryKey: ["catalog"] });
     },
@@ -41,7 +42,6 @@ export function UpgradeConfiguration({ script }: { script: Script }) {
       </div>
     </div>
     <div className="space-y-4 p-5">
-    {current && <p className="text-sm text-slate-600">This configuration is up to date.</p>}
     {!supportsScriptVersion(version) && <p role="alert">This app does not support configuration version {version}. Update the application before editing this script.</p>}
     {supportsScriptVersion(version) && version < CURRENT_SCRIPT_VERSION && <>
       <div><h5 className="font-semibold text-slate-900">What's included</h5>
@@ -54,8 +54,6 @@ export function UpgradeConfiguration({ script }: { script: Script }) {
       </Button>
     </>}
     {upgrade.isPending && <div role="status" className="flex items-center gap-2"><LoadingSpinner />Saving configuration version {CURRENT_SCRIPT_VERSION}…</div>}
-    {upgrade.isSuccess && <div role="status" className="rounded border border-green-600 bg-green-50 p-3 text-green-900">Configuration upgraded successfully to version {CURRENT_SCRIPT_VERSION}. Scheduling is disabled until you configure and enable it.</div>}
-    {upgrade.isError && <div role="alert" className="rounded border border-red-500 bg-red-50 p-3 text-red-800">Upgrade failed: {upgrade.error.message} You can retry with Upgrade configuration.</div>}
     <ScriptVersionHelp />
     </div>
   </div>;

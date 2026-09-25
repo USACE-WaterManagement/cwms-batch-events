@@ -54,7 +54,7 @@ test("custom arguments apply once, cancel restores defaults, and role help expla
   await page.getByLabel("Arguments for this run").fill("--start-date 2026-09-01 --end-date 2026-09-07   ");
   await capture("custom-run");
   await page.getByRole("button", { name: "Submit custom run", exact: true }).click();
-  await expect(page.getByRole("alert").filter({ hasText: "Job could not" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Notifications" }).getByRole("alert")).toContainText("You do not have permission to perform this action.");
   await expect(page.getByLabel("Arguments for this run")).toHaveValue(/2026-09-01/);
   expect(submissions[0]).toEqual({ runTrigger: "manual", scriptId: script.id, commandArgs: ["--start-date", "2026-09-01", "--end-date", "2026-09-07"] });
   await page.getByRole("button", { name: "Cancel custom run" }).click();

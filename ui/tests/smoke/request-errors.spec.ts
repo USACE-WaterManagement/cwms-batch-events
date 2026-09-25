@@ -74,7 +74,7 @@ test("failed saves show a toast, retain the form, and are not automatically repe
   await page.getByRole("button", { name: "Create first script" }).click();
   await configSection(page, "General");
   await page.getByLabel("Name", { exact: true }).fill("SWT report");
-  await configSection(page, "Source");
+  await configSection(page, "Command");
   await page.getByLabel("GitHub Repo Path", { exact: true }).fill("python/report.py");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("region", { name: "Notifications" })).toContainText("The server could not complete the request");

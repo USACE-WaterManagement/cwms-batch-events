@@ -55,7 +55,7 @@ export const ScriptRunJob = ({ script, onSubmitted, onEdit }: {
     <p>{script.description}</p>
     {!supportsScriptVersion(version) && <p role="alert">This app does not support configuration version {version}. Running is unavailable.</p>}
     <dl className="space-y-2 text-sm">
-      <div><dt className="font-semibold">{script.executionType === "command" ? "Executable" : "File"}</dt><dd className="break-all">{script.repoPath}</dd></div>
+      <div><dt className="font-semibold">{script.executionType === "command" ? "Executable" : "File"}</dt><dd className="break-all font-mono">{script.repoPath}</dd></div>
       <div><dt className="font-semibold">Saved command · version {version}</dt><dd><pre className="whitespace-pre-wrap break-all">{savedCommandPreview(script)}</pre></dd></div>
       <div><dt className="font-semibold">Execution roles</dt><dd>{script.roles.length ? script.roles.join(", ") : "No additional CDA role required. Office access is required."}</dd></div>
     </dl>
@@ -74,7 +74,6 @@ export const ScriptRunJob = ({ script, onSubmitted, onEdit }: {
     }}>{custom ? "Cancel custom run" : "Custom run"}</Button>
     {onEdit && <Button disabled={run.isPending} onClick={onEdit}>Edit job</Button>}
     </div>
-    {run.isError && <p role="alert" className="text-red-700">Job could not be submitted: {run.error.message}</p>}
     {custom && version < 3 && command.commandMode === "shell" && <p role="status">Upgrade configuration in Details before using Bash command mode.</p>}
   </div>;
 };

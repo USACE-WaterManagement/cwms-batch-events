@@ -1,3 +1,4 @@
+import { ScheduleTiming } from "./ScheduleTiming";
 import { ViewField } from "./ViewField";
 import {
   Button,
@@ -9,7 +10,6 @@ import {
   Text,
 } from "@usace/groundwork";
 import type { Script, ScriptFormData } from "../scripts-manager/types";
-import { MdErrorOutline } from "react-icons/md";
 import { useState } from "react";
 import { ScriptSections, ConfigSection } from "./ScriptSections";
 import { fieldSections, type ScriptSection } from "./configurationSections";
@@ -39,7 +39,7 @@ const fieldHelp: Record<string, React.ReactNode> = {
     <div className="space-y-4">
       <section className="space-y-2">
         <h3 className="font-semibold">District GitHub repository</h3>
-        <p>Downloads the selected officeÃ¢â‚¬â„¢s repository before running a Python file, Bash script, or Java JAR. Paths are relative to <code>/jobs</code>. Enabled Java artifact pins also download their release JARs.</p>
+        <p>Downloads the selected office's repository before running a Python file, Bash script, or Java JAR. Paths are relative to <code>/jobs</code>. Enabled Java artifact pins also download their release JARs.</p>
         <div className="space-y-2 rounded-md border border-blue-200 bg-blue-50 p-3 text-blue-950">
           <p className="font-semibold">Example: SWT Java release</p>
           <p>Runtime: <strong>Java JAR</strong><br />JAR Path:</p>
@@ -54,7 +54,7 @@ const fieldHelp: Record<string, React.ReactNode> = {
           <p className="font-semibold">Example: JAR already in the container</p>
           <p>Executable: <code className="font-mono font-semibold">java</code><br />Arguments:</p>
           <pre className="whitespace-pre-wrap break-all rounded bg-white p-2 font-mono text-blue-950"><code>-jar /opt/reports/report.jar</code></pre>
-          <p>Replace this example path with an existing JAR in the image or a mounted directory. Use the repository source for SWTÃ¢â‚¬â„¢s downloaded release JAR.</p>
+          <p>Replace this example path with an existing JAR in the image or a mounted directory. Use the repository source for SWT's downloaded release JAR.</p>
         </div>
       </section>
       <p>Quote arguments that contain spaces. For shell operations such as <code>&amp;&amp;</code> or <code>||</code>, select Bash command mode and enter the complete command.</p>
@@ -74,7 +74,7 @@ const slugify = (str: string) => {
 };
 
 const FormRow = ({ children }: React.PropsWithChildren) => {
-  return <Field className="grid grid-cols-1 gap-2 sm:grid-cols-[120px_minmax(0,1fr)] sm:gap-6">{children}</Field>;
+  return <Field className="grid min-w-0 grid-cols-1 gap-2">{children}</Field>;
 };
 
 const InputLabel = ({
@@ -93,6 +93,12 @@ function scriptPathLabel(form: ScriptFormData): string {
   if (form.executionType === "command") return "Executable";
   if (form.runtime === "java") return "JAR Path";
   return "GitHub Repo Path";
+}
+
+function displayedRuntime(form: ScriptFormData): string {
+  if (form.commandMode === "shell") return "shell";
+  if (form.executionType === "command") return "installed";
+  return form.runtime ?? "python";
 }
 
 function editableVersion(script?: Script): 2 | 3 | 4 {
@@ -118,7 +124,6 @@ export const ScriptForm = ({
   office,
   script,
   isPending,
-  mutationError,
   onDelete,
   onSave,
   onCancelEdit,
@@ -145,6 +150,13 @@ export const ScriptForm = ({
     scheduleTimezone: script?.scheduleTimezone ?? "UTC",
   });
 
+  const [sourcePaths, setSourcePaths] = useState<Record<string, string>>({
+    [form.executionType ?? "github_file"]: form.repoPath,
+  });
+  const changeSource = (executionType: "github_file" | "command") => {
+    setSourcePaths(previous => ({ ...previous, [form.executionType ?? "github_file"]: form.repoPath }));
+    changeForm({ ...form, executionType, repoPath: sourcePaths[executionType] ?? "" });
+  };
   const [preset, setPreset] = useState(() => schedulePreset(form));
   const initialFields = (form.scheduleCron ?? '').split(/\s+/);
   const [scheduleTime, setScheduleTime] = useState(() => {
@@ -247,7 +259,21 @@ export const ScriptForm = ({
           </FormRow>
           </ConfigSection>
           <ConfigSection id="source" active={section}>
-          {form.commandMode !== "shell" && <FormRow>
+          <FormRow>
+            <InputLabel htmlFor="executionType">Source</InputLabel>
+            <select
+              id="executionType"
+              value={form.executionType}
+              onChange={(e) =>
+                changeSource(e.target.value as "github_file" | "command")
+              }
+              className="rounded border p-2"
+            >
+              <option value="github_file">District GitHub repository</option>
+              <option value="command">Installed command</option>
+            </select>
+          </FormRow>
+          <div className="min-h-24">{form.commandMode !== "shell" && <FormRow>
             <InputLabel htmlFor="repoPath">
               {scriptPathLabel(form)}
             </InputLabel>
@@ -268,30 +294,15 @@ export const ScriptForm = ({
               onChange={(path) => update("repoPath", path)}
             />}
           </FormRow>}
-          {errorFor("repoPath")}
-          <FormRow>
-            <InputLabel htmlFor="executionType">Source</InputLabel>
-            <select
-              id="executionType"
-              value={form.executionType}
-              onChange={(e) =>
-                update(
-                  "executionType",
-                  e.target.value as "github_file" | "command",
-                )
-              }
-              className="rounded border p-2"
-            >
-              <option value="github_file">District GitHub repository</option>
-              <option value="command">Installed command</option>
-            </select>
-          </FormRow>
-          {form.commandMode !== "shell" && form.executionType !== "command" && (
+          {form.commandMode === "shell" && <p className="text-sm text-slate-600">The Bash command below includes its own executable and paths.</p>}
+          {errorFor("repoPath")}</div>
+          <div>
             <FormRow>
               <InputLabel htmlFor="runtime">Runtime</InputLabel>
               <select
                 id="runtime"
-                value={form.runtime}
+                value={displayedRuntime(form)}
+                disabled={form.executionType === "command" || form.commandMode === "shell"}
                 onChange={(e) =>
                   update(
                     "runtime",
@@ -300,20 +311,21 @@ export const ScriptForm = ({
                 }
                 className="rounded border p-2"
               >
+                {form.executionType === "command" && <option value="installed">Provided by the executable</option>}
                 <option value="python">Python</option>
                 <option value="java">Java JAR</option>
                 <option value="shell">Bash</option>
               </select>
             </FormRow>
-          )}
-          </ConfigSection>
-          <ConfigSection id="arguments" active={section}>
+          </div>
+
           <div className="my-3 rounded-lg border border-gray-300 bg-white p-3">
             <CommandSettings value={form} onChange={changeForm} disabled={isPending} />
           </div>
           {errorFor("commandMode")}{errorFor("shellCommand")}{errorFor("commandArgs")}
           </ConfigSection>
           <ConfigSection id="schedule" active={section}>
+          {script && <ScheduleTiming script={script} enabled={section === "schedule"} editing />}
           {(form.configVersion ?? 1) < 4 && <p className="rounded border border-blue-300 bg-blue-50 p-3 text-sm">Scheduling requires version 4. Cancel editing and choose Upgrade configuration in Details.</p>}
           {errorFor("scheduleType")}
           <fieldset disabled={(form.configVersion ?? 1) < 4} className="space-y-4">
@@ -458,12 +470,7 @@ export const ScriptForm = ({
           </ConfigSection>
         </Fieldset>
         </ScriptSections>
-        {mutationError && (
-          <div role="alert" className="mt-3 flex gap-2">
-            <MdErrorOutline className="text-red-500 flex-none size-6" />
-            <Text className="text-red-500">{mutationError.message}</Text>
-          </div>
-        )}
+
         </div>
         <div className="script-form-actions mt-4 flex w-full flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
           <div className="flex items-center gap-2">

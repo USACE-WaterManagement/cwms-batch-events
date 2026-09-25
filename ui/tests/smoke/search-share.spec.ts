@@ -72,7 +72,7 @@ test("run selection is routed, share copies a canonical link, and back restores 
   await page.evaluate(() => { navigator.clipboard.writeText = async () => { throw new Error("Clipboard unavailable"); }; });
   await page.getByRole("button", { name: "Share job log", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "Job log link", exact: true })).toHaveValue(shared!);
-  await page.getByRole("link", { name: "← Back to script view", exact: true }).click();
+  await page.getByRole("link", { name: "Back to script view", exact: true }).click();
   await expect(page.getByRole("tab", { name: "Run history", exact: true })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByLabel("Job output")).toHaveValue("Older output");
   await expect(page.getByRole("list", { name: "Script run history" }).getByRole("button").nth(1)).toHaveAttribute("aria-pressed", "true");

@@ -59,14 +59,17 @@ export function useScriptRuns(scriptId: string) {
   });
 }
 
-export const useJobsPage = (page: number, pageSize: number | "all") => {
+export const useJobsPage = (page: number, pageSize: number | "all", offices: string[] = []) => {
   const auth = useAuth();
   const client = useQueryClient();
   return useQuery({
-    queryKey: ["jobs", "page", page, pageSize],
+    queryKey: ["jobs", "page", page, pageSize, offices],
     enabled: auth.isAuth,
     queryFn: async () => {
-      const query = pageSize === "all" ? "" : `?limit=${pageSize}&offset=${(page - 1) * pageSize}`;
+      const params = new URLSearchParams();
+      if (pageSize !== "all") { params.set("limit", String(pageSize)); params.set("offset", String((page - 1) * pageSize)); }
+      offices.forEach(office => params.append("office", office));
+      const query = params.size ? `?${params}` : "";
       const response = await fetchWithAuth(`/api/jobs${query}`, {}, auth.token);
       if (!response.ok) throw new Error("Failed to fetch job history");
       const jobs: JobDetails[] = await response.json();

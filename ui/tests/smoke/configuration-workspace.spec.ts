@@ -41,7 +41,7 @@ test("explicit upgrade shows progress, recoverable failure, success, and stays u
   await expect(page.getByRole("status").filter({ hasText: "Saving configuration version 4" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Upgrading configuration…", exact: true })).toBeDisabled();
   release();
-  await expect(page.getByRole("alert")).toContainText("Upgrade failed");
+  await expect(page.getByRole("alert")).toContainText("The server could not complete the request");
   expect(attempts).toBe(1);
   await page.getByRole("button", { name: "Upgrade configuration", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Configuration upgraded successfully" })).toBeVisible();
@@ -80,7 +80,7 @@ test("save marks missing fields and sections, keeps drafts, and preserves an old
   await open(page);
   await page.getByRole("button", { name: "Edit", exact: true }).click();
   await page.getByLabel("Name", { exact: true }).fill("");
-  await configSection(page, "Source");
+  await configSection(page, "Command");
   await page.getByLabel("GitHub Repo Path", { exact: true }).fill("");
   await configSection(page, "Schedule");
   await expect(page.getByLabel("Schedule", { exact: true })).toBeDisabled();
@@ -89,10 +89,10 @@ test("save marks missing fields and sections, keeps drafts, and preserves an old
   await expect(page.getByLabel("Name", { exact: true })).toHaveAttribute("aria-invalid", "true");
   const nav = page.getByRole("navigation", { name: "Configuration sections" });
   await expect(nav.getByRole("button", { name: /General/ }).getByLabel("Needs attention")).toBeVisible();
-  await expect(nav.getByRole("button", { name: /Source/ }).getByLabel("Needs attention")).toBeVisible();
+  await expect(nav.getByRole("button", { name: /Command/ }).getByLabel("Needs attention")).toBeVisible();
   expect(writes).toHaveLength(0);
   await page.getByLabel("Name", { exact: true }).fill("Corrected report");
-  await nav.getByRole("button", { name: /Source/ }).click();
+  await nav.getByRole("button", { name: /Command/ }).click();
   await expect(page.getByLabel("GitHub Repo Path", { exact: true })).toHaveAttribute("aria-invalid", "true");
   await page.getByLabel("GitHub Repo Path", { exact: true }).fill("python/report.py");
   await configSection(page, "General");

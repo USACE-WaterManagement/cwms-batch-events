@@ -41,7 +41,7 @@ test("saves timezone schedules and disables scheduling when switched to manual",
   await page.getByRole("button", { name: "Create first script", exact: true }).click();
   await configSection(page, "General");
   await page.getByLabel("Name", { exact: true }).fill("Synthetic Schedule");
-  await configSection(page, "Source");
+  await configSection(page, "Command");
   await page
     .getByLabel("GitHub Repo Path", { exact: true })
     .fill("python/report.py");

@@ -74,7 +74,7 @@ export const ScriptsList = ({
                   {script.active && script.scheduleEnabled && <span className="rounded bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-800">Automatic</span>}
                   <span className="inline-flex items-center gap-1"><ActiveIcon isActive={script.active} />{script.active ? "Active" : "Inactive"}</span>
                 </div>
-                <span className="mt-1 block text-sm text-gray-600">{script.repoPath}</span>
+                <span className="mt-1 block font-mono text-sm text-gray-600">{script.repoPath}</span>
                 <LatestScriptRun
                   jobs={jobs.filter(job => job.scriptId === script.id && job.office === script.office)}
                   now={jobsUpdatedAt} scriptName={script.name} state={runHistoryState}

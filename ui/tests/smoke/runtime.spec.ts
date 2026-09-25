@@ -36,9 +36,9 @@ test("registers and edits an installed Java command with separate arguments", as
   await page.getByRole("button", { name: "Create first script", exact: true }).click();
   await configSection(page, "General");
   await page.getByLabel("Name", { exact: true }).fill("Synthetic Java");
-  await configSection(page, "Source");
+  await configSection(page, "Command");
   await page.getByLabel("Source", { exact: true }).selectOption("command");
-  await configSection(page, "Source");
+  await configSection(page, "Command");
   await page.getByLabel("Executable", { exact: true }).fill("java");
   await configSection(page, "Command");
   await page.getByRole("button", { name: "Add arguments", exact: true }).click();
@@ -61,11 +61,11 @@ test("registers and edits an installed Java command with separate arguments", as
     "-jar /opt/report.jar 'two words'",
   );
   await page.getByRole("button", { name: "Apply arguments", exact: true }).click();
-  await configSection(page, "Source");
+  await configSection(page, "Command");
   await page.getByLabel("Source", { exact: true }).selectOption("github_file");
-  await configSection(page, "Source");
+  await configSection(page, "Command");
   await page.getByLabel("Runtime", { exact: true }).selectOption("java");
-  await configSection(page, "Source");
+  await configSection(page, "Command");
   await page
     .getByLabel("JAR Path", { exact: true })
     .fill("java-artifacts/BuildWSmetadataViaCDA.jar");
@@ -120,7 +120,7 @@ test("legacy registration upgrades only through the dedicated action", async ({ 
   expect(writes).toBe(1);
   expect(script.configVersion).toBe(4);
   await page.getByRole("button", { name: "Edit", exact: true }).click();
-  await configSection(page, "Source");
+  await configSection(page, "Command");
   await expect(page.getByLabel("Source", { exact: true })).toHaveValue("github_file");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("button", { name: "Edit", exact: true })).toBeVisible();

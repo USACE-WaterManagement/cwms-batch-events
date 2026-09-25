@@ -1,3 +1,4 @@
+import { MdArrowBack, MdOpenInNew } from "react-icons/md";
 import JobDetail from "./JobDetail";
 import JobLogs from "./JobLogs";
 import useJobDetails from "./useJobDetails";
@@ -19,17 +20,17 @@ const JobDetailFull = ({ jobId, standalone = false }: JobDetailFullProps) => {
 
   if (!auth.isAuth) return <LoginPrompt title="Sign in to view this job" description="This job log is shared with users who have access to its office." />;
   if (isPending) return <span>Loading...</span>;
-  if (isError) return <div className="space-y-3"><p role="alert">This job could not be loaded. It may be unavailable or outside your office access.</p><Link to="/jobs" className="text-blue-700 underline">← Job History</Link></div>;
+  if (isError) return <div className="space-y-3"><p role="alert">This job could not be loaded. It may be unavailable or outside your office access.</p><Link to="/jobs" className="action-link"><MdArrowBack aria-hidden />Job History</Link></div>;
   if (!data) return null;
 
   return (
     <>
-      <nav aria-label="Job navigation" className="mb-4 flex flex-wrap items-start justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-        <div className="flex flex-wrap gap-4 py-2 text-sm font-medium text-blue-700">
-          {standalone && <Link to="/jobs" className="underline">← Job History</Link>}
-          {standalone && data.scriptId && admins.data?.includes(data.office) && <Link to="/scripts-manager" search={{ office: data.office, scriptId: data.scriptId, jobId }} className="underline">← Back to script view</Link>}
-          {standalone && data.scriptId && !admins.isPending && !admins.data?.includes(data.office) && <Link to="/submit" search={{ office: data.office, scriptId: data.scriptId }} className="underline">← Back to script view</Link>}
-          {!standalone && <Link to="/jobs/$jobId" params={{ jobId }} className="underline">Open job page</Link>}
+      <nav aria-label="Job navigation" className="mb-2 flex flex-wrap items-start justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 p-2">
+        <div className="flex flex-wrap gap-2 text-sm font-medium text-blue-700">
+          {standalone && <Link to="/jobs" className="action-link"><MdArrowBack aria-hidden />Job History</Link>}
+          {standalone && data.scriptId && admins.data?.includes(data.office) && <Link to="/scripts-manager" search={{ office: data.office, scriptId: data.scriptId, jobId }} className="action-link"><MdArrowBack aria-hidden />Back to script view</Link>}
+          {standalone && data.scriptId && !admins.isPending && !admins.data?.includes(data.office) && <Link to="/submit" search={{ office: data.office, scriptId: data.scriptId }} className="action-link"><MdArrowBack aria-hidden />Back to script view</Link>}
+          {!standalone && <Link to="/jobs/$jobId" params={{ jobId }} className="action-link"><MdOpenInNew aria-hidden />Open job page</Link>}
         </div>
         <ShareJob key={jobId} jobId={jobId} />
       </nav>

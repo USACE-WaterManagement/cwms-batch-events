@@ -79,3 +79,46 @@ def due_minutes(script, last_checked: datetime | None, now: datetime):
         if script.schedule_updated_at and start >= script.schedule_updated_at and is_due(script, start):
             yield start
         start += timedelta(minutes=1)
+
+
+def next_run(script, after: datetime) -> datetime | None:
+    """Next occurrence, using dispatcher rules; search eight years for leap days.
+
+    Filter dates before enumerating times, so impossible cron dates are bounded.
+    Round-trip local times to exclude DST gaps; only fold zero is considered.
+    """
+    if not script.active or not script.schedule_enabled or script.config_version != 4:
+        return None
+    zone = ZoneInfo(script.schedule_timezone)
+    day = after.astimezone(zone).replace(hour=0, minute=0, second=0, microsecond=0)
+    if script.schedule_type == "hourly":
+        hours, minutes = list(range(24)), [script.schedule_minute]
+    elif script.schedule_type in {"monthly", "cron"}:
+        fields = validate_cron(script.schedule_cron).split()
+        minutes = [v for v in range(60) if field_matches(fields[0], v, 0, 59)]
+        hours = [v for v in range(24) if field_matches(fields[1], v, 0, 23)]
+    else:
+        return None
+    for _ in range(366 * 8):
+        date_matches = True
+        if script.schedule_type == "monthly":
+            date_matches = day.day == min(int(fields[2]), monthrange(day.year, day.month)[1])
+        elif script.schedule_type == "cron":
+            dom = field_matches(fields[2], day.day, 1, 31)
+            weekday = (day.weekday() + 1) % 7
+            dow = field_matches(fields[4], weekday, 0, 7) or (weekday == 0 and field_matches(fields[4], 7, 0, 7))
+            date_matches = dom or dow
+            if fields[2] == "*" or fields[4] == "*":
+                date_matches = dom and dow
+            date_matches = date_matches and field_matches(fields[3], day.month, 1, 12)
+        if date_matches:
+            for hour in hours:
+                for minute in minutes:
+                    local = day.replace(hour=hour, minute=minute, fold=0)
+                    candidate = local.astimezone(timezone.utc)
+                    if candidate <= after or candidate.astimezone(zone).replace(tzinfo=None) != local.replace(tzinfo=None):
+                        continue
+                    if is_due(script, candidate):
+                        return candidate
+        day += timedelta(days=1)
+    return None

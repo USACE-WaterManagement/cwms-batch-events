@@ -1,8 +1,11 @@
+import { useActionNotices, dismissAction } from "../utils/actionNotifications";
+import { MdCheckCircle, MdClose } from "react-icons/md";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { dismissToast, getNotifications, subscribe } from "../utils/errorNotifications";
 
 export default function ErrorToasts() {
+  const actions = useActionNotices();
   const notifications = useSyncExternalStore(subscribe, getNotifications);
   const [container, setContainer] = useState<Element>(document.body);
   const [summaryOpen, setSummaryOpen] = useState(false);
@@ -22,6 +25,10 @@ export default function ErrorToasts() {
     return () => observer.disconnect();
   }, []);
   return createPortal(<section aria-label="Notifications" hidden={summaryOpen} className="pointer-events-none fixed right-4 bottom-4 z-[10000] flex max-h-[70vh] w-[calc(100%-2rem)] max-w-md flex-col gap-3 overflow-y-auto">
+    {actions.map(item => <div key={item.id} role="status" className="pointer-events-auto flex items-start gap-3 rounded-lg border border-emerald-300 bg-white p-4 text-sm text-slate-900 shadow-lg">
+      <MdCheckCircle aria-hidden className="size-5 shrink-0 text-emerald-600" /><p className="flex-1">{item.message}</p>
+      <button type="button" aria-label="Dismiss notification" className="rounded p-1 hover:bg-slate-100" onClick={() => dismissAction(item.id)}><MdClose /></button>
+    </div>)}
     {notifications.filter(item => item.kind !== "warning" && !item.toastDismissed).map(item => <div key={item.id} role="alert" className="pointer-events-auto rounded-lg border border-red-300 bg-white p-4 text-slate-900 shadow-lg">
       <div className="flex items-start justify-between gap-3">
         <p className="font-semibold text-red-800">Request failed</p>
