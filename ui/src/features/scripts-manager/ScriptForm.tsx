@@ -34,6 +34,22 @@ const fieldHelp: Record<string, React.ReactNode> = {
   scheduleMinute: "Minute of each hour, from 0 through 59, in the selected timezone.",
   scheduleCron: "Five numeric fields: minute, hour, day of month, month, and day of week. Supports lists, ranges, and steps.",
   scheduleTimezone: "An IANA timezone such as America/Chicago. Missing daylight-saving times are skipped and repeated times run once.",
+  resourceSize: (
+    <div className="space-y-2">
+      <p>Start with Medium for most jobs.</p>
+      <ul className="list-disc space-y-1 pl-5">
+        <li>Size up when a job is slow from CPU pressure, runs out of memory, or is killed for exceeding memory.</li>
+        <li>Size down when the job finishes comfortably and monitoring shows low CPU and memory use.</li>
+      </ul>
+      <p>vCPU is the amount of virtual processor capacity. GiB is memory. One GiB is 1024 MiB.</p>
+      <p>
+        <a href="https://docs.aws.amazon.com/batch/latest/userguide/job_definition_parameters.html#containerProperties" target="_blank" rel="noopener noreferrer">AWS Batch resource requirements</a>
+        {" "}and{" "}
+        <a href="https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html#task_size" target="_blank" rel="noopener noreferrer">AWS Fargate task sizes</a>
+        {" "}explain these values in more detail.
+      </p>
+    </div>
+  ),
   name: "A descriptive name for this job. Its slug is generated from the name when you create it.",
   description: "Describe what this job does and when someone should run it.",
   repoPath: <>Enter a path relative to /jobs. Repository files are checked out there. With the Java artifact loader deployed, enabled pins in java/artifacts.json download release JARs into java-artifacts/ before the job runs. Enter those generated paths manually. Browse lists only files committed to GitHub. Files and directories cannot be created here. <Link to="/help/script-files" target="_blank" rel="noopener noreferrer">Script setup (new tab)</Link>. For an installed command, enter its executable. That mode skips checkout and artifact downloads.</>,
@@ -352,12 +368,30 @@ export const ScriptForm = ({
           <ConfigSection id="resources" active={section}>
             <FormRow>
               <InputLabel htmlFor="resourceSize">Task size</InputLabel>
-              <select id="resourceSize" {...validation("resourceSize")} value={form.resourceSize ?? "medium"}
-                onChange={(event: React.ChangeEvent<HTMLSelectElement>) => update("resourceSize", event.target.value as "small" | "medium" | "large")} className="rounded border p-2">
-                <option value="small">Small — 0.5 vCPU, 1 GiB</option>
-                <option value="medium">Medium — 1 vCPU, 2 GiB</option>
-                <option value="large">Large — 2 vCPU, 4 GiB</option>
-              </select>
+              <div className="grid gap-3 @md/script-panel:grid-cols-3" role="radiogroup" aria-label="Task size">
+                {[
+                  ["small", "Small", "0.5 vCPU", "1 GiB"],
+                  ["medium", "Medium", "1 vCPU", "2 GiB"],
+                  ["large", "Large", "2 vCPU", "4 GiB"],
+                ].map(([value, label, cpu, memory]) => (
+                  <label key={value} className={`cursor-pointer rounded-lg border p-3 transition ${form.resourceSize === value ? "border-blue-700 bg-blue-50 ring-2 ring-blue-200" : "border-slate-300 hover:border-blue-400"}`}>
+                    <input
+                      className="sr-only"
+                      type="radio"
+                      name="resourceSize"
+                      value={value}
+                      checked={form.resourceSize === value}
+                      onChange={() => update("resourceSize", value as "small" | "medium" | "large")}
+                      aria-invalid={Boolean(errors.resourceSize)}
+                      aria-describedby={errors.resourceSize ? "resourceSize-error" : undefined}
+                    />
+                    <span className="block font-semibold">{label}</span>
+                    <span className="mt-1 block text-sm text-slate-600">{cpu}</span>
+                    <span className="block text-sm text-slate-600">{memory} memory</span>
+                  </label>
+                ))}
+              </div>
+              {errorFor("resourceSize")}
               <Text>Applied to manual and automatic runs. The values are fixed platform profiles.</Text>
             </FormRow>
           </ConfigSection>
