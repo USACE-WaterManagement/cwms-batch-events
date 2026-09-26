@@ -210,6 +210,7 @@ class ScriptRunOptions(ExecutionRecord):
     office: str
     repo_path: str
     script_slug: str | None
+    schedule_timezone: str = "UTC"
 
     @model_validator(mode="after")
     def validate_execution_schema(self):

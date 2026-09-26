@@ -117,12 +117,13 @@ test("invalid cron and timezone highlight Schedule and recover without losing va
   await configSection(page, "Schedule");
   await page.getByLabel("Schedule", { exact: true }).selectOption("cron");
   await page.getByLabel("Cron expression", { exact: true }).fill("99 8 * * *");
-  await page.getByLabel("Timezone", { exact: true }).fill("Not/AZone");
+  await page.getByLabel("Timezone", { exact: true }).selectOption("__custom__");
+  await page.getByLabel("Custom timezone", { exact: true }).fill("Not/AZone");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByLabel("Cron expression", { exact: true })).toHaveAttribute("aria-invalid", "true");
-  await expect(page.getByLabel("Timezone", { exact: true })).toHaveAttribute("aria-invalid", "true");
+  await expect(page.getByLabel("Custom timezone", { exact: true })).toHaveAttribute("aria-invalid", "true");
   await page.getByLabel("Cron expression", { exact: true }).fill("0 8 * * 1-5");
-  await page.getByLabel("Timezone", { exact: true }).fill("America/Chicago");
+  await page.getByLabel("Timezone", { exact: true }).selectOption("America/Chicago");
   await expect(page.getByRole("tab", { name: "Details", exact: true })).toBeVisible();
   await expect(page.locator("[data-invalid-details=false]")).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });

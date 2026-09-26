@@ -50,7 +50,13 @@ test("saves timezone schedules and disables scheduling when switched to manual",
   await configSection(page, "Schedule");
   await page.getByLabel("Minute", { exact: true }).fill("25");
   await configSection(page, "Schedule");
-  await page.getByLabel("Timezone", { exact: true }).fill("America/Chicago");
+  const timezone = page.getByLabel("Timezone", { exact: true });
+  await timezone.selectOption("__custom__");
+  await expect(page.getByLabel("Custom timezone", { exact: true })).toBeVisible();
+  await page.getByLabel("Custom timezone", { exact: true }).fill("America/Chicago");
+  await timezone.selectOption("America/Denver");
+  expect(await timezone.locator("option").count()).toBeGreaterThan(20);
+  await page.getByLabel("Timezone", { exact: true }).selectOption("America/Chicago");
   await configSection(page, "Schedule");
   await page.getByRole("radio", { name: "Automatic", exact: true }).check();
   await page.getByRole("button", { name: "Save", exact: true }).click();

@@ -29,6 +29,7 @@ class BatchJobRunner:
         ).replace(".", "_")
 
         environment = [{"name": "OFFICE", "value": office}]
+        environment.append({"name": "TZ", "value": message.payload.schedule_timezone})
         environment.extend({"name": name, "value": value} for name, value in runner_environment(message).items())
         tags = {"Office": office, "BatchEventsJobId": str(message.job_id)}
         if message.request_id:

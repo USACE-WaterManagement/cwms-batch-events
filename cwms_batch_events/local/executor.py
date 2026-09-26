@@ -44,6 +44,7 @@ class LocalExecutor:
                 environment=[
                     *(f"{key}={value}" for key, value in runner_environment(message).items()),
                     f"OFFICE={message.payload.office}",
+                    f"TZ={message.payload.schedule_timezone}",
                     "GITHUB_BRANCH=cwbi-dev",
                     "ENVIRONMENT=cwbi-dev",
                     f"SKIP_GIT_CLONE={str(skips_repository_checkout(message.payload)).lower()}",

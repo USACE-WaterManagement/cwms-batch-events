@@ -133,6 +133,7 @@ def post_job(
         command_mode=job.command_mode,
         shell_command=job.shell_command,
         release_jar=job.release_jar,
+        schedule_timezone=job.schedule_timezone or "UTC",
     )
     message = queue.create_job_message(job.id, user.username, JobSource.API, options)
     background_tasks.add_task(queue.send_job_message, message)
