@@ -19,6 +19,17 @@ import { MdFilterList } from "react-icons/md";
 
 dayjs.extend(relativeTime);
 
+const INFRASTRUCTURE_OFFICE_GROUPS: Record<string, string[]> = {
+  IWR: ["HEC"],
+  LRD: ["LRB", "LRC", "LRD", "LRE", "LRH", "LRL", "LRN", "LRP"],
+  MVD: ["MVK", "MVM", "MVN", "MVP", "MVR", "MVS"],
+  NAD: ["NAB", "NAE", "NAN", "NAO", "NAP"],
+  NWD: ["NWDM", "NWDP", "NWP", "NWS", "NWW"],
+  SAD: ["SAJ", "SAM", "SAS", "SAW"],
+  SPD: ["SPA", "SPK", "SPL"],
+  SWD: ["SWF", "SWG", "SWL", "SWT"],
+};
+
 const JobsList = () => {
   const auth = useAuth();
   const [range, setRange] = useState<RunDateRange>({ start: "", end: "" });
@@ -26,8 +37,9 @@ const JobsList = () => {
   const [pageSize, setPageSize] = useState<number | "all">(10);
   const [offices, setOffices] = useState<string[]>([]);
   const [officeFilterOpen, setOfficeFilterOpen] = useState(false);
-  const accessible = useQuery<Record<string, string[]>>({ queryKey: ["accessibleOfficeGroups"], enabled: auth.isAuth,
-    queryFn: async () => (await fetchWithAuth("/api/users/me/office-groups", {}, auth.token)).json() });
+  const accessible = useQuery<string[]>({ queryKey: ["accessibleOffices"], enabled: auth.isAuth,
+    queryFn: async () => (await fetchWithAuth("/api/users/me/offices", {}, auth.token)).json() });
+  const accessibleOffices = new Set((accessible.data ?? []).map(office => office.toUpperCase()));
   const { data, isLoading, isPlaceholderData, isError, error, refetch } = useJobsPage(page, pageSize, offices, range);
   const loading = isLoading || isPlaceholderData;
   const jobs = data?.jobs ?? [];
@@ -63,18 +75,23 @@ const JobsList = () => {
           <Button type="button" onClick={() => setOfficeFilterOpen(false)}>Done</Button>
         </div>}>
         <div className="max-h-[60dvh] space-y-4 overflow-y-auto overscroll-contain">
-          <p className="text-sm text-slate-600">Select one or more offices. Offices are grouped by their CDA division when that metadata is available.</p>
-          <div className="space-y-4">
-            {Object.entries(accessible.data ?? {}).map(([division, divisionOffices]) => <fieldset key={division}>
-              <legend className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-600">{division} division</legend>
-              <div className="flex flex-wrap gap-2">
-                {divisionOffices.map(office => <label key={office} className="flex cursor-pointer select-none items-center gap-2 rounded border border-slate-300 bg-white px-2 py-2 text-sm">
-                  <input type="checkbox" checked={offices.includes(office)} onChange={event => {
-                    setOffices(current => event.target.checked ? [...current, office].sort() : current.filter(item => item !== office)); setPage(1);
-                  }} />{office}
-                </label>)}
-              </div>
-            </fieldset>)}
+          <p className="text-sm text-slate-600">Select one or more offices.</p>
+          <div className="divide-y divide-slate-200 border-y border-slate-200">
+            {Object.entries(INFRASTRUCTURE_OFFICE_GROUPS).map(([division, divisionOffices]) => {
+              const visibleOffices = divisionOffices.filter(office => accessibleOffices.has(office));
+              if (visibleOffices.length === 0) return null;
+              return <fieldset key={division} className="py-3">
+                <legend className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-600">{division} division</legend>
+                <div className="divide-y divide-slate-100 rounded border border-slate-200 bg-white">
+                  {visibleOffices.map(office => <label key={office} className="flex cursor-pointer select-none items-center gap-3 px-3 py-2 text-sm hover:bg-slate-50">
+                    <input type="checkbox" checked={offices.includes(office)} onChange={event => {
+                      setOffices(current => event.target.checked ? [...current, office].sort() : current.filter(item => item !== office)); setPage(1);
+                    }} />
+                    <span>{office}</span>
+                  </label>)}
+                </div>
+              </fieldset>;
+            })}
           </div>
         </div>
       </Modal>
