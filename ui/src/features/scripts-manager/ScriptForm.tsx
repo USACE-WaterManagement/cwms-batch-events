@@ -119,6 +119,14 @@ function displayedRuntime(form: ScriptFormData): string {
   return form.runtime ?? "python";
 }
 
+function runtimeForPath(path: string): "python" | "java" | "shell" | undefined {
+  const extension = path.toLowerCase().match(/\.[^./]+$/)?.[0];
+  if (extension === ".py") return "python";
+  if (extension === ".sh") return "shell";
+  if (extension === ".jar") return "java";
+  return undefined;
+}
+
 function editableVersion(script?: Script): 2 | 3 | 4 {
   if (script?.configVersion === 2) return 2;
   if (script?.configVersion === 3) return 3;
@@ -328,7 +336,8 @@ export const ScriptForm = ({
               onChange={(path) => {
                 const nextName = uniqueName(path);
                 const shouldSuggest = !script && (!form.name.trim() || form.name === suggestedName);
-                changeForm({ ...form, repoPath: path, name: shouldSuggest ? nextName : form.name });
+                const runtime = runtimeForPath(path);
+                changeForm({ ...form, repoPath: path, name: shouldSuggest ? nextName : form.name, ...(runtime ? { runtime } : {}) });
                 setSuggestedName(nextName);
               }}
             />}
