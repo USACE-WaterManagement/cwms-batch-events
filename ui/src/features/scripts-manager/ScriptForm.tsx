@@ -351,7 +351,7 @@ export const ScriptForm = ({
           </ConfigSection>
           <ConfigSection id="environment" active={section}>
             <div className="space-y-3">
-              <Text>These values are passed to every run of this script. Do not enter secrets.</Text>
+              <Text>These values are passed to every run of this script. <b>Do NOT</b> enter secrets, or otherwise sensitive values.</Text>
               {(form.environmentVariables ?? []).map((variable, index) => (
                 <div className="grid gap-2 rounded border p-3 @md/script-panel:grid-cols-[1fr_1fr_auto]" key={`${index}-${variable.name}`}>
                   <Input
@@ -387,7 +387,7 @@ export const ScriptForm = ({
           </ConfigSection>
           <ConfigSection id="schedule" active={section}>
           {script && <ScheduleTiming script={script} enabled={section === "schedule"} editing />}
-          {(form.configVersion ?? 1) < 4 && <p className="rounded border border-blue-300 bg-blue-50 p-3 text-sm">Scheduling requires version 4. Cancel editing and choose Upgrade configuration in Details.</p>}
+          {(form.configVersion ?? 1) < 4 && <p className="rounded border border-blue-300 bg-blue-50 p-3 text-sm">Scheduling requires version 4. <b>Cancel editing</b> and choose Upgrade configuration in Details.</p>}
           {errorFor("scheduleType")}
           <fieldset disabled={(form.configVersion ?? 1) < 4} className="space-y-4">
           <FormRow>
