@@ -57,6 +57,9 @@ class JobModel(Base):
         ARRAY(String), default=list, server_default="{}"
     )
     command_placeholder: Mapped[str | None]
+    environment_variables: Mapped[list[dict]] = mapped_column(
+        JSONB, default=list, server_default="[]"
+    )
     resource_size: Mapped[str] = mapped_column(default="medium", server_default="medium")
     execution_type: Mapped[str | None]
     command_mode: Mapped[str] = mapped_column(default="arguments", server_default="arguments")
@@ -115,6 +118,9 @@ class ScriptModel(Base):
         ARRAY(String), default=list, server_default="{}"
     )
     command_placeholder: Mapped[str | None]
+    environment_variables: Mapped[list[dict]] = mapped_column(
+        JSONB, default=list, server_default="[]"
+    )
     resource_size: Mapped[str] = mapped_column(default="medium", server_default="medium")
     execution_type: Mapped[str]
     command_mode: Mapped[str] = mapped_column(default="arguments", server_default="arguments")

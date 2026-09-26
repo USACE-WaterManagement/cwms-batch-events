@@ -623,6 +623,13 @@ export interface components {
          * @enum {string}
          */
         JobStatus: "Failed" | "Pending" | "Running" | "Completed";
+        /** EnvironmentVariable */
+        EnvironmentVariable: {
+            /** Name */
+            name: string;
+            /** Value */
+            value: string;
+        };
         /** OperationsSummary */
         OperationsSummary: {
             /**
@@ -728,6 +735,8 @@ export interface components {
             commandArgs?: string[];
             /** Commandplaceholder */
             commandPlaceholder?: string | null;
+            /** Environmentvariables */
+            environmentVariables?: components["schemas"]["EnvironmentVariable"][];
             /** Resourcesize */
             resourceSize?: "small" | "medium" | "large";
             /**
@@ -803,6 +812,8 @@ export interface components {
             commandArgs?: string[];
             /** Commandplaceholder */
             commandPlaceholder?: string | null;
+            /** Environmentvariables */
+            environmentVariables?: components["schemas"]["EnvironmentVariable"][];
             /** Resourcesize */
             resourceSize?: "small" | "medium" | "large";
             /**
@@ -940,6 +951,8 @@ export interface components {
             commandArgs?: string[];
             /** Commandplaceholder */
             commandPlaceholder?: string | null;
+            /** Environmentvariables */
+            environmentVariables?: components["schemas"]["EnvironmentVariable"][];
             /** Resourcesize */
             resourceSize?: "small" | "medium" | "large";
             /**

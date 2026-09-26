@@ -1,4 +1,5 @@
 from cwms_batch_events.core.job_correlation import runner_environment
+from cwms_batch_events.core.models import EnvironmentVariable
 from datetime import datetime
 from unittest import mock
 
@@ -39,6 +40,22 @@ def test_batch_job_runner_submits_expected_batch_job():
         },
         tags={"Office": "swt", "BatchEventsJobId": str(message.job_id), "BatchEventsRequestId": "a" * 32},
     )
+
+
+def test_batch_job_runner_passes_script_environment_variables():
+    batch_client = mock.Mock()
+    batch_client.submit_job.return_value = {"jobId": "ext-123"}
+    message = make_job_message()
+    message.payload.environment_variables = [EnvironmentVariable(name="REPORT_MODE", value="daily")]
+
+    with mock.patch(
+        "cwms_batch_events.lambdas.dispatch_job.job_runner.batch.boto3.client",
+        return_value=batch_client,
+    ):
+        BatchJobRunner().run_job(message)
+
+    environment = batch_client.submit_job.call_args.kwargs["containerOverrides"]["environment"]
+    assert {"name": "REPORT_MODE", "value": "daily"} in environment
 
 
 def test_batch_job_runner_uses_repo_path_name_when_slug_missing():

@@ -4,10 +4,11 @@ import { FieldHelp } from "./FieldHelp";
 
 import { scriptSections, fieldSections, type ScriptSection } from "./configurationSections";
 
-const sectionIcons = { general: MdTune, source: MdTerminal, resources: MdSettings, access: MdShield, schedule: MdSchedule, upgrade: MdUpgrade };
+const sectionIcons = { general: MdTune, source: MdTerminal, environment: MdSettings, resources: MdSettings, access: MdShield, schedule: MdSchedule, upgrade: MdUpgrade };
 const descriptions = {
   general: "Name your script and describe what it does.",
   source: "Choose where the script comes from and how it runs.",
+  environment: "Set values available to every run (No Passwords, Keys, or other secret values)",
   resources: "Choose the fixed CPU and memory profile for every run.",
   access: "Choose who can run this script in your office.",
   schedule: "Choose when this script runs and the timezone it follows.",
