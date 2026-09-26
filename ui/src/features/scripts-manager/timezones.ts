@@ -1,3 +1,7 @@
+// Keep this list explicit instead of depending on Intl.supportedValuesOf so
+// every supported browser presents the same choices and stays aligned with
+// the server's Python ZoneInfo data. Custom input remains available for valid
+// IANA aliases or newer zones that are not in this compatibility list.
 export const TIMEZONES = [
   "UTC", "Africa/Cairo", "Africa/Johannesburg", "Africa/Nairobi", "America/Anchorage", "America/Argentina/Buenos_Aires",
   "America/Bogota", "America/Chicago", "America/Denver", "America/Detroit", "America/Edmonton", "America/Halifax",
