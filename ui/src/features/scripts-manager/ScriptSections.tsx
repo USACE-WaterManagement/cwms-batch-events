@@ -8,7 +8,7 @@ const sectionIcons = { general: MdTune, source: MdTerminal, environment: MdSetti
 const descriptions = {
   general: "Name your script and describe what it does.",
   source: "Choose where the script comes from and how it runs.",
-  environment: "Set safe non-secret values available to every run.",
+  environment: "Set values available to every run (No Passwords, Keys, or other secret values)",
   access: "Choose who can run this script in your office.",
   schedule: "Choose when this script runs and the timezone it follows.",
   upgrade: "Review and upgrade this script's configuration version.",
