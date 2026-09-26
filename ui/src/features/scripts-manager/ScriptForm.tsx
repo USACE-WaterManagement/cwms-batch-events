@@ -154,6 +154,7 @@ export const ScriptForm = ({
     runtime: script?.runtime === "java" || script?.runtime === "shell" ? script.runtime : "python",
     commandArgs: script?.commandArgs ?? [],
     commandPlaceholder: script?.commandPlaceholder ?? null,
+    environmentVariables: script?.environmentVariables ?? [],
     commandMode: script?.commandMode === "shell" ? "shell" : "arguments",
     shellCommand: script?.shellCommand ?? null,
     releaseJar: script?.releaseJar ?? null,
@@ -347,6 +348,42 @@ export const ScriptForm = ({
             <CommandSettings value={form} onChange={changeForm} disabled={isPending} />
           </div>
           {errorFor("commandMode")}{errorFor("shellCommand")}{errorFor("commandArgs")}
+          </ConfigSection>
+          <ConfigSection id="environment" active={section}>
+            <div className="space-y-3">
+              <Text>These values are passed to every run of this script. Do not enter secrets.</Text>
+              {(form.environmentVariables ?? []).map((variable, index) => (
+                <div className="grid gap-2 rounded border p-3 @md/script-panel:grid-cols-[1fr_1fr_auto]" key={`${index}-${variable.name}`}>
+                  <Input
+                    aria-label={`Environment variable ${index + 1} name`}
+                    placeholder="NAME"
+                    value={variable.name}
+                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                      const next = [...(form.environmentVariables ?? [])];
+                      next[index] = { ...variable, name: event.target.value.toUpperCase() };
+                      update("environmentVariables", next);
+                    }}
+                  />
+                  <Input
+                    aria-label={`Environment variable ${index + 1} value`}
+                    placeholder="Value"
+                    value={variable.value}
+                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                      const next = [...(form.environmentVariables ?? [])];
+                      next[index] = { ...variable, value: event.target.value };
+                      update("environmentVariables", next);
+                    }}
+                  />
+                  <Button type="button" onClick={() => update("environmentVariables", (form.environmentVariables ?? []).filter((_, itemIndex) => itemIndex !== index))}>
+                    Remove
+                  </Button>
+                </div>
+              ))}
+              <Button type="button" onClick={() => update("environmentVariables", [...(form.environmentVariables ?? []), { name: "", value: "" }])}>
+                Add variable
+              </Button>
+              <Text>Names must be uppercase identifiers. Runtime and secret-like names are reserved.</Text>
+            </div>
           </ConfigSection>
           <ConfigSection id="schedule" active={section}>
           {script && <ScheduleTiming script={script} enabled={section === "schedule"} editing />}

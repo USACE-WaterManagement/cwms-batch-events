@@ -30,6 +30,38 @@ class ReleaseJar(CamelModel):
     size: int = Field(gt=0, le=536870912)
 
 
+PROTECTED_ENVIRONMENT_NAMES = frozenset({
+    "OFFICE", "TZ", "SKIP_GIT_CLONE", "GITHUB_BRANCH", "ENVIRONMENT",
+    "CDA_API_ROOT",
+})
+PROTECTED_ENVIRONMENT_TERMS = (
+    "KEY", "SECRET", "PASSWORD", "TOKEN", "CREDENTIAL", "AUTH", "PRIVATE", "CERT",
+)
+
+
+class EnvironmentVariable(CamelModel):
+    name: str = Field(pattern=r"^[A-Z][A-Z0-9_]*$", max_length=64)
+    value: str = Field(max_length=2048)
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value: str) -> str:
+        if value in PROTECTED_ENVIRONMENT_NAMES or value.startswith("BATCH_EVENTS_"):
+            raise ValueError("This environment variable name is reserved")
+        if any(term in value for term in PROTECTED_ENVIRONMENT_TERMS):
+            raise ValueError("Environment variable names cannot contain secret-related terms")
+        return value
+
+
+def validate_environment_variables(values: list[EnvironmentVariable]) -> list[EnvironmentVariable]:
+    if len(values) > 20:
+        raise ValueError("A script may define at most 20 environment variables")
+    names = [value.name for value in values]
+    if len(names) != len(set(names)):
+        raise ValueError("Environment variable names must be unique")
+    return values
+
+
 class ExecutionRecord(CamelModel):
     """Stored execution fields, including paths accepted by older API versions."""
 
@@ -42,6 +74,12 @@ class ExecutionRecord(CamelModel):
     command_mode: str = "arguments"
     shell_command: str | None = None
     release_jar: ReleaseJar | None = None
+    environment_variables: list[EnvironmentVariable] = Field(default_factory=list)
+
+    @field_validator("environment_variables")
+    @classmethod
+    def valid_environment_variables(cls, values):
+        return validate_environment_variables(values)
 
 
 class ExecutionOptions(ExecutionRecord):
@@ -283,6 +321,12 @@ class ScriptBase(CamelModel):
     schedule_minute: int | None = None
     schedule_cron: str | None = None
     schedule_timezone: str = "UTC"
+    environment_variables: list[EnvironmentVariable] = Field(default_factory=list)
+
+    @field_validator("environment_variables")
+    @classmethod
+    def valid_environment_variables(cls, values):
+        return validate_environment_variables(values)
 
     @field_validator("schedule_type")
     def validate_schedule_type(cls, value: str) -> str:

@@ -1,13 +1,14 @@
 import { useId, type ReactNode } from "react";
-import { MdTune, MdTerminal, MdShield, MdSchedule, MdUpgrade, MdErrorOutline } from "react-icons/md";
+import { MdTune, MdTerminal, MdShield, MdSchedule, MdUpgrade, MdSettings, MdErrorOutline } from "react-icons/md";
 import { FieldHelp } from "./FieldHelp";
 
 import { scriptSections, fieldSections, type ScriptSection } from "./configurationSections";
 
-const sectionIcons = { general: MdTune, source: MdTerminal, access: MdShield, schedule: MdSchedule, upgrade: MdUpgrade };
+const sectionIcons = { general: MdTune, source: MdTerminal, environment: MdSettings, access: MdShield, schedule: MdSchedule, upgrade: MdUpgrade };
 const descriptions = {
   general: "Name your script and describe what it does.",
   source: "Choose where the script comes from and how it runs.",
+  environment: "Set safe non-secret values available to every run.",
   access: "Choose who can run this script in your office.",
   schedule: "Choose when this script runs and the timezone it follows.",
   upgrade: "Review and upgrade this script's configuration version.",
