@@ -326,6 +326,7 @@ class PostgresJobDatabase:
                 script.execution_type = payload.execution_type
                 script.runtime = payload.runtime
                 script.command_args = payload.command_args
+                script.command_placeholder = payload.command_placeholder
                 script.command_mode = payload.command_mode
                 script.shell_command = payload.shell_command
                 script.release_jar = payload.release_jar.model_dump(by_alias=False) if payload.release_jar else None

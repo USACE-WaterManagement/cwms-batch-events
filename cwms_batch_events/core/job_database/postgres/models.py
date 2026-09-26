@@ -56,6 +56,7 @@ class JobModel(Base):
     command_args: Mapped[list[str]] = mapped_column(
         ARRAY(String), default=list, server_default="{}"
     )
+    command_placeholder: Mapped[str | None]
     execution_type: Mapped[str | None]
     command_mode: Mapped[str] = mapped_column(default="arguments", server_default="arguments")
     shell_command: Mapped[str | None]

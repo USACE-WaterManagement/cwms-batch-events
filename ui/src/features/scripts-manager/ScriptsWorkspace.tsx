@@ -206,7 +206,8 @@ export const ScriptsWorkspace = ({ officeSelector, office, initialScriptId, init
           { name: "Details", content: <ScriptDetailPanel
             office={office} script={selectedScript} mode={panelMode} isPending={isPending}
             mutationError={mutationError} onDelete={onDelete} onEdit={onEdit}
-            onSave={onSave} onCancelEdit={onCancelEdit} onValidationChange={setInvalidDetails} /> },
+            onSave={onSave} onCancelEdit={onCancelEdit} onValidationChange={setInvalidDetails}
+            existingNames={scripts.data.map(script => script.name)} /> },
           { name: "Run job", content: <ScriptRunJob script={selectedScript} onEdit={() => { showTab(0); onEdit(); }} onSubmitted={job => {
             setSelectedScriptId(job.scriptId ?? selectedScript.id);
             setPanelMode("view");
@@ -231,6 +232,7 @@ export const ScriptsWorkspace = ({ officeSelector, office, initialScriptId, init
         onEdit={onEdit}
         onSave={onSave}
         onCancelEdit={onCancelEdit}
+        existingNames={scripts.data.map(script => script.name)}
       />}
       </div>}
       <Modal opened={creating} onClose={onCancelCreate}
@@ -243,6 +245,7 @@ export const ScriptsWorkspace = ({ officeSelector, office, initialScriptId, init
           onDelete={onDelete}
           onSave={onCreate}
           onCancelEdit={onCancelCreate}
+          existingNames={scripts.data.map(script => script.name)}
         />}
       </Modal>
     </div>

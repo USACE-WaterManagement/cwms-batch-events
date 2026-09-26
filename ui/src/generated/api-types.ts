@@ -549,6 +549,8 @@ export interface components {
             repoPath: string;
             /** Commandargs */
             commandArgs?: string[];
+            /** Commandplaceholder */
+            commandPlaceholder?: string | null;
             /**
              * Commandmode
              * @default arguments
@@ -722,6 +724,8 @@ export interface components {
             repoPath: string;
             /** Commandargs */
             commandArgs?: string[];
+            /** Commandplaceholder */
+            commandPlaceholder?: string | null;
             /**
              * Commandmode
              * @default arguments
@@ -793,6 +797,8 @@ export interface components {
             repoPath: string;
             /** Commandargs */
             commandArgs?: string[];
+            /** Commandplaceholder */
+            commandPlaceholder?: string | null;
             /**
              * Commandmode
              * @default arguments
@@ -926,6 +932,8 @@ export interface components {
             repoPath: string;
             /** Commandargs */
             commandArgs?: string[];
+            /** Commandplaceholder */
+            commandPlaceholder?: string | null;
             /**
              * Commandmode
              * @default arguments

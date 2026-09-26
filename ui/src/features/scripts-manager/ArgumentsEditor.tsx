@@ -8,8 +8,9 @@ function ArgumentsPreview({ id, error, args }: { id: string; error: string; args
   return <div id={`${id}-preview`}><ArgumentValues args={args} /></div>;
 }
 
-export function ArgumentsEditor({ id, label = "Arguments", initialArgs, disabled, onChange, onValidityChange }: {
+export function ArgumentsEditor({ id, label = "Arguments", initialArgs, placeholder, disabled, onChange, onValidityChange }: {
   id: string; label?: string; initialArgs: string[]; disabled?: boolean;
+  placeholder?: string | null;
   onChange: (args: string[]) => void; onValidityChange: (valid: boolean) => void;
 }) {
   const [text, setText] = useState(() => formatArguments(initialArgs));
@@ -19,7 +20,7 @@ export function ArgumentsEditor({ id, label = "Arguments", initialArgs, disabled
   return <div className="min-w-0 space-y-2">
     <textarea rows={2} id={id} aria-label={label} aria-describedby={`${id}-help ${id}-preview`} aria-invalid={!!error}
       value={text} disabled={disabled} className="block w-full rounded border border-gray-400 bg-white p-2 font-mono text-sm"
-      placeholder={'--start-date 2026-09-01 --name "Daily report"'}
+      placeholder={placeholder || '--start-date 2026-09-01 --name "Daily report"'}
       onChange={event => {
         setText(event.target.value);
         try { onChange(parseArguments(event.target.value)); onValidityChange(true); }

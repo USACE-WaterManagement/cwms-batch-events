@@ -17,6 +17,12 @@ export function CommandSettings({ value, onChange, disabled }: {
   const [draft, setDraft] = useState<ScriptFormData | null>(null);
   const [valid, setValid] = useState(true);
   return <section className="space-y-4" aria-label="Script arguments">
+    <label className="block space-y-1 text-sm font-semibold" htmlFor="command-placeholder">
+      Custom run hint
+      <input id="command-placeholder" value={value.commandPlaceholder ?? ""} onChange={event => onChange({ ...value, commandPlaceholder: event.target.value || null })}
+        placeholder='--start-date 2026-09-01 --name "Daily report"' className="mt-1 block w-full rounded border border-gray-400 p-2 font-normal" />
+      <span className="block font-normal text-gray-600">Shown as guidance when someone enters arguments for one run. It does not change saved arguments.</span>
+    </label>
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div><h3 className="font-semibold text-slate-900">Arguments</h3><p className="text-sm text-slate-500">Arguments are optional. This is the complete command that will run.</p></div>
       <Button type="button" disabled={disabled} onClick={() => { setDraft({ ...value }); setValid(true); }}>

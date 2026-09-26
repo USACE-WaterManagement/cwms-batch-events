@@ -79,6 +79,7 @@ test("save marks missing fields and sections, keeps drafts, and preserves an old
   });
   await open(page);
   await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await configSection(page, "Name");
   await page.getByLabel("Name", { exact: true }).fill("");
   await configSection(page, "Command");
   await page.getByLabel("GitHub Repo Path", { exact: true }).fill("");
@@ -88,14 +89,14 @@ test("save marks missing fields and sections, keeps drafts, and preserves an old
   await expect(page.locator("[data-invalid-details=true]")).toBeVisible();
   await expect(page.getByLabel("Name", { exact: true })).toHaveAttribute("aria-invalid", "true");
   const nav = page.getByRole("navigation", { name: "Configuration sections" });
-  await expect(nav.getByRole("button", { name: /General/ }).getByLabel("Needs attention")).toBeVisible();
+  await expect(nav.getByRole("button", { name: /Name/ }).getByLabel("Needs attention")).toBeVisible();
   await expect(nav.getByRole("button", { name: /Command/ }).getByLabel("Needs attention")).toBeVisible();
   expect(writes).toHaveLength(0);
   await page.getByLabel("Name", { exact: true }).fill("Corrected report");
   await nav.getByRole("button", { name: /Command/ }).click();
   await expect(page.getByLabel("GitHub Repo Path", { exact: true })).toHaveAttribute("aria-invalid", "true");
   await page.getByLabel("GitHub Repo Path", { exact: true }).fill("python/report.py");
-  await configSection(page, "General");
+  await configSection(page, "Name");
   await expect(page.getByLabel("Name", { exact: true })).toHaveValue("Corrected report");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("button", { name: "Edit", exact: true })).toBeVisible();
