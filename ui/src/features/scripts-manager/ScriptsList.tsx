@@ -36,7 +36,7 @@ export const ScriptsList = ({
   runHistoryState,
 }: ScriptsListProps) => {
   return (
-    <div className="scripts-list-scroll @container/scripts max-h-[65vh] overflow-y-auto overscroll-contain">
+    <div className="scripts-list-scroll @container/scripts max-h-[65vh] overflow-y-auto overscroll-auto">
     <table className="block w-full" aria-label="Jobs">
       <thead className="sr-only"><tr><th scope="col">Script</th><th scope="col">Actions</th></tr></thead>
       <tbody className="block w-full">
