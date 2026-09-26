@@ -52,7 +52,7 @@ export function ScriptSections({ active, onSelect, errors = {}, children }: {
       </div>
       </div>
     </nav>
-    <div className="h-[clamp(32rem,65dvh,44rem)] min-w-0 overflow-y-auto overscroll-contain bg-white p-4 [scrollbar-gutter:stable]">
+    <div className="h-[clamp(32rem,65dvh,44rem)] min-w-0 overflow-y-auto overscroll-auto bg-white p-4 [scrollbar-gutter:stable]">
       <header className="mb-5 border-b border-slate-100 pb-4">
         <div className="flex items-center gap-2"><h3 className="text-lg font-semibold text-slate-900">{scriptSections.find(section => section.id === active)?.label}</h3>
           {active === "access" && <FieldHelp label="Execution roles">Optional. Leave empty to allow users with office access to run this script. Selected roles restrict execution to users with at least one of those roles in this office.</FieldHelp>}
