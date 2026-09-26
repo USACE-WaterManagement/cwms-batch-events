@@ -2,7 +2,7 @@ import { RunDatePicker, type RunDateRange } from "./RunHistoryControls";
 import { RequestErrorPage } from "../../shared/components/StatePage";
 import { useAuth } from "@usace-watermanagement/groundwork-water";
 import { LoadingRows } from "../../shared/components/LoadingRows";
-import { Button, UsaceBox } from "@usace/groundwork";
+import { Button, Modal, UsaceBox } from "@usace/groundwork";
 import { useQuery } from "@tanstack/react-query";
 import fetchWithAuth from "../../utils/fetchWithAuth";
 import { useState } from "react";
@@ -15,8 +15,20 @@ import LoginPrompt from "../auth/LoginPrompt";
 import { RunTriggerBadge } from "./RunAttribution";
 import { submittedBy } from "./submittedBy";
 import { MdSearch } from "react-icons/md";
+import { MdFilterList } from "react-icons/md";
 
 dayjs.extend(relativeTime);
+
+const INFRASTRUCTURE_OFFICE_GROUPS: Record<string, string[]> = {
+  IWR: ["HEC"],
+  LRD: ["LRB", "LRC", "LRD", "LRE", "LRH", "LRL", "LRN", "LRP"],
+  MVD: ["MVK", "MVM", "MVN", "MVP", "MVR", "MVS"],
+  NAD: ["NAB", "NAE", "NAN", "NAO", "NAP"],
+  NWD: ["NWDM", "NWDP", "NWP", "NWS", "NWW"],
+  SAD: ["SAJ", "SAM", "SAS", "SAW"],
+  SPD: ["SPA", "SPK", "SPL"],
+  SWD: ["SWF", "SWG", "SWL", "SWT"],
+};
 
 const JobsList = () => {
   const auth = useAuth();
@@ -24,8 +36,10 @@ const JobsList = () => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number | "all">(10);
   const [offices, setOffices] = useState<string[]>([]);
+  const [officeFilterOpen, setOfficeFilterOpen] = useState(false);
   const accessible = useQuery<string[]>({ queryKey: ["accessibleOffices"], enabled: auth.isAuth,
     queryFn: async () => (await fetchWithAuth("/api/users/me/offices", {}, auth.token)).json() });
+  const accessibleOffices = new Set((accessible.data ?? []).map(office => office.toUpperCase()));
   const { data, isLoading, isPlaceholderData, isError, error, refetch } = useJobsPage(page, pageSize, offices, range);
   const loading = isLoading || isPlaceholderData;
   const jobs = data?.jobs ?? [];
@@ -46,20 +60,41 @@ const JobsList = () => {
       <UsaceBox title="Job History" className="mb-0!">
       <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-sm text-slate-600">Click a job to open it</p><Link to="/log-search" className="action-link"><MdSearch aria-hidden />Search logs</Link></div>
-      <div className="flex flex-wrap items-start gap-x-6 gap-y-3 border-b border-slate-200 pb-3">
-      <fieldset className="min-w-0 flex-1">
-        <legend className="mb-2 text-sm font-semibold">Filter offices <span className="font-normal text-slate-500">· {offices.length ? `${offices.length} selected` : "All offices"}</span></legend>
-        <div className="flex flex-wrap gap-2">
-          {(accessible.data ?? []).map(office => <label key={office} className="flex cursor-pointer select-none items-center gap-2 rounded border border-slate-300 bg-white px-2 py-2 text-sm">
-            <input type="checkbox" checked={offices.includes(office)} onChange={event => {
-              setOffices(current => event.target.checked ? [...current, office].sort() : current.filter(item => item !== office)); setPage(1);
-            }} />{office}
-          </label>)}
-          {offices.length > 0 && <button type="button" className="action-link" onClick={() => { setOffices([]); setPage(1); }}>All offices</button>}
-        </div>
-      </fieldset>
+        <div className="flex flex-wrap items-start gap-x-6 gap-y-3 border-b border-slate-200 pb-3">
+      <div className="min-w-56 flex-1">
+        <p className="mb-2 text-sm font-semibold">Offices <span className="font-normal text-slate-500">· {offices.length ? `${offices.length} selected` : "All offices"}</span></p>
+        <Button type="button" className="inline-flex items-center gap-2" onClick={() => setOfficeFilterOpen(true)}>
+          <MdFilterList aria-hidden />Filter offices
+        </Button>
+      </div>
       <RunDatePicker value={range} onChange={value => { setRange(value); setPage(1); }} />
       </div>
+      <Modal opened={officeFilterOpen} onClose={() => setOfficeFilterOpen(false)} dialogTitle="Filter offices"
+        buttons={<div className="flex flex-wrap items-center justify-end gap-3">
+          <Button type="button" disabled={offices.length === 0} onClick={() => { setOffices([]); setPage(1); }}>All offices</Button>
+          <Button type="button" onClick={() => setOfficeFilterOpen(false)}>Done</Button>
+        </div>}>
+        <div className="max-h-[60dvh] space-y-4 overflow-y-auto overscroll-contain">
+          <p className="text-sm text-slate-600">Select one or more offices.</p>
+          <div className="divide-y divide-slate-200 border-y border-slate-200">
+            {Object.entries(INFRASTRUCTURE_OFFICE_GROUPS).map(([division, divisionOffices]) => {
+              const visibleOffices = divisionOffices.filter(office => accessibleOffices.has(office));
+              if (visibleOffices.length === 0) return null;
+              return <fieldset key={division} className="py-3">
+                <legend className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-600">{division} division</legend>
+                <div className="divide-y divide-slate-100 rounded border border-slate-200 bg-white">
+                  {visibleOffices.map(office => <label key={office} className="flex cursor-pointer select-none items-center gap-3 px-3 py-2 text-sm hover:bg-slate-50">
+                    <input type="checkbox" checked={offices.includes(office)} onChange={event => {
+                      setOffices(current => event.target.checked ? [...current, office].sort() : current.filter(item => item !== office)); setPage(1);
+                    }} />
+                    <span>{office}</span>
+                  </label>)}
+                </div>
+              </fieldset>;
+            })}
+          </div>
+        </div>
+      </Modal>
       {isError && <RequestErrorPage error={error} onRetry={() => void refetch()} />}
       <nav aria-label="Job history pagination" className="flex flex-wrap items-center gap-3 text-sm">
         <label className="flex items-center gap-2">
