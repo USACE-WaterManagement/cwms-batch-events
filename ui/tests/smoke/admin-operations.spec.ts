@@ -61,6 +61,11 @@ test("HQ dashboard reports usage, queue issues, failures and clearly labeled cos
   await expect(page.getByText(/This is not an AWS bill/)).toBeVisible();
   await page.getByRole("button", { name: "Jobs", exact: true }).click();
   await expect(page.getByRole("table")).toContainText("Daily reservoir report");
+  await page.getByLabel("Office", { exact: true }).selectOption("SWT");
+  await expect(page.getByText(/All task definitions for SWT/)).toBeVisible();
+  await page.getByLabel("Sort tasks", { exact: true }).selectOption("runs");
+  await expect.poll(() => queries.at(-1)?.get("taskSort")).toBe("runs");
+  await expect.poll(() => queries.at(-1)?.get("taskDirection")).toBe("desc");
   await page.getByLabel("Office", { exact: true }).selectOption("SWF");
   await expect.poll(() => queries.at(-1)?.get("office")).toBe("SWF");
   await page.setViewportSize({ width: 390, height: 844 });

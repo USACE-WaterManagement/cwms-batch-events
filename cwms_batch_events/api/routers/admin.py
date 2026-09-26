@@ -57,6 +57,16 @@ class OperationsSummary(CamelModel):
     automatic: int
 
 
+TASK_SORT_COLUMNS = {
+    "minutes": "runtime_minutes",
+    "runs": "runs",
+    "failures": "failed",
+    "users": "users",
+    "name": "script_name",
+    "missing": "missing_duration",
+}
+
+
 USAGE_COLUMNS = """count(*) AS runs,
     count(*) FILTER (WHERE job_status='Failed') AS failed,
     count(*) FILTER (WHERE job_status='Completed') AS completed,
@@ -77,6 +87,8 @@ def operations(
     office: str | None = Query(None, min_length=2, max_length=10),
     queue_minutes: int = Query(15, alias="queueMinutes", ge=1, le=10080),
     run_minutes: int = Query(120, alias="runMinutes", ge=1, le=43200),
+    task_sort: str = Query("minutes", alias="taskSort", pattern="^(minutes|runs|failures|users|name|missing)$"),
+    task_direction: str = Query("desc", alias="taskDirection", pattern="^(asc|desc)$"),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db_session),
 ):
@@ -91,7 +103,11 @@ def operations(
     offices = list(db.scalars(text("""SELECT office FROM scripts UNION SELECT office FROM jobs
         WHERE (created_time >= :since AND created_time <= :now) OR job_status IN ('Pending','Running') ORDER BY office"""), params))
     usage = rows(f"SELECT office, {USAGE_COLUMNS} FROM jobs WHERE {WINDOW} GROUP BY office ORDER BY runtime_minutes DESC, office")
-    top = rows(f"SELECT office, script_id, script_name AS name, {USAGE_COLUMNS} FROM jobs WHERE {WINDOW} GROUP BY office,script_id,script_name ORDER BY runtime_minutes DESC, runs DESC LIMIT 20")
+    task_order = TASK_SORT_COLUMNS[task_sort]
+    direction = "ASC" if task_direction == "asc" else "DESC"
+    limit = "" if params["office"] else "LIMIT 20"
+    tie_breaker = "script_name ASC" if task_sort == "name" else "script_name ASC, script_id"
+    top = rows(f"SELECT office, script_id, script_name AS name, {USAGE_COLUMNS} FROM jobs WHERE {WINDOW} GROUP BY office,script_id,script_name ORDER BY {task_order} {direction} NULLS LAST, {tie_breaker} {limit}")
     daily = rows(f"SELECT to_char(created_time AT TIME ZONE 'UTC','YYYY-MM-DD') AS day, count(*) AS runs, count(*) FILTER (WHERE job_status='Failed') AS failed FROM jobs WHERE {WINDOW} GROUP BY day ORDER BY day")
     attention = rows(f"""SELECT id,office,script_name AS name,job_status AS status,
         extract(epoch FROM (:now - coalesce(run_time,created_time)))/60.0 AS age_minutes,

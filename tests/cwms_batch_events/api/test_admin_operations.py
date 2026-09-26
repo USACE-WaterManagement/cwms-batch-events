@@ -15,3 +15,10 @@ def test_report_windows_and_thresholds_are_bounded(client, user, db_session, que
     user.roles = {"HQ": ["Data Acquisition Mgr"]}
     assert client.get(f"/admin/operations?{query}").status_code == 422
     db_session.execute.assert_not_called()
+
+
+@pytest.mark.parametrize("query", ["taskSort=duration", "taskDirection=sideways"])
+def test_task_sort_options_are_bounded(client, user, db_session, query):
+    user.roles = {"HQ": ["Data Acquisition Mgr"]}
+    assert client.get(f"/admin/operations?{query}").status_code == 422
+    db_session.execute.assert_not_called()

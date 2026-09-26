@@ -36,11 +36,13 @@ export function OperationsDashboard() {
   const [office, setOffice] = useState("");
   const [queueMinutes, setQueueMinutes] = useState(15);
   const [runMinutes, setRunMinutes] = useState(120);
+  const [taskSort, setTaskSort] = useState("minutes");
+  const [taskDirection, setTaskDirection] = useState("desc");
   const [rate, setRate] = useState("");
   const query = useQuery<Summary>({
-    queryKey: ["adminOperations", days, office, queueMinutes, runMinutes], placeholderData: keepPreviousData,
+    queryKey: ["adminOperations", days, office, queueMinutes, runMinutes, taskSort, taskDirection], placeholderData: keepPreviousData,
     queryFn: async () => {
-      const params = new URLSearchParams({ days: String(days), queueMinutes: String(queueMinutes), runMinutes: String(runMinutes) });
+      const params = new URLSearchParams({ days: String(days), queueMinutes: String(queueMinutes), runMinutes: String(runMinutes), taskSort, taskDirection });
       if (office) params.set("office", office);
       return (await fetchWithAuth(`/api/admin/operations?${params}`, {}, auth.token)).json();
     },
@@ -65,7 +67,11 @@ export function OperationsDashboard() {
     }
   }
   const loading = query.isPending || query.isPlaceholderData;
-  const chooseOffice = (value: string) => { setOffice(value); };
+  const chooseOffice = (value: string) => { setOffice(value); setTab("usage"); setUsageView("Jobs"); };
+  const changeTaskSort = (value: string) => {
+    if (value === taskSort) setTaskDirection(previous => previous === "asc" ? "desc" : "asc");
+    else { setTaskSort(value); setTaskDirection(value === "name" ? "asc" : "desc"); }
+  };
   return <section className="mx-auto max-w-7xl space-y-5">
     <header><h1 className="text-2xl font-bold">Administration</h1><p className="mt-1 text-sm text-slate-600">Organization usage and operations across district jobs.</p></header>
     <nav aria-label="Admin sections" className="flex flex-wrap gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2">
@@ -116,7 +122,18 @@ export function OperationsDashboard() {
           <nav aria-label="Usage sections" className="flex flex-wrap content-start gap-1 rounded-lg border border-slate-200 bg-slate-50 p-2 md:flex-col">{["Offices", "Jobs", "Cost"].map(item => <button key={item} aria-pressed={usageView === item} className={`rounded px-3 py-2 text-left text-sm font-semibold ${usageView === item ? "bg-blue-700 text-white" : "text-slate-600"}`} onClick={() => setUsageView(item)}>{item}</button>)}</nav>
           <UsaceBox title={usageView === "Cost" ? "Cost planning" : `${usageView} by recorded runtime`} className="min-w-0">
             {usageView === "Offices" && <><div className="h-80"><ResponsiveContainer width="100%" height="100%"><BarChart data={usage.slice(0,12)}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="office" /><YAxis width={50} /><Tooltip /><Bar name="Run minutes" dataKey="runtimeMinutes" fill="#1d4ed8" isAnimationActive={false} /></BarChart></ResponsiveContainer></div><UsageTable rows={usage} onOffice={chooseOffice} /></>}
-            {usageView === "Jobs" && <><p className="mb-3 text-sm text-slate-500">Top 20 job definitions by recorded runtime, then run count. Names reflect saved run snapshots.</p><UsageTable rows={data?.topJobs ?? []} jobs onOffice={chooseOffice} /></>}
+            {usageView === "Jobs" && <>
+              <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+                <p className="text-sm text-slate-500">{office ? `All task definitions for ${office}.` : "Top 20 task definitions across offices."} Names reflect saved run snapshots.</p>
+                <label className="text-sm font-semibold">Sort tasks
+                  <select aria-label="Sort tasks" className="ml-2 rounded border py-2 pl-3 pr-8" value={taskSort} onChange={event => changeTaskSort(event.target.value)}>
+                    <option value="minutes">Run minutes</option><option value="runs">Runs</option><option value="failures">Failures</option><option value="users">Users</option><option value="name">Task name</option><option value="missing">Missing duration</option>
+                  </select>
+                </label>
+                <button type="button" className="action-link" onClick={() => setTaskDirection(previous => previous === "asc" ? "desc" : "asc")}>Sort {taskDirection === "asc" ? "ascending" : "descending"}</button>
+              </div>
+              <UsageTable rows={data?.topJobs ?? []} jobs onOffice={chooseOffice} />
+            </>}
             {usageView === "Cost" && <div className="space-y-4 text-sm"><p>Actual billing is unavailable. No AWS billing or resource-pricing integration is configured.</p><label className="block font-semibold">Planning rate (USD per job runtime hour)<input aria-label="Planning rate (USD per job runtime hour)" type="number" min="0" step="0.01" value={rate} onChange={event => setRate(event.target.value)} className="mt-2 block w-full max-w-xs rounded border p-2" /></label>
               {rate !== "" && Number.isFinite(Number(rate)) && Number(rate) >= 0 && <p className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-lg font-semibold">Scenario estimate: {(totals.minutes / 60 * Number(rate)).toLocaleString(undefined, { style: "currency", currency: "USD" })}</p>}
               <p>Calculated as recorded runtime hours × your rate. This is not an AWS bill. It excludes running jobs, missing durations, CPU/memory differences, startup time, storage, and data transfer. {totals.missing} finished runs lack duration data. The rate stays in this view and is not saved.</p>
