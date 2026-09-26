@@ -3,6 +3,7 @@ from cwms_batch_events.core.job_database.base import JobDatabase
 from cwms_batch_events.core.job_logger.base import JobLogger
 from cwms_batch_events.core.execution import command_for_payload, skips_repository_checkout
 from cwms_batch_events.core.models import JobMessage, JobStatus
+from cwms_batch_events.core.models import RESOURCE_PROFILES
 from cwms_batch_events.core.settings import ExecutorSettings, get_settings
 from cwms_batch_events.core.release_jars import jar_command
 import os
@@ -41,6 +42,8 @@ class LocalExecutor:
                 command=command,
                 detach=True,
                 stderr=True,
+                nano_cpus=int(float(RESOURCE_PROFILES[message.payload.resource_size]["vcpus"]) * 1_000_000_000),
+                mem_limit=int(RESOURCE_PROFILES[message.payload.resource_size]["memory"]) * 1024 * 1024,
                 environment=[
                     *(f"{key}={value}" for key, value in runner_environment(message).items()),
                     f"OFFICE={message.payload.office}",

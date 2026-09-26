@@ -208,6 +208,7 @@ class PostgresJobDatabase:
         job.runtime = options.runtime
         job.command_args = list(options.command_args)
         job.command_placeholder = options.command_placeholder
+        job.resource_size = options.resource_size
         job.command_mode = options.command_mode
         job.shell_command = options.shell_command
         job.release_jar = options.release_jar.model_dump(by_alias=False) if options.release_jar else None

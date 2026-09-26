@@ -32,6 +32,10 @@ def test_batch_job_runner_submits_expected_batch_job():
             "environment": [{"name": "OFFICE", "value": "swt"}, {"name": "TZ", "value": "America/Chicago"},
                 *[{"name": key, "value": value} for key, value in runner_environment(message).items()]],
             "command": ["python", "/jobs/run.py"],
+            "resourceRequirements": [
+                {"type": "VCPU", "value": "1"},
+                {"type": "MEMORY", "value": "2048"},
+            ],
         },
         tags={"Office": "swt", "BatchEventsJobId": str(message.job_id), "BatchEventsRequestId": "a" * 32},
     )
@@ -58,3 +62,21 @@ def test_batch_job_runner_uses_repo_path_name_when_slug_missing():
     assert batch_client.submit_job.call_args.kwargs["jobName"] == (
         "cwms-swt-event-my_script_py-20260416-1230"
     )
+
+
+def test_batch_job_runner_uses_selected_resource_profile():
+    batch_client = mock.Mock()
+    batch_client.submit_job.return_value = {"jobId": "ext-123"}
+    message = make_job_message()
+    message.payload.resource_size = "large"
+
+    with mock.patch(
+        "cwms_batch_events.lambdas.dispatch_job.job_runner.batch.boto3.client",
+        return_value=batch_client,
+    ):
+        BatchJobRunner().run_job(message)
+
+    assert batch_client.submit_job.call_args.kwargs["containerOverrides"]["resourceRequirements"] == [
+        {"type": "VCPU", "value": "2"},
+        {"type": "MEMORY", "value": "4096"},
+    ]

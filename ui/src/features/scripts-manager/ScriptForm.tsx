@@ -154,6 +154,7 @@ export const ScriptForm = ({
     runtime: script?.runtime === "java" || script?.runtime === "shell" ? script.runtime : "python",
     commandArgs: script?.commandArgs ?? [],
     commandPlaceholder: script?.commandPlaceholder ?? null,
+    resourceSize: script?.resourceSize ?? "medium",
     commandMode: script?.commandMode === "shell" ? "shell" : "arguments",
     shellCommand: script?.shellCommand ?? null,
     releaseJar: script?.releaseJar ?? null,
@@ -347,6 +348,18 @@ export const ScriptForm = ({
             <CommandSettings value={form} onChange={changeForm} disabled={isPending} />
           </div>
           {errorFor("commandMode")}{errorFor("shellCommand")}{errorFor("commandArgs")}
+          </ConfigSection>
+          <ConfigSection id="resources" active={section}>
+            <FormRow>
+              <InputLabel htmlFor="resourceSize">Task size</InputLabel>
+              <select id="resourceSize" {...validation("resourceSize")} value={form.resourceSize ?? "medium"}
+                onChange={(event: React.ChangeEvent<HTMLSelectElement>) => update("resourceSize", event.target.value as "small" | "medium" | "large")} className="rounded border p-2">
+                <option value="small">Small — 0.5 vCPU, 1 GiB</option>
+                <option value="medium">Medium — 1 vCPU, 2 GiB</option>
+                <option value="large">Large — 2 vCPU, 4 GiB</option>
+              </select>
+              <Text>Applied to manual and automatic runs. The values are fixed platform profiles.</Text>
+            </FormRow>
           </ConfigSection>
           <ConfigSection id="schedule" active={section}>
           {script && <ScheduleTiming script={script} enabled={section === "schedule"} editing />}
