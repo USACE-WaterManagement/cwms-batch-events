@@ -133,6 +133,7 @@ def post_job(
         command_mode=job.command_mode,
         shell_command=job.shell_command,
         environment_variables=job.environment_variables,
+        resource_size=job.resource_size or "medium",
         release_jar=job.release_jar,
         schedule_timezone=job.schedule_timezone or "UTC",
     )

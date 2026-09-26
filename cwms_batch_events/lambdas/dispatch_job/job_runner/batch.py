@@ -1,6 +1,7 @@
 import logging
 from cwms_batch_events.core.execution import command_for_payload, skips_repository_checkout
 from cwms_batch_events.core.models import JobMessage
+from cwms_batch_events.core.models import RESOURCE_PROFILES
 from cwms_batch_events.core.release_jars import jar_command
 from cwms_batch_events.core.job_correlation import runner_environment
 from cwms_batch_events.lambdas.dispatch_job.utils import OFFICES
@@ -51,6 +52,10 @@ class BatchJobRunner:
             containerOverrides={
                 "environment": environment,
                 "command": command,
+                "resourceRequirements": [
+                    {"type": "VCPU", "value": RESOURCE_PROFILES[message.payload.resource_size]["vcpus"]},
+                    {"type": "MEMORY", "value": RESOURCE_PROFILES[message.payload.resource_size]["memory"]},
+                ],
             },
             tags=tags,
         )

@@ -551,6 +551,8 @@ export interface components {
             commandArgs?: string[];
             /** Commandplaceholder */
             commandPlaceholder?: string | null;
+            /** Resourcesize */
+            resourceSize?: "small" | "medium" | "large";
             /**
              * Commandmode
              * @default arguments
@@ -735,6 +737,8 @@ export interface components {
             commandPlaceholder?: string | null;
             /** Environmentvariables */
             environmentVariables?: components["schemas"]["EnvironmentVariable"][];
+            /** Resourcesize */
+            resourceSize?: "small" | "medium" | "large";
             /**
              * Commandmode
              * @default arguments
@@ -810,6 +814,8 @@ export interface components {
             commandPlaceholder?: string | null;
             /** Environmentvariables */
             environmentVariables?: components["schemas"]["EnvironmentVariable"][];
+            /** Resourcesize */
+            resourceSize?: "small" | "medium" | "large";
             /**
              * Commandmode
              * @default arguments
@@ -947,6 +953,8 @@ export interface components {
             commandPlaceholder?: string | null;
             /** Environmentvariables */
             environmentVariables?: components["schemas"]["EnvironmentVariable"][];
+            /** Resourcesize */
+            resourceSize?: "small" | "medium" | "large";
             /**
              * Commandmode
              * @default arguments

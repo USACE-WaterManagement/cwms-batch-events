@@ -61,6 +61,13 @@ def validate_environment_variables(values: list[EnvironmentVariable]) -> list[En
         raise ValueError("Environment variable names must be unique")
     return values
 
+ResourceSize = Literal["small", "medium", "large"]
+RESOURCE_PROFILES: dict[ResourceSize, dict[str, str]] = {
+    "small": {"vcpus": "0.5", "memory": "1024"},
+    "medium": {"vcpus": "1", "memory": "2048"},
+    "large": {"vcpus": "2", "memory": "4096"},
+}
+
 
 class ExecutionRecord(CamelModel):
     """Stored execution fields, including paths accepted by older API versions."""
@@ -80,6 +87,7 @@ class ExecutionRecord(CamelModel):
     @classmethod
     def valid_environment_variables(cls, values):
         return validate_environment_variables(values)
+    resource_size: ResourceSize = "medium"
 
 
 class ExecutionOptions(ExecutionRecord):
@@ -327,6 +335,7 @@ class ScriptBase(CamelModel):
     @classmethod
     def valid_environment_variables(cls, values):
         return validate_environment_variables(values)
+    resource_size: ResourceSize = "medium"
 
     @field_validator("schedule_type")
     def validate_schedule_type(cls, value: str) -> str:

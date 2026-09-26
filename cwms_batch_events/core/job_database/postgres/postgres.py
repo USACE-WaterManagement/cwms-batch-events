@@ -211,6 +211,7 @@ class PostgresJobDatabase:
         job.environment_variables = [
             item.model_dump(by_alias=False) for item in options.environment_variables
         ]
+        job.resource_size = options.resource_size
         job.command_mode = options.command_mode
         job.shell_command = options.shell_command
         job.release_jar = options.release_jar.model_dump(by_alias=False) if options.release_jar else None

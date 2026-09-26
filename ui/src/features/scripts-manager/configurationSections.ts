@@ -1,6 +1,7 @@
 export const scriptSections = [
   { id: "source", label: "Command" },
   { id: "environment", label: "Environment" },
+  { id: "resources", label: "Resources" },
   { id: "general", label: "Name" },
   { id: "access", label: "Access" },
   { id: "schedule", label: "Schedule" },
@@ -12,6 +13,7 @@ export const fieldSections: Record<string, ScriptSection> = {
   repoPath: "source", executionType: "source", runtime: "source",
   commandArgs: "source", commandMode: "source", shellCommand: "source",
   environmentVariables: "environment",
+  resourceSize: "resources",
   roles: "access", scheduleType: "schedule", scheduleMinute: "schedule",
   scheduleCron: "schedule", scheduleTimezone: "schedule", scheduleEnabled: "schedule",
 };
