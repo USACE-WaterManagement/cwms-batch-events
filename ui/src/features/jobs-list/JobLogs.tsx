@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useDeferredValue, useId, useState } from "react";
 import useJobLogs, { FINAL_LOG_CHECKS } from "./useJobLogs";
 import { jobStatusLabel } from "./jobStatus";
 import type { JobDetails } from "./useJobDetails";
@@ -26,6 +26,7 @@ const JobLogs = ({ jobId, status, batchStatus, endTime }: JobLogsProps) => {
     : isLoading ? "Loading logs..."
     : running ? waiting
     : "No logs available. Refresh to check again.");
+  const displayedMessage = useDeferredValue(message);
 
   return (
     <section aria-label="Job logs" className="min-w-0 overflow-hidden rounded-lg border border-gray-300 bg-white">
@@ -71,7 +72,7 @@ const JobLogs = ({ jobId, status, batchStatus, endTime }: JobLogsProps) => {
       {isError && <p role="alert">{error.message}</p>}
       {data?.hasMore && <p>More output is available. Load more to continue.</p>}
       {data?.truncated && <p>Showing the most recent 2 million characters of loaded output.</p>}
-      <textarea aria-label="Job output" readOnly value={message} className="block h-96 min-h-48 w-full resize-y overflow-auto rounded border border-gray-400 bg-white p-3 font-mono text-sm text-gray-900" />
+      <textarea aria-label="Job output" readOnly value={displayedMessage} className="block h-96 min-h-48 w-full resize-y overflow-auto rounded border border-gray-400 bg-white p-3 font-mono text-sm text-gray-900" />
       </div>
     </section>
   );
