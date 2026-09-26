@@ -30,6 +30,14 @@ class ReleaseJar(CamelModel):
     size: int = Field(gt=0, le=536870912)
 
 
+ResourceSize = Literal["small", "medium", "large"]
+RESOURCE_PROFILES: dict[ResourceSize, dict[str, str]] = {
+    "small": {"vcpus": "0.5", "memory": "1024"},
+    "medium": {"vcpus": "1", "memory": "2048"},
+    "large": {"vcpus": "2", "memory": "4096"},
+}
+
+
 class ExecutionRecord(CamelModel):
     """Stored execution fields, including paths accepted by older API versions."""
 
@@ -42,6 +50,7 @@ class ExecutionRecord(CamelModel):
     command_mode: str = "arguments"
     shell_command: str | None = None
     release_jar: ReleaseJar | None = None
+    resource_size: ResourceSize = "medium"
 
 
 class ExecutionOptions(ExecutionRecord):
@@ -283,6 +292,7 @@ class ScriptBase(CamelModel):
     schedule_minute: int | None = None
     schedule_cron: str | None = None
     schedule_timezone: str = "UTC"
+    resource_size: ResourceSize = "medium"
 
     @field_validator("schedule_type")
     def validate_schedule_type(cls, value: str) -> str:

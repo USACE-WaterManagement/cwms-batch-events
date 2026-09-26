@@ -551,6 +551,8 @@ export interface components {
             commandArgs?: string[];
             /** Commandplaceholder */
             commandPlaceholder?: string | null;
+            /** Resourcesize */
+            resourceSize?: "small" | "medium" | "large";
             /**
              * Commandmode
              * @default arguments
@@ -726,6 +728,8 @@ export interface components {
             commandArgs?: string[];
             /** Commandplaceholder */
             commandPlaceholder?: string | null;
+            /** Resourcesize */
+            resourceSize?: "small" | "medium" | "large";
             /**
              * Commandmode
              * @default arguments
@@ -799,6 +803,8 @@ export interface components {
             commandArgs?: string[];
             /** Commandplaceholder */
             commandPlaceholder?: string | null;
+            /** Resourcesize */
+            resourceSize?: "small" | "medium" | "large";
             /**
              * Commandmode
              * @default arguments
@@ -934,6 +940,8 @@ export interface components {
             commandArgs?: string[];
             /** Commandplaceholder */
             commandPlaceholder?: string | null;
+            /** Resourcesize */
+            resourceSize?: "small" | "medium" | "large";
             /**
              * Commandmode
              * @default arguments
