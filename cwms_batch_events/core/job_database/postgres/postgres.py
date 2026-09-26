@@ -201,6 +201,7 @@ class PostgresJobDatabase:
         job.display_name = readable_name(user.display_name, user.username)
         job.run_trigger = payload.run_trigger
         job.office = script.office
+        job.schedule_timezone = script.schedule_timezone or "UTC"
         job.config_version = options.config_version
         job.repo_path = options.repo_path
         job.execution_type = options.execution_type

@@ -69,6 +69,7 @@ def register_due_jobs(now=None, session_factory=create_session):
                         db.add(job)
                         db.flush()
                         payload = ScriptRunOptions(office=script.office.lower(), script_slug=script.slug,
+                                                   schedule_timezone=script.schedule_timezone or "UTC",
                                                    **options.model_dump(by_alias=False))
                         message = JobMessage(version="1.0", job_id=job.id,
                             runner_type=get_settings().default_job_runner,

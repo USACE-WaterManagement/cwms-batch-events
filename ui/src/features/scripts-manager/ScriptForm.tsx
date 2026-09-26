@@ -27,6 +27,7 @@ import { ScriptVersionNotice } from "./ScriptVersionNotice";
 import { ScriptVersionHelp } from "./CommandModal";
 
 import { schedulePreset, presetCron } from './schedulePresets';
+import { TIMEZONES } from './timezones';
 
 const fieldHelp: Record<string, React.ReactNode> = {
   scheduleType: "Batch Events queues enabled schedules automatically while the API is running. Disable any equivalent Airflow or legacy trigger before enabling this schedule.",
@@ -428,28 +429,12 @@ export const ScriptForm = ({
               <FormRow>
                 <InputLabel htmlFor="scheduleTimezone">Timezone</InputLabel>
                 <div>
-                  <Input
-                    id="scheduleTimezone" {...validation("scheduleTimezone")}
-                    required
-                    list="schedule-timezones"
-                    value={form.scheduleTimezone}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      update("scheduleTimezone", e.target.value)
-                    }
-                  />
-                  <datalist id="schedule-timezones">
-                    {[
-                      "UTC",
-                      "America/New_York",
-                      "America/Chicago",
-                      "America/Denver",
-                      "America/Los_Angeles",
-                      "America/Anchorage",
-                      "Pacific/Honolulu",
-                    ].map((zone) => (
-                      <option key={zone} value={zone} />
-                    ))}
-                  </datalist>
+                  <select id="scheduleTimezone" {...validation("scheduleTimezone")} required value={TIMEZONES.includes(form.scheduleTimezone as typeof TIMEZONES[number]) ? form.scheduleTimezone : "__custom__"}
+                    onChange={(event: React.ChangeEvent<HTMLSelectElement>) => update("scheduleTimezone", event.target.value === "__custom__" ? "" : event.target.value)} className="rounded border p-2">
+                    {TIMEZONES.map(zone => <option key={zone} value={zone}>{zone}</option>)}
+                    <option value="__custom__">Custom timezone...</option>
+                  </select>
+                  {!TIMEZONES.includes(form.scheduleTimezone as typeof TIMEZONES[number]) && <input id="scheduleTimezoneCustom" {...validation("scheduleTimezone")} aria-label="Custom timezone" value={form.scheduleTimezone} onChange={(event: React.ChangeEvent<HTMLInputElement>) => update("scheduleTimezone", event.target.value)} placeholder="America/Chicago" className="mt-2 block rounded border p-2" />}
                   <Text>
                     Use an IANA timezone. Missing daylight-saving times are
                     skipped. Repeated times run once.
