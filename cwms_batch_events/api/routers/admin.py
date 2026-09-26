@@ -103,8 +103,12 @@ def operations(
     offices = list(db.scalars(text("""SELECT office FROM scripts UNION SELECT office FROM jobs
         WHERE (created_time >= :since AND created_time <= :now) OR job_status IN ('Pending','Running') ORDER BY office"""), params))
     usage = rows(f"SELECT office, {USAGE_COLUMNS} FROM jobs WHERE {WINDOW} GROUP BY office ORDER BY runtime_minutes DESC, office")
-    task_order = TASK_SORT_COLUMNS[task_sort]
-    direction = "ASC" if task_direction == "asc" else "DESC"
+    task_sort_value = task_sort if isinstance(task_sort, str) else "minutes"
+    task_direction_value = (
+        task_direction if isinstance(task_direction, str) else "desc"
+    )
+    task_order = TASK_SORT_COLUMNS[task_sort_value]
+    direction = "ASC" if task_direction_value == "asc" else "DESC"
     limit = "" if params["office"] else "LIMIT 20"
     tie_breaker = "script_name ASC" if task_sort == "name" else "script_name ASC, script_id"
     top = rows(f"SELECT office, script_id, script_name AS name, {USAGE_COLUMNS} FROM jobs WHERE {WINDOW} GROUP BY office,script_id,script_name ORDER BY {task_order} {direction} NULLS LAST, {tie_breaker} {limit}")
