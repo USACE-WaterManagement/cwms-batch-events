@@ -16,6 +16,7 @@ interface ScriptDetailPanelProps {
   onSave: (data: ScriptFormData) => void | Promise<void>;
   onValidationChange?: (invalid: boolean) => void;
   onCancelEdit: () => void;
+  existingNames?: string[];
 }
 
 export const ScriptDetailPanel = ({
@@ -29,8 +30,9 @@ export const ScriptDetailPanel = ({
   onSave,
   onCancelEdit,
   onValidationChange,
+  existingNames,
 }: ScriptDetailPanelProps) => {
-  const [section, setSection] = useState<ScriptSection>("general");
+  const [section, setSection] = useState<ScriptSection>("source");
   if (mode === "view" && !script) {
     return <section className="flex min-h-48 min-w-0 flex-col items-center justify-center gap-3 self-start rounded-xl border border-dashed border-gray-300 bg-gray-50 px-6 py-8 text-center">
       <MdTouchApp aria-hidden className="text-4xl text-gray-400" />
@@ -56,6 +58,7 @@ export const ScriptDetailPanel = ({
         onValidationChange={onValidationChange}
         initialSection={section}
         onSectionChange={setSection}
+        existingNames={existingNames}
       />
     );
   }

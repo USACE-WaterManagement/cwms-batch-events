@@ -3,6 +3,7 @@ import dayjs from "dayjs";
 import { ScheduleTiming } from "./ScheduleTiming";
 import { ViewField } from "./ViewField";
 import { Button, Text } from "@usace/groundwork";
+import { MdEdit } from "react-icons/md";
 import type { Script } from "../scripts-manager/types";
 import { savedCommandPreview, supportsScriptVersion } from "./commandArguments";
 import { ArgumentValues } from "./CommandSummary";
@@ -46,6 +47,9 @@ export const ScriptView = ({ script, onEdit, section, onSectionChange }: ScriptV
   if (script) {
     return (
       <div className="flex flex-col gap-y-6">
+        <div className="flex justify-end">
+          <Button disabled={(script.configVersion ?? 1) === 1 || !supportsScriptVersion(script.configVersion ?? 1)} onClick={onEdit}><MdEdit aria-hidden /> Edit</Button>
+        </div>
         <ScriptSections active={section} onSelect={onSectionChange}>
         <div className="flex flex-col gap-2">
           <ConfigSection id="general" active={section}>
@@ -101,9 +105,6 @@ export const ScriptView = ({ script, onEdit, section, onSectionChange }: ScriptV
           <ConfigSection id="upgrade" active={section}><UpgradeConfiguration key={script.id} script={script} /></ConfigSection>
         </div>
         </ScriptSections>
-        <div className="w-full flex justify-end">
-          <Button disabled={(script.configVersion ?? 1) === 1 || !supportsScriptVersion(script.configVersion ?? 1)} onClick={onEdit}>Edit</Button>
-        </div>
       </div>
     );
   } else {

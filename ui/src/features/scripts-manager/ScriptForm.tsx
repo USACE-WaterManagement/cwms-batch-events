@@ -119,6 +119,7 @@ interface ScriptFormProps {
   onCancelEdit: () => void;
   initialSection?: ScriptSection;
   onSectionChange?: (section: ScriptSection) => void;
+  existingNames?: string[];
 }
 
 export const ScriptForm = ({
@@ -129,18 +130,29 @@ export const ScriptForm = ({
   onSave,
   onCancelEdit,
   onValidationChange,
-  initialSection = "general",
+  initialSection = "source",
   onSectionChange,
+  existingNames = [],
 }: ScriptFormProps) => {
+  const uniqueName = (path: string) => {
+    const stem = path.split("/").pop()?.replace(/\.[^.]+$/, "")?.trim() || "New job";
+    const names = new Set(existingNames.map(name => name.toLowerCase()));
+    if (!names.has(stem.toLowerCase())) return stem;
+    let suffix = 2;
+    while (names.has(`${stem} ${suffix}`.toLowerCase())) suffix += 1;
+    return `${stem} ${suffix}`;
+  };
+  const initialName = script?.name ?? "";
   const [form, setForm] = useState<ScriptFormData>({
     configVersion: editableVersion(script),
-    name: script?.name ?? "",
+    name: initialName,
     description: script?.description ?? "",
     active: script?.active ?? true,
     repoPath: script?.repoPath ?? "",
     executionType: script?.executionType === "command" ? "command" : "github_file",
     runtime: script?.runtime === "java" || script?.runtime === "shell" ? script.runtime : "python",
     commandArgs: script?.commandArgs ?? [],
+    commandPlaceholder: script?.commandPlaceholder ?? null,
     commandMode: script?.commandMode === "shell" ? "shell" : "arguments",
     shellCommand: script?.shellCommand ?? null,
     releaseJar: script?.releaseJar ?? null,
@@ -151,6 +163,7 @@ export const ScriptForm = ({
     scheduleCron: script?.scheduleCron ?? "",
     scheduleTimezone: script?.scheduleTimezone ?? "UTC",
   });
+  const [suggestedName, setSuggestedName] = useState(initialName);
 
   const [sourcePaths, setSourcePaths] = useState<Record<string, string>>({
     [form.executionType ?? "github_file"]: form.repoPath,
@@ -294,7 +307,12 @@ export const ScriptForm = ({
               runtime={form.runtime ?? "python"}
               error={errors.repoPath}
               value={form.repoPath}
-              onChange={(path) => update("repoPath", path)}
+              onChange={(path) => {
+                const nextName = uniqueName(path);
+                const shouldSuggest = !script && (!form.name.trim() || form.name === suggestedName);
+                changeForm({ ...form, repoPath: path, name: shouldSuggest ? nextName : form.name });
+                setSuggestedName(nextName);
+              }}
             />}
           </FormRow>}
           {form.commandMode === "shell" && <p className="text-sm text-slate-600">The Bash command below includes its own executable and paths.</p>}

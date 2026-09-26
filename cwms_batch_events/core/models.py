@@ -38,6 +38,7 @@ class ExecutionRecord(CamelModel):
     runtime: str = "python"
     repo_path: str
     command_args: list[str] = Field(default_factory=list)
+    command_placeholder: str | None = None
     command_mode: str = "arguments"
     shell_command: str | None = None
     release_jar: ReleaseJar | None = None
@@ -271,6 +272,7 @@ def _validate_schedule_timezone(value: str | None) -> str:
 class ScriptBase(CamelModel):
     name: str
     description: str
+    command_placeholder: str | None = None
     repo_path: str
     active: bool = True
     roles: list[str] = []

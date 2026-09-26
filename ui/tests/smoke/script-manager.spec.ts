@@ -28,7 +28,7 @@ test("browse files, field help, responsive footer, and help navigation", async (
   await expect(page.getByRole("heading",{name:"No jobs yet for SWT"})).toBeVisible();
   await capture("empty-office");
   await page.getByRole("button",{name:"Create first job"}).click();
-  await configSection(page, "General");
+  await configSection(page, "Name");
   await page.getByLabel("Name",{exact:true}).fill("Daily report");
   await configSection(page, "Command");
   await page.getByLabel("GitHub Repo Path",{exact:true}).fill("python/");

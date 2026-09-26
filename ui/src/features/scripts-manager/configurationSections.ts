@@ -1,6 +1,6 @@
 export const scriptSections = [
-  { id: "general", label: "General" },
   { id: "source", label: "Command" },
+  { id: "general", label: "Name" },
   { id: "access", label: "Access" },
   { id: "schedule", label: "Schedule" },
   { id: "upgrade", label: "Upgrade" },
@@ -13,4 +13,3 @@ export const fieldSections: Record<string, ScriptSection> = {
   roles: "access", scheduleType: "schedule", scheduleMinute: "schedule",
   scheduleCron: "schedule", scheduleTimezone: "schedule", scheduleEnabled: "schedule",
 };
-

@@ -35,7 +35,7 @@ export function CommandEditor({ value, onChange, onValidityChange, disabled, arg
       <p className="text-sm text-gray-600">Enter the complete command, including executables. Bash interprets <code>&amp;&amp;</code>, <code>||</code>, variables, pipes, and redirection. {value.executionType === "command" ? "Repository checkout is skipped." : "The district repository and enabled artifacts are available under /jobs."}</p>
     </> : <>
       <label htmlFor={`${id}-args`} className="block font-semibold">{label}</label>
-      <ArgumentsEditor key="arguments" id={`${id}-args`} label={label} initialArgs={value.commandArgs ?? []} disabled={disabled}
+      <ArgumentsEditor key="arguments" id={`${id}-args`} label={label} placeholder={value.commandPlaceholder} initialArgs={value.commandArgs ?? []} disabled={disabled}
         onChange={commandArgs => onChange({ ...value, commandArgs })} onValidityChange={onValidityChange} />
       <div className="rounded border border-gray-200 bg-gray-50 p-3">
         <p className="text-xs font-semibold text-gray-600">Command preview</p>
