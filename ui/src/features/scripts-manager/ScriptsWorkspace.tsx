@@ -109,6 +109,7 @@ export const ScriptsWorkspace = ({ office }: ScriptsWorkspaceProps) => {
         />
       </div>
       <ScriptDetailPanel
+        office={office}
         script={selectedScript}
         mode={panelMode}
         isPending={isPending}

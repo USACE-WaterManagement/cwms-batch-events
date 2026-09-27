@@ -3,6 +3,7 @@ import { ScriptView } from "./ScriptView";
 import type { Script, ScriptFormData } from "../scripts-manager/types";
 
 interface ScriptDetailPanelProps {
+  office: string;
   mode: "view" | "edit";
   script?: Script;
   isPending: boolean;
@@ -14,6 +15,7 @@ interface ScriptDetailPanelProps {
 }
 
 export const ScriptDetailPanel = ({
+  office,
   mode,
   script,
   isPending,
@@ -30,6 +32,7 @@ export const ScriptDetailPanel = ({
   } else if (mode === "edit") {
     innerComponent = (
       <ScriptForm
+        office={office}
         key={script?.id ?? "new"}
         script={script}
         isPending={isPending}

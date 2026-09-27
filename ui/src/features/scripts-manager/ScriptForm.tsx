@@ -25,6 +25,51 @@ const slugify = (str: string) => {
     .replace(/^-+|-+$/g, "");
 };
 
+const DRAFT_STORAGE_PREFIX = "cwms-batch-events:script-form-draft";
+
+function draftStorageKey(office: string, script?: Script): string {
+  return `${DRAFT_STORAGE_PREFIX}:${encodeURIComponent(office)}:${encodeURIComponent(script?.id ?? "new")}`;
+}
+
+function initialForm(script?: Script): ScriptFormData {
+  return {
+    name: script?.name ?? "",
+    description: script?.description ?? "",
+    active: script?.active ?? true,
+    repoPath: script?.repoPath ?? "",
+    roles: script?.roles ?? ["CWMS Users"],
+  };
+}
+
+function readDraft(key: string, fallback: ScriptFormData): ScriptFormData {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const stored = window.localStorage.getItem(key);
+    if (!stored) return fallback;
+    const parsed: unknown = JSON.parse(stored);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return fallback;
+    return { ...fallback, ...parsed } as ScriptFormData;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeDraft(key: string, value: ScriptFormData): void {
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Browser storage may be unavailable or full. The form remains usable.
+  }
+}
+
+function removeDraft(key: string): void {
+  try {
+    window.localStorage.removeItem(key);
+  } catch {
+    // Ignore unavailable browser storage when clearing the form.
+  }
+}
+
 const FormRow = ({ children }: React.PropsWithChildren) => {
   return <Field className="grid grid-cols-[120px_1fr] gap-6">{children}</Field>;
 };
@@ -41,6 +86,7 @@ const InputLabel = ({
 };
 
 interface ScriptFormProps {
+  office: string;
   script?: Script;
   isPending: boolean;
   mutationError: Error | null;
@@ -50,6 +96,7 @@ interface ScriptFormProps {
 }
 
 export const ScriptForm = ({
+  office,
   script,
   isPending,
   mutationError,
@@ -57,21 +104,40 @@ export const ScriptForm = ({
   onSave,
   onCancelEdit,
 }: ScriptFormProps) => {
-  const [form, setForm] = useState<ScriptFormData>({
-    name: script?.name ?? "",
-    description: script?.description ?? "",
-    active: script?.active ?? true,
-    repoPath: script?.repoPath ?? "",
-    roles: script?.roles ?? ["CWMS Users"],
+  const storageKey = draftStorageKey(office, script);
+  const [form, setForm] = useState<ScriptFormData>(() => readDraft(storageKey, initialForm(script)));
+  const [draftRestored, setDraftRestored] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return window.localStorage.getItem(storageKey) !== null;
+    } catch {
+      return false;
+    }
   });
 
-  const handleSubmit = () => onSave(form);
+  const handleSubmit = async () => {
+    await onSave(form);
+    removeDraft(storageKey);
+    setDraftRestored(false);
+  };
 
   const update = <K extends keyof typeof form>(
     key: K,
     value: (typeof form)[K],
   ) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    setForm((prev) => {
+      const next = { ...prev, [key]: value };
+      writeDraft(storageKey, next);
+      setDraftRestored(true);
+      return next;
+    });
+  };
+
+  const clearForm = () => {
+    if (!window.confirm("Clear this form and discard the saved draft?")) return;
+    setForm(initialForm(script));
+    removeDraft(storageKey);
+    setDraftRestored(false);
   };
 
   return (
@@ -79,7 +145,7 @@ export const ScriptForm = ({
       onSubmit={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        handleSubmit();
+        void handleSubmit();
       }}
     >
       <div className="flex flex-col gap-y-6">
@@ -161,6 +227,10 @@ export const ScriptForm = ({
         <div className="w-full flex justify-between">
           {script && <DeleteConfirm onDelete={() => onDelete(script?.id)} />}
           <div className="flex justify-between gap-6 ml-auto">
+            {draftRestored && <span className="self-center text-sm text-gray-600">Draft restored from this browser</span>}
+            <Button type="button" disabled={isPending} onClick={clearForm}>
+              Clear form
+            </Button>
             <Button type="submit" disabled={isPending}>
               Save
             </Button>
