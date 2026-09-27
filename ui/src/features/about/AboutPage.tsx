@@ -238,8 +238,8 @@ const RateLimitsPane = () => (
       <H3>Who shares a limit</H3>
       <Text className="mt-2">
         Limits are tracked per authenticated bearer credential, not per human
-        user. A shared bearer token shares one bucket, while different bearer
-        tokens have separate buckets. Office-specific values can replace the
+        user. A shared bearer token shares one counter, while different bearer
+        tokens have separate counters. Office-specific values can replace the
         defaults.
       </Text>
     </Card>

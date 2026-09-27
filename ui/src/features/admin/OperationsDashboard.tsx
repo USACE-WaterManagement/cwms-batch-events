@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { useAuth } from "@usace-watermanagement/groundwork-water";
 import { Link } from "@tanstack/react-router";
-import { UsaceBox } from "@usace/groundwork";
-import { MdDashboard, MdWarningAmber, MdPieChart, MdSchedule, MdSpeed, MdRefresh, MdOpenInNew } from "react-icons/md";
+import { Button, Modal, UsaceBox } from "@usace/groundwork";
+import { MdDashboard, MdWarningAmber, MdPieChart, MdSchedule, MdSpeed, MdRefresh, MdOpenInNew, MdHelpOutline } from "react-icons/md";
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line } from "recharts";
 import fetchWithAuth from "../../utils/fetchWithAuth";
 import { LoadingRows } from "../../shared/components/LoadingRows";
@@ -30,6 +30,7 @@ const tabs = [{ id: "overview", label: "Overview", icon: MdDashboard }, { id: "o
 function RateLimitsPanel({ authToken }: { authToken?: string }) {
   const queryClient = useQueryClient();
   const [drafts, setDrafts] = useState<Record<string, { requestsPerMinute: string; jobSubmissionsPerMinute: string }>>({});
+  const [helpOpen, setHelpOpen] = useState(false);
   const query = useQuery<RateLimitRow[]>({
     queryKey: ["adminRateLimits"],
     queryFn: async () => (await fetchWithAuth("/api/admin/rate-limits", {}, authToken)).json(),
@@ -54,7 +55,9 @@ function RateLimitsPanel({ authToken }: { authToken?: string }) {
   };
   if (query.isPending) return <LoadingRows label="Loading office rate limits" />;
   if (query.isError) return <p role="alert">Office rate limits could not be loaded. Refresh the page to retry.</p>;
-  return <UsaceBox title="Office rate limits">
+  return <>
+  <UsaceBox title="Office rate limits">
+    <button type="button" className="action-link mb-4" onClick={() => setHelpOpen(true)}><MdHelpOutline aria-hidden />How rate limits are applied</button>
     <p className="mb-4 text-sm text-slate-600">Defaults are 120 API requests and 10 job submissions per minute. Set a higher or lower value for an office when its workload requires it. Scheduled jobs still have a separate five-minute minimum interval.</p>
     <div className="overflow-x-auto"><table className="w-full text-left text-sm">
       <caption className="sr-only">Per-office API rate limit overrides</caption>
@@ -69,7 +72,19 @@ function RateLimitsPanel({ authToken }: { authToken?: string }) {
       </tr>; })}</tbody>
     </table>{!query.data?.length && <p className="p-4 text-slate-500">No offices have been registered yet.</p>}</div>
     <p className="mt-4 text-xs text-slate-500">Limits are applied at each API process. Deployments with multiple API workers should also enforce an equivalent limit at the gateway. Health checks and internal service callbacks use separate access controls.</p>
-  </UsaceBox>;
+  </UsaceBox>
+  <Modal opened={helpOpen} onClose={() => setHelpOpen(false)} dialogTitle="How API rate limits are applied"
+    buttons={<div className="flex justify-end"><Button type="button" onClick={() => setHelpOpen(false)}>Close</Button></div>}>
+    <div className="max-h-[65dvh] space-y-5 overflow-y-auto p-1 text-sm">
+      <section><h3 className="font-semibold">Who shares a limit</h3><p className="mt-1">Limits are tracked per authenticated bearer credential. The same shared token uses the same counters. Different bearer tokens use separate counters. Limits are not assigned by the human name shown in the audit column.</p></section>
+      <section><h3 className="font-semibold">Which limit applies</h3><p className="mt-1">General API requests use the requests-per-minute value. Job submissions use a separate jobs-per-minute value. The default values are 120 general requests and 10 job submissions per minute. The five-minute scheduler interval is a separate scheduling rule.</p></section>
+      <section><h3 className="font-semibold">How office values work</h3><p className="mt-1">An office override replaces the documented default for requests or job submissions. Requests filtered to multiple offices use the most restrictive applicable value. Resetting an office removes its override and returns it to the default.</p></section>
+      <section><h3 className="font-semibold">Where values are kept</h3><p className="mt-1">The active counters are kept in memory by each API process. Office override settings are persisted in the database and refreshed by each process about once per minute. A change is immediate in the process that saves it and reaches other processes during their next refresh.</p></section>
+      <section><h3 className="font-semibold">Multiple API processes</h3><p className="mt-1">Each API process maintains its own counters. Deployments with multiple API workers should also enforce equivalent shared limits at the deployment gateway.</p></section>
+      <p className="border-t border-slate-200 pt-4 text-slate-600">When a limit is reached, the API returns HTTP 429 with a Retry-After value and a link to the public <Link to="/about/rate-limits" className="font-medium text-blue-700 underline">rate-limit documentation</Link>.</p>
+    </div>
+  </Modal>
+  </>;
 }
 
 function UsageTable({ rows, jobs = false, onOffice }: { rows: Usage[]; jobs?: boolean; onOffice: (office: string) => void }) {

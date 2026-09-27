@@ -122,9 +122,9 @@ class OfficeRateLimitStore:
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """Apply process-local request limits to API callers.
 
-    The credential fingerprint keeps buckets stable without retaining bearer
+    The credential fingerprint keeps counters stable without retaining bearer
     tokens. Deployments with multiple workers should also apply an equivalent
-    limit at the gateway for a shared bucket.
+    limit at the gateway for shared enforcement.
     """
 
     def __init__(
@@ -152,7 +152,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         caller_key = self._caller_key(request)
         if caller_key is None:
             # User-facing routes require Authorization. Let the auth dependency
-            # return its normal 401 rather than sharing one anonymous bucket.
+            # return its normal 401 rather than sharing one anonymous counter.
             return await call_next(request)
 
         offices = await self._request_offices(request)
