@@ -215,6 +215,7 @@ const RateLimitsPane = () => (
         <Text className="mt-2">
           The default limit is 20 job submissions per minute for a credential.
           Submissions have a separate limit because they consume execution resources.
+          Scheduled jobs still enforce the five-minute minimum schedule interval.
         </Text>
       </Card>
     </div>
@@ -227,7 +228,9 @@ const RateLimitsPane = () => (
       </Text>
       <Text className="mt-3">
         If an office has a documented operational need for more capacity, an
-        administrator can request increased limits for that office.
+        administrator can request increased limits for that office. HQ
+        administrators can set office-specific request and job limits in the
+        Admin rate limits panel.
       </Text>
     </Card>
     <Card className="p-6">

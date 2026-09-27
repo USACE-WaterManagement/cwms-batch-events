@@ -1,16 +1,17 @@
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from cwms_batch_events.core.rate_limit import RateLimitMiddleware
+from cwms_batch_events.core.rate_limit import OfficeRateLimit, OfficeRateLimitStore, RateLimitMiddleware
 
 
-def make_client(*, api_limit=2, job_limit=1):
+def make_client(*, api_limit=2, job_limit=1, store=None):
     app = FastAPI()
     app.add_middleware(
         RateLimitMiddleware,
         requests_per_minute=api_limit,
         job_submissions_per_minute=job_limit,
         documentation_url="/events/about/rate-limits",
+        office_rate_limit_store=store,
     )
 
     @app.get("/jobs")
@@ -58,3 +59,12 @@ def test_health_is_not_rate_limited():
     with make_client(api_limit=1) as client:
         assert client.get("/health").status_code == 200
         assert client.get("/health").status_code == 200
+
+
+def test_office_override_applies_to_selected_office():
+    store = OfficeRateLimitStore(OfficeRateLimit(10, 5), session_factory=lambda: None)
+    store.set("SWT", OfficeRateLimit(1, 1))
+    with make_client(store=store) as client:
+        headers = {"Authorization": "apikey stable-test-key"}
+        assert client.get("/jobs?office=SWT", headers=headers).status_code == 200
+        assert client.get("/jobs?office=SWT", headers=headers).status_code == 429

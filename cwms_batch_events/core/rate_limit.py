@@ -1,11 +1,88 @@
 import hashlib
+import json
 import time
 from collections import defaultdict, deque
+from dataclasses import dataclass
 from threading import Lock
+from uuid import UUID
+
+from sqlalchemy import text
+
+from cwms_batch_events.core.job_database.postgres.session import create_session
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
+
+
+@dataclass(frozen=True)
+class OfficeRateLimit:
+    requests_per_minute: int
+    job_submissions_per_minute: int
+
+
+class OfficeRateLimitStore:
+    """Persisted office overrides with a short refresh window for API workers."""
+
+    def __init__(self, defaults: OfficeRateLimit, session_factory=create_session):
+        self.defaults = defaults
+        self.session_factory = session_factory
+        self._overrides: dict[str, OfficeRateLimit] = {}
+        self._last_refresh = 0.0
+        self._lock = Lock()
+
+    def get(self, offices: list[str]) -> OfficeRateLimit:
+        if not offices:
+            return self.defaults
+        self._refresh_if_due()
+        with self._lock:
+            limits = [self._overrides.get(office.upper(), self.defaults) for office in offices]
+        return OfficeRateLimit(
+            requests_per_minute=min(limit.requests_per_minute for limit in limits),
+            job_submissions_per_minute=min(limit.job_submissions_per_minute for limit in limits),
+        )
+
+    def set(self, office: str, limits: OfficeRateLimit) -> None:
+        with self._lock:
+            self._overrides[office.upper()] = limits
+
+    def remove(self, office: str) -> None:
+        with self._lock:
+            self._overrides.pop(office.upper(), None)
+
+    def snapshot(self) -> dict[str, OfficeRateLimit]:
+        self._refresh_if_due(force=True)
+        with self._lock:
+            return dict(self._overrides)
+
+    def office_for_script(self, script_id: UUID) -> str | None:
+        try:
+            with self.session_factory() as db:
+                office = db.scalar(text("SELECT office FROM scripts WHERE id=:script_id"), {"script_id": script_id})
+            return office.upper() if office else None
+        except Exception:
+            return None
+
+    def _refresh_if_due(self, force: bool = False) -> None:
+        now = time.monotonic()
+        with self._lock:
+            if not force and now - self._last_refresh < 60:
+                return
+            self._last_refresh = now
+        try:
+            with self.session_factory() as db:
+                rows = db.execute(text("""SELECT office, requests_per_minute, job_submissions_per_minute
+                    FROM office_rate_limits""")).mappings().all()
+            overrides = {
+                row["office"]: OfficeRateLimit(row["requests_per_minute"], row["job_submissions_per_minute"])
+                for row in rows
+            }
+            with self._lock:
+                self._overrides = overrides
+        except Exception:
+            # Keep the last known values. Defaults remain safe if the table is
+            # not present during a rolling migration or the database is down.
+            return
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -22,11 +99,15 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         requests_per_minute: int = 120,
         job_submissions_per_minute: int = 20,
         documentation_url: str = "/events/about/rate-limits",
+        office_rate_limit_store: OfficeRateLimitStore | None = None,
     ):
         super().__init__(app)
         self.requests_per_minute = requests_per_minute
         self.job_submissions_per_minute = job_submissions_per_minute
         self.documentation_url = documentation_url
+        self.office_rate_limit_store = office_rate_limit_store or OfficeRateLimitStore(
+            OfficeRateLimit(requests_per_minute, job_submissions_per_minute)
+        )
         self._requests: dict[tuple[str, str], deque[float]] = defaultdict(deque)
         self._lock = Lock()
 
@@ -40,8 +121,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             # return its normal 401 rather than sharing one anonymous bucket.
             return await call_next(request)
 
-        policy, limit = self._policy(request)
-        key = (caller_key, policy)
+        offices = await self._request_offices(request)
+        office_limits = self.office_rate_limit_store.get(offices)
+        policy, limit = self._policy(request, office_limits)
+        office_key = ",".join(sorted(set(offices))) or "default"
+        key = (f"{caller_key}:{office_key}", policy)
         now = time.monotonic()
         window = 60.0
 
@@ -83,10 +167,24 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         path = request.url.path.rstrip("/") or "/"
         return path.endswith(("/health", "/docs", "/redoc", "/openapi.json")) or "/internal" in path
 
-    def _policy(self, request: Request) -> tuple[str, int]:
+    def _policy(self, request: Request, office_limits: OfficeRateLimit) -> tuple[str, int]:
         if request.method == "POST" and request.url.path.rstrip("/").endswith("/jobs"):
-            return "job-submission", self.job_submissions_per_minute
-        return "api", self.requests_per_minute
+            return "job-submission", office_limits.job_submissions_per_minute
+        return "api", office_limits.requests_per_minute
+
+    async def _request_offices(self, request: Request) -> list[str]:
+        values = [value.upper() for value in request.query_params.getlist("office") if value]
+        if values:
+            return values
+        if request.method != "POST" or not request.url.path.rstrip("/").endswith("/jobs"):
+            return []
+        try:
+            body = json.loads(await request.body())
+            script_id = UUID(str(body.get("scriptId") or body.get("script_id")))
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return []
+        office = self.office_rate_limit_store.office_for_script(script_id)
+        return [office] if office else []
 
     @staticmethod
     def _caller_key(request: Request) -> str | None:

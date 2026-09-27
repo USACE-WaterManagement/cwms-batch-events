@@ -1,5 +1,8 @@
 import pytest
 
+from cwms_batch_events.api.main import app
+from cwms_batch_events.core.rate_limit import OfficeRateLimit, OfficeRateLimitStore
+
 
 @pytest.mark.parametrize("roles", [{}, {"SWT": ["Data Acquisition Mgr"]}, {"HQ": ["CWMS Users"]},
                                   {"HQ": ["Data Exchange Mgr"]}, {"HQ": ["CWMS Admin"]}])
@@ -22,3 +25,23 @@ def test_task_sort_options_are_bounded(client, user, db_session, query):
     user.roles = {"HQ": ["Data Acquisition Mgr"]}
     assert client.get(f"/admin/operations?{query}").status_code == 422
     db_session.execute.assert_not_called()
+
+
+def test_hq_admin_can_save_and_reset_office_rate_limits(client, user, db_session, monkeypatch):
+    user.roles = {"HQ": ["Data Acquisition Mgr"]}
+    db_session.scalars.return_value = ["SWT"]
+    store = OfficeRateLimitStore(OfficeRateLimit(120, 20), session_factory=lambda: db_session)
+    monkeypatch.setattr(store, "_refresh_if_due", lambda force=False: None)
+    monkeypatch.setattr(app.state, "rate_limit_store", store)
+
+    updated = client.put("/admin/rate-limits/SWT", json={"requestsPerMinute": 240, "jobSubmissionsPerMinute": 40})
+
+    assert updated.status_code == 200
+    assert updated.json()["requestsPerMinute"] == 240
+    assert store.get(["SWT"]) == OfficeRateLimit(240, 40)
+    db_session.commit.assert_called_once()
+
+    reset = client.delete("/admin/rate-limits/SWT")
+
+    assert reset.status_code == 204
+    assert store.get(["SWT"]) == OfficeRateLimit(120, 20)

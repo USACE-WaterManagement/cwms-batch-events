@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { useAuth } from "@usace-watermanagement/groundwork-water";
 import { Link } from "@tanstack/react-router";
 import { UsaceBox } from "@usace/groundwork";
-import { MdDashboard, MdWarningAmber, MdPieChart, MdSchedule, MdRefresh, MdOpenInNew } from "react-icons/md";
+import { MdDashboard, MdWarningAmber, MdPieChart, MdSchedule, MdSpeed, MdRefresh, MdOpenInNew } from "react-icons/md";
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line } from "recharts";
 import fetchWithAuth from "../../utils/fetchWithAuth";
 import { LoadingRows } from "../../shared/components/LoadingRows";
@@ -12,10 +12,60 @@ import type { components } from "../../generated/api-types";
 
 type Summary = components["schemas"]["OperationsSummary"];
 type Usage = components["schemas"]["Usage"];
+type RateLimitRow = {
+  office: string;
+  requestsPerMinute: number;
+  jobSubmissionsPerMinute: number;
+  requestOverride: boolean;
+  jobSubmissionOverride: boolean;
+};
 const colors = ["#1d4ed8", "#0f766e", "#9333ea", "#c2410c", "#be123c", "#0369a1", "#4d7c0f", "#475569"];
 const number = (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 1 });
 const tabs = [{ id: "overview", label: "Overview", icon: MdDashboard }, { id: "operations", label: "Operations", icon: MdWarningAmber },
-  { id: "usage", label: "Usage", icon: MdPieChart }, { id: "scheduler", label: "Scheduler", icon: MdSchedule }] as const;
+  { id: "usage", label: "Usage", icon: MdPieChart }, { id: "scheduler", label: "Scheduler", icon: MdSchedule },
+  { id: "rate-limits", label: "Rate limits", icon: MdSpeed }] as const;
+
+function RateLimitsPanel({ authToken }: { authToken?: string }) {
+  const queryClient = useQueryClient();
+  const [drafts, setDrafts] = useState<Record<string, { requestsPerMinute: string; jobSubmissionsPerMinute: string }>>({});
+  const query = useQuery<RateLimitRow[]>({
+    queryKey: ["adminRateLimits"],
+    queryFn: async () => (await fetchWithAuth("/api/admin/rate-limits", {}, authToken)).json(),
+  });
+  const valueFor = (row: RateLimitRow) => drafts[row.office] ?? {
+    requestsPerMinute: String(row.requestsPerMinute),
+    jobSubmissionsPerMinute: String(row.jobSubmissionsPerMinute),
+  };
+  const save = async (row: RateLimitRow) => {
+    const value = valueFor(row);
+    await fetchWithAuth(`/api/admin/rate-limits/${encodeURIComponent(row.office)}`, {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ requestsPerMinute: Number(value.requestsPerMinute), jobSubmissionsPerMinute: Number(value.jobSubmissionsPerMinute) }),
+    }, authToken);
+    setDrafts(previous => { const next = { ...previous }; delete next[row.office]; return next; });
+    await queryClient.invalidateQueries({ queryKey: ["adminRateLimits"] });
+  };
+  const reset = async (row: RateLimitRow) => {
+    await fetchWithAuth(`/api/admin/rate-limits/${encodeURIComponent(row.office)}`, { method: "DELETE" }, authToken);
+    setDrafts(previous => { const next = { ...previous }; delete next[row.office]; return next; });
+    await queryClient.invalidateQueries({ queryKey: ["adminRateLimits"] });
+  };
+  if (query.isPending) return <LoadingRows label="Loading office rate limits" />;
+  if (query.isError) return <p role="alert">Office rate limits could not be loaded. Refresh the page to retry.</p>;
+  return <UsaceBox title="Office rate limits">
+    <p className="mb-4 text-sm text-slate-600">Defaults are 120 API requests and 20 job submissions per minute. Set a higher or lower value for an office when its workload requires it. Scheduled jobs still have a separate five-minute minimum interval.</p>
+    <div className="overflow-x-auto"><table className="w-full text-left text-sm">
+      <caption className="sr-only">Per-office API rate limit overrides</caption>
+      <thead className="border-b bg-slate-50 text-slate-600"><tr><th className="p-3">Office</th><th className="p-3">Requests/min</th><th className="p-3">Jobs/min</th><th className="p-3">Actions</th></tr></thead>
+      <tbody>{query.data?.map(row => { const value = valueFor(row); return <tr key={row.office} className="border-b border-slate-100">
+        <td className="p-3 font-semibold">{row.office}</td>
+        <td className="p-3"><label className="sr-only" htmlFor={`requests-${row.office}`}>Requests per minute for {row.office}</label><input id={`requests-${row.office}`} type="number" min="1" max="10000" className="w-28 rounded border p-2" value={value.requestsPerMinute} onChange={event => setDrafts(previous => ({ ...previous, [row.office]: { ...value, requestsPerMinute: event.target.value } }))} /></td>
+        <td className="p-3"><label className="sr-only" htmlFor={`jobs-${row.office}`}>Job submissions per minute for {row.office}</label><input id={`jobs-${row.office}`} type="number" min="1" max="1000" className="w-28 rounded border p-2" value={value.jobSubmissionsPerMinute} onChange={event => setDrafts(previous => ({ ...previous, [row.office]: { ...value, jobSubmissionsPerMinute: event.target.value } }))} /></td>
+        <td className="p-3"><div className="flex flex-wrap gap-2"><button type="button" className="action-link" onClick={() => void save(row)}>Save</button>{(row.requestOverride || row.jobSubmissionOverride) && <button type="button" className="action-link" onClick={() => void reset(row)}>Use defaults</button>}</div></td>
+      </tr>; })}</tbody>
+    </table>{!query.data?.length && <p className="p-4 text-slate-500">No offices have been registered yet.</p>}</div>
+  </UsaceBox>;
+}
 
 function UsageTable({ rows, jobs = false, onOffice }: { rows: Usage[]; jobs?: boolean; onOffice: (office: string) => void }) {
   return <div className="overflow-x-auto"><table className="w-full text-left text-sm">
@@ -78,6 +128,7 @@ export function OperationsDashboard() {
       {tabs.map(item => <button key={item.id} aria-pressed={tab === item.id} onClick={() => setTab(item.id)} className={`inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold ${tab === item.id ? "bg-blue-700 text-white" : "text-slate-600 hover:bg-white"}`}><item.icon aria-hidden />{item.label}</button>)}
     </nav>
     {tab === "scheduler" ? <UsaceBox title="Scheduler health"><SchedulerStatus office={office || undefined} /></UsaceBox> : <>
+      {tab === "rate-limits" ? <RateLimitsPanel authToken={auth.token} /> : <>
       <div className="flex flex-wrap items-end gap-3 rounded-lg border border-slate-200 bg-white p-4">
         <label className="text-sm font-semibold">Period<select aria-label="Period" className="mt-1 block rounded border py-2 pl-3 pr-10" value={days} onChange={event => setDays(Number(event.target.value))}><option value={7}>Last 7 days</option><option value={30}>Last 30 days</option><option value={90}>Last 90 days</option></select></label>
         <label className="text-sm font-semibold">Office<select aria-label="Office" className="mt-1 block min-w-36 rounded border py-2 pl-3 pr-10" value={office} onChange={event => chooseOffice(event.target.value)}><option value="">All offices</option>{data?.offices?.map(item => <option key={item}>{item}</option>)}</select></label>
@@ -140,6 +191,7 @@ export function OperationsDashboard() {
             </div>}
           </UsaceBox>
         </div>}
+      </>}
       </>}
     </>}
   </section>;
