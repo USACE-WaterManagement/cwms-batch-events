@@ -56,3 +56,25 @@ code, pre, .font-mono, #repoPath, #shellCommand, #scheduleCron, [aria-label="Job
 
 #root > .gw-grid { grid-template-columns: minmax(0, 1fr); }
 #root > .gw-grid > div { min-width: 0; }
+
+.connectivity-banner {
+  align-items: center;
+  background: #fff4d6;
+  border-bottom: 1px solid #d99b17;
+  color: #5c4100;
+  display: flex;
+  font-size: 0.875rem;
+  gap: 0.5rem;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  text-align: center;
+}
+
+.connectivity-dot {
+  background: #b7791f;
+  border-radius: 50%;
+  display: inline-block;
+  flex: 0 0 auto;
+  height: 0.5rem;
+  width: 0.5rem;
+}

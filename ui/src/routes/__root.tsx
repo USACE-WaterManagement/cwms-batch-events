@@ -17,6 +17,8 @@ import useAdminOffices from "../features/scripts-manager/useAdminOffices";
 import { AboutMenu } from "../components/AboutMenu";
 import { EnvironmentBadge } from "../components/EnvironmentBadge";
 import { useSystemAdmin } from "../features/auth/useSystemAdmin";
+import { ConnectivityBanner } from "../shared/components/ConnectivityStatus";
+import { useConnectivityStatus } from "../shared/components/useConnectivityStatus";
 
 const primaryLinks = [
   { id: "jobs", text: "Job History", href: "/jobs" },
@@ -53,6 +55,7 @@ function repositoryButtonTitle(office: string | undefined, repositoryUrl: string
 function RootShell({ children }: { children: ReactNode }) {
   const location = useLocation();
   const auth = useAuth();
+  const { isOnline } = useConnectivityStatus();
   const systemAdmin = useSystemAdmin();
   const [githubOpen, setGithubOpen] = useState(false);
   const [selectedOffice] = useRememberedOffice([]);
@@ -78,6 +81,8 @@ function RootShell({ children }: { children: ReactNode }) {
       </span>}
       missionText="Support USACE water management teams with shared tools to run district jobs and track their results."
       aboutText="CWMS Batch Events lets authorized district users submit jobs, review job history and logs, and manage registered jobs. For access or job support, contact your district Batch Events administrator."
+      msgBanner={!isOnline ? <ConnectivityBanner /> : undefined}
+      msgBannerPosition="top"
       usaceLinks={[
         ...footerLinks,
         ...(auth.isAuth ? [{ text: "Version and environment", href: "/events/about/version" }] : []),
