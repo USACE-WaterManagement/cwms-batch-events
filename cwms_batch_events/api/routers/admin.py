@@ -1,5 +1,6 @@
 """HQ operations reporting from stored job records, without AWS billing calls."""
 from datetime import datetime, timedelta
+from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -28,6 +29,18 @@ class RateLimitRow(CamelModel):
     job_submission_override: bool
     changed_by: str | None = None
     changed_at: datetime | None = None
+
+
+class RateLimitHistoryRow(CamelModel):
+    id: int
+    office: str
+    action: Literal["created", "updated", "reset", "legacy"]
+    previous_requests_per_minute: int | None = None
+    previous_job_submissions_per_minute: int | None = None
+    new_requests_per_minute: int | None = None
+    new_job_submissions_per_minute: int | None = None
+    changed_by: str
+    changed_at: datetime
 
 
 def require_hq_admin(user: User) -> None:
@@ -67,6 +80,27 @@ def get_rate_limits(
     return rows
 
 
+@router.get("/rate-limits/{office}/history", response_model=list[RateLimitHistoryRow])
+def get_rate_limit_history(
+    office: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+):
+    require_hq_admin(user)
+    office = office.upper()
+    if not office.isascii() or not office.isalpha() or not 3 <= len(office) <= 4:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Office must be 3-4 letters")
+    rows = db.execute(text("""SELECT id, office, action,
+        previous_requests_per_minute, previous_job_submissions_per_minute,
+        new_requests_per_minute, new_job_submissions_per_minute,
+        changed_by, changed_at
+        FROM office_rate_limit_history
+        WHERE office=:office
+        ORDER BY changed_at DESC, id DESC
+        LIMIT 100"""), {"office": office}).mappings().all()
+    return [RateLimitHistoryRow(**row) for row in rows]
+
+
 @router.put("/rate-limits/{office}", response_model=RateLimitRow)
 def update_rate_limit(
     office: str,
@@ -79,6 +113,9 @@ def update_rate_limit(
     office = office.upper()
     if not office.isascii() or not office.isalpha() or not 3 <= len(office) <= 4:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Office must be 3-4 letters")
+    previous = db.execute(text("""SELECT requests_per_minute, job_submissions_per_minute
+        FROM office_rate_limits WHERE office=:office FOR UPDATE"""), {"office": office}).mappings().first()
+    action = "updated" if previous else "created"
     result = db.execute(text("""INSERT INTO office_rate_limits
         (office, requests_per_minute, job_submissions_per_minute, changed_by, changed_at)
         VALUES (:office, :requests, :jobs, :changed_by, CURRENT_TIMESTAMP)
@@ -93,6 +130,17 @@ def update_rate_limit(
         "jobs": payload.job_submissions_per_minute, "changed_by": user.username,
     })
     audit = result.mappings().one()
+    db.execute(text("""INSERT INTO office_rate_limit_history (
+        office, action, previous_requests_per_minute, previous_job_submissions_per_minute,
+        new_requests_per_minute, new_job_submissions_per_minute, changed_by, changed_at
+    ) VALUES (:office, :action, :previous_requests, :previous_jobs,
+        :new_requests, :new_jobs, :changed_by, :changed_at)"""), {
+        "office": office, "action": action,
+        "previous_requests": previous["requests_per_minute"] if previous else None,
+        "previous_jobs": previous["job_submissions_per_minute"] if previous else None,
+        "new_requests": payload.requests_per_minute, "new_jobs": payload.job_submissions_per_minute,
+        "changed_by": audit["changed_by"], "changed_at": audit["changed_at"],
+    })
     db.commit()
     limits = OfficeRateLimit(payload.requests_per_minute, payload.job_submissions_per_minute)
     store = rate_limit_store(request)
@@ -112,7 +160,17 @@ def reset_rate_limit(
 ):
     require_hq_admin(user)
     office = office.upper()
+    previous = db.execute(text("""SELECT requests_per_minute, job_submissions_per_minute,
+        changed_by, changed_at FROM office_rate_limits WHERE office=:office FOR UPDATE"""), {"office": office}).mappings().first()
     db.execute(text("DELETE FROM office_rate_limits WHERE office=:office"), {"office": office})
+    if previous:
+        db.execute(text("""INSERT INTO office_rate_limit_history (
+            office, action, previous_requests_per_minute, previous_job_submissions_per_minute,
+            changed_by, changed_at
+        ) VALUES (:office, 'reset', :previous_requests, :previous_jobs, :changed_by, CURRENT_TIMESTAMP)"""), {
+            "office": office, "previous_requests": previous["requests_per_minute"],
+            "previous_jobs": previous["job_submissions_per_minute"], "changed_by": user.username,
+        })
     db.commit()
     rate_limit_store(request).remove(office)
 

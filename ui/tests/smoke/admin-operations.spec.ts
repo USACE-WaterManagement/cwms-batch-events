@@ -80,12 +80,17 @@ test("rate limit help explains credential counters and process refresh", async (
     const url = new URL(route.request().url());
     if (url.pathname.endsWith("/system-admin")) return route.fulfill({ json: true });
     if (url.pathname.endsWith("/admin/rate-limits")) return route.fulfill({ json: [{ office: "SWT", requestsPerMinute: 120, jobSubmissionsPerMinute: 10, requestOverride: false, jobSubmissionOverride: false, changedBy: null, changedAt: null }] });
+    if (url.pathname.endsWith("/admin/rate-limits/SWT/history")) return route.fulfill({ json: [{ id: 1, office: "SWT", action: "created", previousRequestsPerMinute: null, previousJobSubmissionsPerMinute: null, newRequestsPerMinute: 120, newJobSubmissionsPerMinute: 10, changedBy: "test-user", changedAt: "2026-09-27T20:00:00Z" }] });
     return route.fulfill({ json: summary });
   });
   await page.goto("/events/admin");
   await page.getByRole("button", { name: "Login", exact: true }).first().click();
   await page.getByRole("button", { name: "Rate limits", exact: true }).click();
-  await expect(page.getByRole("table")).toContainText("Default");
+  await expect(page.getByText("SWT", { exact: true })).toBeVisible();
+  await expect(page.getByText("Default", { exact: true }).first()).toBeVisible();
+  await page.locator("summary").click();
+  await expect(page.getByRole("heading", { name: "Change history" })).toBeVisible();
+  await expect(page.getByText("test-user", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "How rate limits are applied", exact: true }).click();
   await expect(page.getByRole("dialog")).toContainText("authenticated bearer credential");
   await expect(page.getByRole("dialog")).toContainText("active counters are kept in memory");

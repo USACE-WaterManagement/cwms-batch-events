@@ -21,15 +21,55 @@ type RateLimitRow = {
   changedBy: string | null;
   changedAt: string | null;
 };
+type RateLimitHistoryRow = {
+  id: number;
+  office: string;
+  action: "created" | "updated" | "reset" | "legacy";
+  previousRequestsPerMinute: number | null;
+  previousJobSubmissionsPerMinute: number | null;
+  newRequestsPerMinute: number | null;
+  newJobSubmissionsPerMinute: number | null;
+  changedBy: string;
+  changedAt: string;
+};
 const colors = ["#1d4ed8", "#0f766e", "#9333ea", "#c2410c", "#be123c", "#0369a1", "#4d7c0f", "#475569"];
 const number = (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 1 });
 const tabs = [{ id: "overview", label: "Overview", icon: MdDashboard }, { id: "operations", label: "Operations", icon: MdWarningAmber },
   { id: "usage", label: "Usage", icon: MdPieChart }, { id: "scheduler", label: "Scheduler", icon: MdSchedule },
   { id: "rate-limits", label: "Rate limits", icon: MdSpeed }] as const;
 
+function RateLimitHistory({ office, authToken, open }: { office: string; authToken?: string; open: boolean }) {
+  const query = useQuery<RateLimitHistoryRow[]>({
+    queryKey: ["adminRateLimitHistory", office],
+    enabled: open,
+    queryFn: async () => (await fetchWithAuth(`/api/admin/rate-limits/${encodeURIComponent(office)}/history`, {}, authToken)).json(),
+  });
+  if (!open) return null;
+  if (query.isPending) return <p className="mt-4 text-sm text-slate-600">Loading change history…</p>;
+  if (query.isError) return <p role="alert" className="mt-4 text-sm text-red-800">Change history could not be loaded.</p>;
+  return <div className="mt-4">
+    <h3 className="font-semibold">Change history</h3>
+    <div className="mt-2 max-h-64 overflow-y-auto rounded border border-slate-200 [scrollbar-gutter:stable]">
+      <table className="w-full min-w-[42rem] text-left text-sm">
+        <caption className="sr-only">Rate-limit change history for {office}</caption>
+        <thead className="sticky top-0 border-b bg-slate-50 text-slate-600"><tr><th className="p-2">Action</th><th className="p-2">Previous</th><th className="p-2">New</th><th className="p-2">Changed by</th><th className="p-2">Changed at</th></tr></thead>
+        <tbody>{query.data?.map(entry => <tr key={entry.id} className="border-b border-slate-100 align-top">
+          <td className="p-2 font-semibold capitalize">{entry.action}</td>
+          <td className="p-2">{entry.previousRequestsPerMinute == null ? "—" : `${entry.previousRequestsPerMinute} requests, ${entry.previousJobSubmissionsPerMinute} jobs`}</td>
+          <td className="p-2">{entry.newRequestsPerMinute == null ? "Defaults" : `${entry.newRequestsPerMinute} requests, ${entry.newJobSubmissionsPerMinute} jobs`}</td>
+          <td className="p-2 whitespace-nowrap">{entry.changedBy}</td>
+          <td className="p-2 whitespace-nowrap">{new Date(entry.changedAt).toLocaleString()}</td>
+        </tr>)}</tbody>
+      </table>
+      {!query.data?.length && <p className="p-3 text-slate-500">No recorded changes.</p>}
+    </div>
+  </div>;
+}
+
 function RateLimitsPanel({ authToken }: { authToken?: string }) {
   const queryClient = useQueryClient();
   const [drafts, setDrafts] = useState<Record<string, { requestsPerMinute: string; jobSubmissionsPerMinute: string }>>({});
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [helpOpen, setHelpOpen] = useState(false);
   const query = useQuery<RateLimitRow[]>({
     queryKey: ["adminRateLimits"],
@@ -59,18 +99,15 @@ function RateLimitsPanel({ authToken }: { authToken?: string }) {
   <UsaceBox title="Office rate limits">
     <button type="button" className="action-link mb-4" onClick={() => setHelpOpen(true)}><MdHelpOutline aria-hidden />How rate limits are applied</button>
     <p className="mb-4 text-sm text-slate-600">Defaults are 120 API requests and 10 job submissions per minute. Set a higher or lower value for an office when its workload requires it. Scheduled jobs still have a separate five-minute minimum interval.</p>
-    <div className="overflow-x-auto"><table className="w-full text-left text-sm">
-      <caption className="sr-only">Per-office API rate limit overrides</caption>
-      <thead className="border-b bg-slate-50 text-slate-600"><tr><th className="p-3">Office</th><th className="p-3">Requests/min</th><th className="p-3">Jobs/min</th><th className="p-3">Changed by</th><th className="p-3">Changed at</th><th className="p-3">Actions</th></tr></thead>
-      <tbody>{query.data?.map(row => { const value = valueFor(row); return <tr key={row.office} className="border-b border-slate-100">
-        <td className="p-3 font-semibold">{row.office}</td>
-        <td className="p-3"><label className="sr-only" htmlFor={`requests-${row.office}`}>Requests per minute for {row.office}</label><input id={`requests-${row.office}`} type="number" min="1" max="10000" className="w-28 rounded border p-2" value={value.requestsPerMinute} onChange={event => setDrafts(previous => ({ ...previous, [row.office]: { ...value, requestsPerMinute: event.target.value } }))} /></td>
-        <td className="p-3"><label className="sr-only" htmlFor={`jobs-${row.office}`}>Job submissions per minute for {row.office}</label><input id={`jobs-${row.office}`} type="number" min="1" max="1000" className="w-28 rounded border p-2" value={value.jobSubmissionsPerMinute} onChange={event => setDrafts(previous => ({ ...previous, [row.office]: { ...value, jobSubmissionsPerMinute: event.target.value } }))} /></td>
-        <td className="p-3 whitespace-nowrap">{row.changedBy || "Default"}</td>
-        <td className="p-3 whitespace-nowrap">{row.changedAt ? new Date(row.changedAt).toLocaleString() : "Default"}</td>
-        <td className="p-3"><div className="flex flex-wrap gap-2"><button type="button" className="action-link" onClick={() => void save(row)}>Save</button>{(row.requestOverride || row.jobSubmissionOverride) && <button type="button" className="action-link" onClick={() => void reset(row)}>Use defaults</button>}</div></td>
-      </tr>; })}</tbody>
-    </table>{!query.data?.length && <p className="p-4 text-slate-500">No offices have been registered yet.</p>}</div>
+    <div className="space-y-2" aria-label="Per-office API rate limit overrides">{query.data?.map(row => { const value = valueFor(row); const isOpen = Boolean(expanded[row.office]); return <details key={row.office} open={isOpen} onToggle={event => setExpanded(previous => ({ ...previous, [row.office]: event.currentTarget.open }))} className="rounded border border-slate-200 bg-white shadow-sm">
+      <summary className="grid cursor-pointer list-none gap-2 p-3 pr-10 marker:hidden focus-visible:outline-2 sm:grid-cols-[minmax(5rem,1fr)_minmax(8rem,1.2fr)_minmax(7rem,1.2fr)_minmax(8rem,1.2fr)_minmax(12rem,1.5fr)] [&::-webkit-details-marker]:hidden">
+        <span className="font-semibold">{row.office}</span><span><span className="text-slate-500 sm:hidden">Requests/min: </span>{row.requestsPerMinute}</span><span><span className="text-slate-500 sm:hidden">Jobs/min: </span>{row.jobSubmissionsPerMinute}</span><span>{row.changedBy || "Default"}</span><span>{row.changedAt ? new Date(row.changedAt).toLocaleString() : "Default"}</span>
+      </summary>
+      <div className="border-t border-slate-200 bg-slate-50 p-3">
+        <div className="flex flex-wrap items-end gap-4"><label className="text-sm font-semibold">Requests/min<input id={`requests-${row.office}`} type="number" min="1" max="10000" className="mt-1 block w-28 rounded border p-2 font-normal" value={value.requestsPerMinute} onChange={event => setDrafts(previous => ({ ...previous, [row.office]: { ...value, requestsPerMinute: event.target.value } }))} /></label><label className="text-sm font-semibold">Jobs/min<input id={`jobs-${row.office}`} type="number" min="1" max="1000" className="mt-1 block w-28 rounded border p-2 font-normal" value={value.jobSubmissionsPerMinute} onChange={event => setDrafts(previous => ({ ...previous, [row.office]: { ...value, jobSubmissionsPerMinute: event.target.value } }))} /></label><div className="flex gap-2"><button type="button" className="action-link" onClick={() => void save(row)}>Save</button>{(row.requestOverride || row.jobSubmissionOverride) && <button type="button" className="action-link" onClick={() => void reset(row)}>Use defaults</button>}</div></div>
+        <RateLimitHistory office={row.office} authToken={authToken} open={isOpen} />
+      </div>
+    </details>; })}{!query.data?.length && <p className="p-4 text-slate-500">No offices have been registered yet.</p>}</div>
     <p className="mt-4 text-xs text-slate-500">Limits are applied at each API process. Deployments with multiple API workers should also enforce an equivalent limit at the gateway. Health checks and internal service callbacks use separate access controls.</p>
   </UsaceBox>
   <Modal opened={helpOpen} onClose={() => setHelpOpen(false)} dialogTitle="How API rate limits are applied"

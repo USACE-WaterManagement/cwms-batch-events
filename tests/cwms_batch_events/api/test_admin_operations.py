@@ -1,5 +1,6 @@
 import pytest
 from datetime import datetime, timezone
+from unittest.mock import MagicMock
 
 from cwms_batch_events.api.main import app
 from cwms_batch_events.core.rate_limit import OfficeRateLimit, OfficeRateLimitStore
@@ -31,9 +32,13 @@ def test_task_sort_options_are_bounded(client, user, db_session, query):
 def test_hq_admin_can_save_and_reset_office_rate_limits(client, user, db_session, monkeypatch):
     user.roles = {"HQ": ["Data Acquisition Mgr"]}
     db_session.scalars.return_value = ["SWT"]
-    db_session.execute.return_value.mappings.return_value.one.return_value = {
+    previous = MagicMock()
+    previous.mappings.return_value.first.return_value = None
+    audit = MagicMock()
+    audit.mappings.return_value.one.return_value = {
         "changed_by": "test-user", "changed_at": datetime(2026, 9, 27, tzinfo=timezone.utc),
     }
+    db_session.execute.side_effect = [previous, audit, MagicMock(), previous, MagicMock()]
     store = OfficeRateLimitStore(OfficeRateLimit(120, 10), session_factory=lambda: db_session)
     monkeypatch.setattr(store, "_refresh_if_due", lambda force=False: None)
     monkeypatch.setattr(app.state, "rate_limit_store", store)
@@ -53,7 +58,7 @@ def test_hq_admin_can_save_and_reset_office_rate_limits(client, user, db_session
     assert updated.json()["changedBy"] == user.username
     assert updated.json()["changedAt"] == "2026-09-27T00:00:00Z"
     assert store.get(["SWT"]) == OfficeRateLimit(240, 40)
-    assert db_session.execute.call_args_list[0].args[1]["changed_by"] == user.username
+    assert any(call.args[1].get("changed_by") == user.username for call in db_session.execute.call_args_list if len(call.args) > 1)
     db_session.commit.assert_called_once()
 
     reset = client.delete("/admin/rate-limits/SWT")
