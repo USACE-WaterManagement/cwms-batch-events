@@ -25,6 +25,7 @@ from cwms_batch_events.core.log_diagnostics import configure_log_diagnostics
 from cwms_batch_events.core.logging_config import configure_logging
 from cwms_batch_events.api.request_logging import RequestLoggingMiddleware
 from cwms_batch_events.core.maintenance import lifespan
+from cwms_batch_events.core.rate_limit import RateLimitMiddleware
 
 configure_logging(api=True)
 configure_log_diagnostics()
@@ -43,6 +44,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(RequestLoggingMiddleware)
+app.add_middleware(
+    RateLimitMiddleware,
+    requests_per_minute=settings.rate_limit_requests_per_minute,
+    job_submissions_per_minute=settings.rate_limit_job_submissions_per_minute,
+    documentation_url=settings.rate_limit_documentation_url,
+)
 
 app.include_router(health.router)
 app.include_router(about.router)

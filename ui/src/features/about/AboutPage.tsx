@@ -193,6 +193,54 @@ const ControlsPane = ({ user }: { user?: ApplicationInfo["user"] }) => {
   </section>;
 };
 
+const RateLimitsPane = () => (
+  <section aria-labelledby="rate-limits-heading" className="space-y-6 py-6">
+    <div>
+      <H2 id="rate-limits-heading">API rate limits</H2>
+      <Text>
+        Batch Events limits requests by authenticated credential to protect shared
+        office execution capacity and avoid accidental submission storms.
+      </Text>
+    </div>
+    <div className="grid gap-4 md:grid-cols-2">
+      <Card className="p-6">
+        <H3>General API requests</H3>
+        <Text className="mt-2">
+          The default limit is 120 requests per minute for a credential.
+          Job history, status refreshes, and other API reads count toward this limit.
+        </Text>
+      </Card>
+      <Card className="p-6">
+        <H3>Job submissions</H3>
+        <Text className="mt-2">
+          The default limit is 20 job submissions per minute for a credential.
+          Submissions have a separate limit because they consume execution resources.
+        </Text>
+      </Card>
+    </div>
+    <Card className="border-blue-200 bg-blue-50 p-6">
+      <H3>When a limit is reached</H3>
+      <Text className="mt-2">
+        The API returns HTTP 429 with a Retry-After header, the URL that was
+        limited, and this documentation link. Wait for the indicated period before
+        retrying. Client applications should honor Retry-After and avoid tight retry loops.
+      </Text>
+      <Text className="mt-3">
+        If an office has a documented operational need for more capacity, an
+        administrator can request increased limits for that office.
+      </Text>
+    </Card>
+    <Card className="p-6">
+      <H3>Scope</H3>
+      <Text className="mt-2">
+        Limits are applied at the API process and should also be enforced at the
+        deployment gateway when multiple API workers share an environment.
+        Health checks and internal service callbacks use separate access controls.
+      </Text>
+    </Card>
+  </section>
+);
+
 type Callout = { label: string; style: CSSProperties };
 const OnboardingScreenshot = ({
   src,
@@ -366,7 +414,7 @@ const OnboardingPane = ({ user }: { user?: ApplicationInfo["user"] }) => {
   </section>;
 };
 
-export type AboutTab = "about" | "controls" | "onboarding" | "version";
+export type AboutTab = "about" | "controls" | "onboarding" | "rate-limits" | "version";
 
 export const AboutPage = ({ initialTab = "about" }: { initialTab?: AboutTab }) => {
   const auth = useAuth();
@@ -381,6 +429,7 @@ export const AboutPage = ({ initialTab = "about" }: { initialTab?: AboutTab }) =
     about: 0,
     controls: 1,
     onboarding: 2,
+    "rate-limits": 3,
     version: 2,
   }[initialTab];
   const defaultTabIndex =
@@ -389,6 +438,11 @@ export const AboutPage = ({ initialTab = "about" }: { initialTab?: AboutTab }) =
   if (initialTab === "onboarding") return <div className="mx-auto max-w-6xl">
     <H1>Onboarding</H1>
     <OnboardingPane user={user} />
+  </div>;
+
+  if (initialTab === "rate-limits") return <div className="mx-auto max-w-6xl">
+    <H1>Rate limits</H1>
+    <RateLimitsPane />
   </div>;
 
   return <div className="mx-auto max-w-6xl">

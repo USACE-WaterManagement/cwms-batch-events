@@ -30,6 +30,7 @@ const batchRepository = "https://github.com/USACE-WaterManagement/cwms-batch-eve
 const footerLinks = [
   { text: "About Batch Events", href: "/events/about" },
   { text: "Controls and access", href: "/events/about/controls" },
+  { text: "API rate limits", href: "/events/about/rate-limits" },
   { text: "Onboarding", href: "/events/help/onboarding" },
   { text: "Script setup", href: "/events/help/script-files" },
   { text: "Report an issue", href: `${batchRepository}/issues` },

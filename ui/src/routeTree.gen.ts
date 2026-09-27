@@ -17,6 +17,7 @@ import { Route as ScriptsManagerRouteImport } from './routes/scripts-manager'
 import { Route as SubmitRouteImport } from './routes/submit'
 import { Route as AboutControlsRouteImport } from './routes/about_.controls'
 import { Route as AboutOnboardingRouteImport } from './routes/about_.onboarding'
+import { Route as AboutRateLimitsRouteImport } from './routes/about_.rate-limits'
 import { Route as AboutScriptFilesRouteImport } from './routes/about_.script-files'
 import { Route as AboutVersionRouteImport } from './routes/about_.version'
 import { Route as HelpOnboardingRouteImport } from './routes/help_.onboarding'
@@ -65,6 +66,11 @@ const AboutOnboardingRoute = AboutOnboardingRouteImport.update({
   path: '/about/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AboutRateLimitsRoute = AboutRateLimitsRouteImport.update({
+  id: '/about_/rate-limits',
+  path: '/about/rate-limits',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AboutScriptFilesRoute = AboutScriptFilesRouteImport.update({
   id: '/about_/script-files',
   path: '/about/script-files',
@@ -110,6 +116,7 @@ export interface FileRoutesByFullPath {
   '/submit': typeof SubmitRoute
   '/about/controls': typeof AboutControlsRoute
   '/about/onboarding': typeof AboutOnboardingRoute
+  '/about/rate-limits': typeof AboutRateLimitsRoute
   '/about/script-files': typeof AboutScriptFilesRoute
   '/about/version': typeof AboutVersionRoute
   '/help/onboarding': typeof HelpOnboardingRoute
@@ -127,6 +134,7 @@ export interface FileRoutesByTo {
   '/submit': typeof SubmitRoute
   '/about/controls': typeof AboutControlsRoute
   '/about/onboarding': typeof AboutOnboardingRoute
+  '/about/rate-limits': typeof AboutRateLimitsRoute
   '/about/script-files': typeof AboutScriptFilesRoute
   '/about/version': typeof AboutVersionRoute
   '/help/onboarding': typeof HelpOnboardingRoute
@@ -145,6 +153,7 @@ export interface FileRoutesById {
   '/submit': typeof SubmitRoute
   '/about_/controls': typeof AboutControlsRoute
   '/about_/onboarding': typeof AboutOnboardingRoute
+  '/about_/rate-limits': typeof AboutRateLimitsRoute
   '/about_/script-files': typeof AboutScriptFilesRoute
   '/about_/version': typeof AboutVersionRoute
   '/help_/onboarding': typeof HelpOnboardingRoute
@@ -164,6 +173,7 @@ export interface FileRouteTypes {
     | '/submit'
     | '/about/controls'
     | '/about/onboarding'
+    | '/about/rate-limits'
     | '/about/script-files'
     | '/about/version'
     | '/help/onboarding'
@@ -181,6 +191,7 @@ export interface FileRouteTypes {
     | '/submit'
     | '/about/controls'
     | '/about/onboarding'
+    | '/about/rate-limits'
     | '/about/script-files'
     | '/about/version'
     | '/help/onboarding'
@@ -198,6 +209,7 @@ export interface FileRouteTypes {
     | '/submit'
     | '/about_/controls'
     | '/about_/onboarding'
+    | '/about_/rate-limits'
     | '/about_/script-files'
     | '/about_/version'
     | '/help_/onboarding'
@@ -216,6 +228,7 @@ export interface RootRouteChildren {
   SubmitRoute: typeof SubmitRoute
   AboutControlsRoute: typeof AboutControlsRoute
   AboutOnboardingRoute: typeof AboutOnboardingRoute
+  AboutRateLimitsRoute: typeof AboutRateLimitsRoute
   AboutScriptFilesRoute: typeof AboutScriptFilesRoute
   AboutVersionRoute: typeof AboutVersionRoute
   HelpOnboardingRoute: typeof HelpOnboardingRoute
@@ -283,6 +296,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AboutOnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/about_/rate-limits': {
+      id: '/about_/rate-limits'
+      path: '/about/rate-limits'
+      fullPath: '/about/rate-limits'
+      preLoaderRoute: typeof AboutRateLimitsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/about_/script-files': {
       id: '/about_/script-files'
       path: '/about/script-files'
@@ -344,6 +364,7 @@ const rootRouteChildren: RootRouteChildren = {
   SubmitRoute: SubmitRoute,
   AboutControlsRoute: AboutControlsRoute,
   AboutOnboardingRoute: AboutOnboardingRoute,
+  AboutRateLimitsRoute: AboutRateLimitsRoute,
   AboutScriptFilesRoute: AboutScriptFilesRoute,
   AboutVersionRoute: AboutVersionRoute,
   HelpOnboardingRoute: HelpOnboardingRoute,
