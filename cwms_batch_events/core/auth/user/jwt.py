@@ -54,7 +54,12 @@ def verify_jwt(token: str) -> dict:
 def verify_jwt_by_api(token: str) -> dict:
     jwks = PyJWKClient(KEYCLOAK_JWKS)
     key = jwks.get_signing_key_from_jwt(token)
-    payload = jwt.decode(token, key, ["RS256"])
+    payload = jwt.decode(
+        token,
+        key,
+        ["RS256"],
+        options={"require": ["exp"]},
+    )
     return payload
 
 
@@ -72,6 +77,6 @@ def verify_jwt_by_saved_key(token: str) -> dict:
         key,
         algorithms=["RS256"],
         issuer=ISSUER[auth_environment],
-        options={"verify_aud": False},
+        options={"verify_aud": False, "require": ["exp"]},
     )
     return payload
