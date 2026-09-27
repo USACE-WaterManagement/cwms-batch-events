@@ -116,6 +116,16 @@ def test_get_job_by_id_returns_job(client, job_db):
     job_db.get_job_by_id.assert_called_once_with(job.id)
 
 
+def test_get_job_by_id_matches_user_office_case_insensitively(client, job_db, user):
+    user.offices = ["swt"]
+    job = make_job_record(office="SWT")
+    job_db.get_job_by_id.return_value = job
+
+    response = client.get(f"/jobs/{job.id}")
+
+    assert response.status_code == 200
+
+
 def test_get_job_by_id_returns_404_when_missing(client, job_db):
     job_id = str(uuid4())
     job_db.get_job_by_id.return_value = None

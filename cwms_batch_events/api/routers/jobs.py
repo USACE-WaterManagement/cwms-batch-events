@@ -32,7 +32,7 @@ def get_office_job(job_id: UUID, user: User, job_db: JobDatabase) -> JobRecord:
     job = job_db.get_job_by_id(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    if job.office not in user.offices:
+    if job.office.casefold() not in {office.casefold() for office in user.offices}:
         # Share only the office needed to request access, never job metadata.
         raise HTTPException(status_code=403, detail={"code": "office_access_required", "office": job.office})
     return job
