@@ -49,7 +49,8 @@ function readDraft(key: string, fallback: ScriptFormData): ScriptFormData {
     const parsed: unknown = JSON.parse(stored);
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return fallback;
     return { ...fallback, ...parsed } as ScriptFormData;
-  } catch {
+  } catch (error) {
+    console.warn("Unable to restore the saved script form draft.", error);
     return fallback;
   }
 }
@@ -57,16 +58,16 @@ function readDraft(key: string, fallback: ScriptFormData): ScriptFormData {
 function writeDraft(key: string, value: ScriptFormData): void {
   try {
     window.localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    // Browser storage may be unavailable or full. The form remains usable.
+  } catch (error) {
+    console.warn("Unable to save the script form draft in browser storage.", error);
   }
 }
 
 function removeDraft(key: string): void {
   try {
     window.localStorage.removeItem(key);
-  } catch {
-    // Ignore unavailable browser storage when clearing the form.
+  } catch (error) {
+    console.warn("Unable to clear the saved script form draft.", error);
   }
 }
 
@@ -110,7 +111,8 @@ export const ScriptForm = ({
     if (typeof window === "undefined") return false;
     try {
       return window.localStorage.getItem(storageKey) !== null;
-    } catch {
+    } catch (error) {
+      console.warn("Unable to check for a saved script form draft.", error);
       return false;
     }
   });
