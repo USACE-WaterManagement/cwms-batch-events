@@ -4,6 +4,7 @@ import logging
 import time
 from collections import defaultdict, deque
 from dataclasses import dataclass
+from datetime import datetime
 from threading import Lock
 from uuid import UUID
 
@@ -26,13 +27,20 @@ class OfficeRateLimit:
     job_submissions_per_minute: int
 
 
+@dataclass(frozen=True)
+class OfficeRateLimitRecord:
+    limits: OfficeRateLimit
+    changed_by: str | None = None
+    changed_at: datetime | None = None
+
+
 class OfficeRateLimitStore:
     """Persisted office overrides with a short refresh window for API workers."""
 
     def __init__(self, defaults: OfficeRateLimit, session_factory=create_session):
         self.defaults = defaults
         self.session_factory = session_factory
-        self._overrides: dict[str, OfficeRateLimit] = {}
+        self._overrides: dict[str, OfficeRateLimitRecord] = {}
         self._last_refresh = 0.0
         self._lock = Lock()
 
@@ -41,21 +49,30 @@ class OfficeRateLimitStore:
             return self.defaults
         self._refresh_if_due()
         with self._lock:
-            limits = [self._overrides.get(office.upper(), self.defaults) for office in offices]
+            limits = [
+                self._overrides.get(office.upper(), OfficeRateLimitRecord(self.defaults)).limits
+                for office in offices
+            ]
         return OfficeRateLimit(
             requests_per_minute=min(limit.requests_per_minute for limit in limits),
             job_submissions_per_minute=min(limit.job_submissions_per_minute for limit in limits),
         )
 
-    def set(self, office: str, limits: OfficeRateLimit) -> None:
+    def set(
+        self,
+        office: str,
+        limits: OfficeRateLimit,
+        changed_by: str | None = None,
+        changed_at: datetime | None = None,
+    ) -> None:
         with self._lock:
-            self._overrides[office.upper()] = limits
+            self._overrides[office.upper()] = OfficeRateLimitRecord(limits, changed_by, changed_at)
 
     def remove(self, office: str) -> None:
         with self._lock:
             self._overrides.pop(office.upper(), None)
 
-    def snapshot(self) -> dict[str, OfficeRateLimit]:
+    def snapshot(self) -> dict[str, OfficeRateLimitRecord]:
         self._refresh_if_due(force=True)
         with self._lock:
             return dict(self._overrides)
@@ -80,10 +97,14 @@ class OfficeRateLimitStore:
             self._last_refresh = now
         try:
             with self.session_factory() as db:
-                rows = db.execute(text("""SELECT office, requests_per_minute, job_submissions_per_minute
+                rows = db.execute(text("""SELECT office, requests_per_minute, job_submissions_per_minute,
+                    changed_by, changed_at
                     FROM office_rate_limits""")).mappings().all()
             overrides = {
-                row["office"]: OfficeRateLimit(row["requests_per_minute"], row["job_submissions_per_minute"])
+                row["office"]: OfficeRateLimitRecord(
+                    OfficeRateLimit(row["requests_per_minute"], row["job_submissions_per_minute"]),
+                    row["changed_by"], row["changed_at"],
+                )
                 for row in rows
             }
             with self._lock:

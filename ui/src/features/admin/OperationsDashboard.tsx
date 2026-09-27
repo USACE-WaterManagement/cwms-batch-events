@@ -18,6 +18,8 @@ type RateLimitRow = {
   jobSubmissionsPerMinute: number;
   requestOverride: boolean;
   jobSubmissionOverride: boolean;
+  changedBy: string | null;
+  changedAt: string | null;
 };
 const colors = ["#1d4ed8", "#0f766e", "#9333ea", "#c2410c", "#be123c", "#0369a1", "#4d7c0f", "#475569"];
 const number = (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 1 });
@@ -56,11 +58,13 @@ function RateLimitsPanel({ authToken }: { authToken?: string }) {
     <p className="mb-4 text-sm text-slate-600">Defaults are 120 API requests and 10 job submissions per minute. Set a higher or lower value for an office when its workload requires it. Scheduled jobs still have a separate five-minute minimum interval.</p>
     <div className="overflow-x-auto"><table className="w-full text-left text-sm">
       <caption className="sr-only">Per-office API rate limit overrides</caption>
-      <thead className="border-b bg-slate-50 text-slate-600"><tr><th className="p-3">Office</th><th className="p-3">Requests/min</th><th className="p-3">Jobs/min</th><th className="p-3">Actions</th></tr></thead>
+      <thead className="border-b bg-slate-50 text-slate-600"><tr><th className="p-3">Office</th><th className="p-3">Requests/min</th><th className="p-3">Jobs/min</th><th className="p-3">Changed by</th><th className="p-3">Changed at</th><th className="p-3">Actions</th></tr></thead>
       <tbody>{query.data?.map(row => { const value = valueFor(row); return <tr key={row.office} className="border-b border-slate-100">
         <td className="p-3 font-semibold">{row.office}</td>
         <td className="p-3"><label className="sr-only" htmlFor={`requests-${row.office}`}>Requests per minute for {row.office}</label><input id={`requests-${row.office}`} type="number" min="1" max="10000" className="w-28 rounded border p-2" value={value.requestsPerMinute} onChange={event => setDrafts(previous => ({ ...previous, [row.office]: { ...value, requestsPerMinute: event.target.value } }))} /></td>
         <td className="p-3"><label className="sr-only" htmlFor={`jobs-${row.office}`}>Job submissions per minute for {row.office}</label><input id={`jobs-${row.office}`} type="number" min="1" max="1000" className="w-28 rounded border p-2" value={value.jobSubmissionsPerMinute} onChange={event => setDrafts(previous => ({ ...previous, [row.office]: { ...value, jobSubmissionsPerMinute: event.target.value } }))} /></td>
+        <td className="p-3 whitespace-nowrap">{row.changedBy || "Default"}</td>
+        <td className="p-3 whitespace-nowrap">{row.changedAt ? new Date(row.changedAt).toLocaleString() : "Default"}</td>
         <td className="p-3"><div className="flex flex-wrap gap-2"><button type="button" className="action-link" onClick={() => void save(row)}>Save</button>{(row.requestOverride || row.jobSubmissionOverride) && <button type="button" className="action-link" onClick={() => void reset(row)}>Use defaults</button>}</div></td>
       </tr>; })}</tbody>
     </table>{!query.data?.length && <p className="p-4 text-slate-500">No offices have been registered yet.</p>}</div>

@@ -1,4 +1,5 @@
 import pytest
+from datetime import datetime, timezone
 
 from cwms_batch_events.api.main import app
 from cwms_batch_events.core.rate_limit import OfficeRateLimit, OfficeRateLimitStore
@@ -30,15 +31,29 @@ def test_task_sort_options_are_bounded(client, user, db_session, query):
 def test_hq_admin_can_save_and_reset_office_rate_limits(client, user, db_session, monkeypatch):
     user.roles = {"HQ": ["Data Acquisition Mgr"]}
     db_session.scalars.return_value = ["SWT"]
+    db_session.execute.return_value.mappings.return_value.one.return_value = {
+        "changed_by": "test-user", "changed_at": datetime(2026, 9, 27, tzinfo=timezone.utc),
+    }
     store = OfficeRateLimitStore(OfficeRateLimit(120, 10), session_factory=lambda: db_session)
     monkeypatch.setattr(store, "_refresh_if_due", lambda force=False: None)
     monkeypatch.setattr(app.state, "rate_limit_store", store)
 
-    updated = client.put("/admin/rate-limits/SWT", json={"requestsPerMinute": 240, "jobSubmissionsPerMinute": 40})
+    updated = client.put(
+        "/admin/rate-limits/SWT",
+        json={
+            "requestsPerMinute": 240,
+            "jobSubmissionsPerMinute": 40,
+            "changedBy": "spoofed-user",
+            "changedAt": "2000-01-01T00:00:00Z",
+        },
+    )
 
     assert updated.status_code == 200
     assert updated.json()["requestsPerMinute"] == 240
+    assert updated.json()["changedBy"] == user.username
+    assert updated.json()["changedAt"] == "2026-09-27T00:00:00Z"
     assert store.get(["SWT"]) == OfficeRateLimit(240, 40)
+    assert db_session.execute.call_args_list[0].args[1]["changed_by"] == user.username
     db_session.commit.assert_called_once()
 
     reset = client.delete("/admin/rate-limits/SWT")

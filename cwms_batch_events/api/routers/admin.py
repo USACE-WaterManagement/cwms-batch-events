@@ -26,6 +26,8 @@ class RateLimitRow(CamelModel):
     job_submissions_per_minute: int
     request_override: bool
     job_submission_override: bool
+    changed_by: str | None = None
+    changed_at: datetime | None = None
 
 
 def require_hq_admin(user: User) -> None:
@@ -59,6 +61,8 @@ def get_rate_limits(
             job_submissions_per_minute=limits.job_submissions_per_minute,
             request_override=override is not None,
             job_submission_override=override is not None,
+            changed_by=override.changed_by if override else None,
+            changed_at=override.changed_at if override else None,
         ))
     return rows
 
@@ -75,21 +79,28 @@ def update_rate_limit(
     office = office.upper()
     if not office.isascii() or not office.isalpha() or not 3 <= len(office) <= 4:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Office must be 3-4 letters")
-    db.execute(text("""INSERT INTO office_rate_limits
-        (office, requests_per_minute, job_submissions_per_minute)
-        VALUES (:office, :requests, :jobs)
+    result = db.execute(text("""INSERT INTO office_rate_limits
+        (office, requests_per_minute, job_submissions_per_minute, changed_by, changed_at)
+        VALUES (:office, :requests, :jobs, :changed_by, CURRENT_TIMESTAMP)
         ON CONFLICT (office) DO UPDATE SET
           requests_per_minute=EXCLUDED.requests_per_minute,
           job_submissions_per_minute=EXCLUDED.job_submissions_per_minute,
-          updated_time=CURRENT_TIMESTAMP"""), {
+          changed_by=EXCLUDED.changed_by,
+          changed_at=CURRENT_TIMESTAMP,
+          updated_time=CURRENT_TIMESTAMP
+        RETURNING changed_by, changed_at"""), {
         "office": office, "requests": payload.requests_per_minute,
-        "jobs": payload.job_submissions_per_minute,
+        "jobs": payload.job_submissions_per_minute, "changed_by": user.username,
     })
+    audit = result.mappings().one()
     db.commit()
     limits = OfficeRateLimit(payload.requests_per_minute, payload.job_submissions_per_minute)
     store = rate_limit_store(request)
-    store.set(office, limits)
-    return RateLimitRow(office=office, **payload.model_dump(), request_override=True, job_submission_override=True)
+    store.set(office, limits, audit["changed_by"], audit["changed_at"])
+    return RateLimitRow(
+        office=office, **payload.model_dump(), request_override=True,
+        job_submission_override=True, changed_by=audit["changed_by"], changed_at=audit["changed_at"],
+    )
 
 
 @router.delete("/rate-limits/{office}", status_code=204)
