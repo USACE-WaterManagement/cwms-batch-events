@@ -228,7 +228,7 @@ const RateLimitsPane = () => (
         retrying. Client applications should honor Retry-After and avoid tight retry loops.
       </Text>
       <Text className="mt-3">
-        If an office has a documented operational need for more capacity, an
+        If an office has a documented operational need for more capacity, its
         administrators can request increased limits for that office. National
         Team members can set office-specific request and job limits on the{" "}
         <Link to="/admin" className="font-medium text-blue-700 underline">Batch Admin page</Link>.
