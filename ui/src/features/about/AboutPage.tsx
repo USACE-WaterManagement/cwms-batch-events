@@ -243,6 +243,29 @@ const RateLimitsPane = () => (
         defaults.
       </Text>
     </Card>
+    <Card className="border-amber-200 bg-amber-50 p-6 text-amber-950">
+      <H3>Credential examples</H3>
+      <Text className="mt-2">
+        Imagine the same user has access to SWT and uses both sign-in methods
+        below. The credentials are different, so their counters are different.
+      </Text>
+      <div className="mt-4 grid gap-3 md:grid-cols-2">
+        <div className="rounded border border-amber-300 bg-white p-4">
+          <p className="font-semibold">CAC sign-in through CDA and Keycloak</p>
+          <p className="mt-1 text-sm">The user submits up to 10 jobs per minute to SWT using the current Keycloak bearer token.</p>
+        </div>
+        <div className="rounded border border-amber-300 bg-white p-4">
+          <p className="font-semibold">API key registered for SWT</p>
+          <p className="mt-1 text-sm">The same user can submit up to another 10 jobs per minute to SWT using the API key. This is a separate credential counter.</p>
+        </div>
+      </div>
+      <Text className="mt-4">
+        In this example, the same person and office could submit up to 20 jobs
+        in the process-local counters during one minute, subject to the API
+        key&apos;s CDA authorization and any deployment gateway limit. Sharing
+        the API key shares its counter with everyone using that key.
+      </Text>
+    </Card>
   </section>
 );
 
