@@ -1,5 +1,6 @@
 import hashlib
 import json
+import logging
 import time
 from collections import defaultdict, deque
 from dataclasses import dataclass
@@ -7,12 +8,16 @@ from threading import Lock
 from uuid import UUID
 
 from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 
 from cwms_batch_events.core.job_database.postgres.session import create_session
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -60,7 +65,11 @@ class OfficeRateLimitStore:
             with self.session_factory() as db:
                 office = db.scalar(text("SELECT office FROM scripts WHERE id=:script_id"), {"script_id": script_id})
             return office.upper() if office else None
-        except Exception:
+        except SQLAlchemyError as exc:
+            logger.warning(
+                "Could not resolve the office for a job submission. Using default rate limits",
+                extra={"event": "rate_limit_office_lookup_failed", "error_type": type(exc).__name__},
+            )
             return None
 
     def _refresh_if_due(self, force: bool = False) -> None:
@@ -79,9 +88,13 @@ class OfficeRateLimitStore:
             }
             with self._lock:
                 self._overrides = overrides
-        except Exception:
-            # Keep the last known values. Defaults remain safe if the table is
-            # not present during a rolling migration or the database is down.
+        except SQLAlchemyError as exc:
+            # Keep the last known values. Defaults remain available when the
+            # table is not present during a rolling migration or the database is down.
+            logger.warning(
+                "Could not refresh office rate-limit overrides. Keeping the last known policy",
+                extra={"event": "rate_limit_overrides_refresh_failed", "error_type": type(exc).__name__},
+            )
             return
 
 
@@ -97,7 +110,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self,
         app,
         requests_per_minute: int = 120,
-        job_submissions_per_minute: int = 20,
+        job_submissions_per_minute: int = 10,
         documentation_url: str = "/events/about/rate-limits",
         office_rate_limit_store: OfficeRateLimitStore | None = None,
     ):

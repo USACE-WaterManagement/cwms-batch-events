@@ -53,7 +53,7 @@ function RateLimitsPanel({ authToken }: { authToken?: string }) {
   if (query.isPending) return <LoadingRows label="Loading office rate limits" />;
   if (query.isError) return <p role="alert">Office rate limits could not be loaded. Refresh the page to retry.</p>;
   return <UsaceBox title="Office rate limits">
-    <p className="mb-4 text-sm text-slate-600">Defaults are 120 API requests and 20 job submissions per minute. Set a higher or lower value for an office when its workload requires it. Scheduled jobs still have a separate five-minute minimum interval.</p>
+    <p className="mb-4 text-sm text-slate-600">Defaults are 120 API requests and 10 job submissions per minute. Set a higher or lower value for an office when its workload requires it. Scheduled jobs still have a separate five-minute minimum interval.</p>
     <div className="overflow-x-auto"><table className="w-full text-left text-sm">
       <caption className="sr-only">Per-office API rate limit overrides</caption>
       <thead className="border-b bg-slate-50 text-slate-600"><tr><th className="p-3">Office</th><th className="p-3">Requests/min</th><th className="p-3">Jobs/min</th><th className="p-3">Actions</th></tr></thead>
@@ -64,6 +64,7 @@ function RateLimitsPanel({ authToken }: { authToken?: string }) {
         <td className="p-3"><div className="flex flex-wrap gap-2"><button type="button" className="action-link" onClick={() => void save(row)}>Save</button>{(row.requestOverride || row.jobSubmissionOverride) && <button type="button" className="action-link" onClick={() => void reset(row)}>Use defaults</button>}</div></td>
       </tr>; })}</tbody>
     </table>{!query.data?.length && <p className="p-4 text-slate-500">No offices have been registered yet.</p>}</div>
+    <p className="mt-4 text-xs text-slate-500">Limits are applied at each API process. Deployments with multiple API workers should also enforce an equivalent limit at the gateway. Health checks and internal service callbacks use separate access controls.</p>
   </UsaceBox>;
 }
 

@@ -73,8 +73,8 @@ def update_rate_limit(
 ):
     require_hq_admin(user)
     office = office.upper()
-    if not office.isascii() or not 2 <= len(office) <= 10 or not office.replace("-", "").isalnum():
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Office must be 2-10 letters, numbers, or hyphens")
+    if not office.isascii() or not office.isalpha() or not 3 <= len(office) <= 4:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Office must be 3-4 letters")
     db.execute(text("""INSERT INTO office_rate_limits
         (office, requests_per_minute, job_submissions_per_minute)
         VALUES (:office, :requests, :jobs)

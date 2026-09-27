@@ -1,3 +1,5 @@
+import time
+
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -64,6 +66,7 @@ def test_health_is_not_rate_limited():
 def test_office_override_applies_to_selected_office():
     store = OfficeRateLimitStore(OfficeRateLimit(10, 5), session_factory=lambda: None)
     store.set("SWT", OfficeRateLimit(1, 1))
+    store._last_refresh = time.monotonic()
     with make_client(store=store) as client:
         headers = {"Authorization": "apikey stable-test-key"}
         assert client.get("/jobs?office=SWT", headers=headers).status_code == 200

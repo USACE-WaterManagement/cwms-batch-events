@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { useAuth } from "@usace-watermanagement/groundwork-water";
+import { Link } from "@tanstack/react-router";
 import {
   Card, H1, H2, H3, Table, TableBody, TableCell, TableHead, TableHeader,
   TableRow, Tabs, Text,
@@ -198,22 +199,22 @@ const RateLimitsPane = () => (
     <div>
       <H2 id="rate-limits-heading">API rate limits</H2>
       <Text>
-        Batch Events limits requests by authenticated credential to protect shared
-        office execution capacity and avoid accidental submission storms.
+        Batch Events limits requests by the authenticated bearer credential to
+        protect shared office execution capacity and avoid submission storms.
       </Text>
     </div>
     <div className="grid gap-4 md:grid-cols-2">
       <Card className="p-6">
         <H3>General API requests</H3>
         <Text className="mt-2">
-          The default limit is 120 requests per minute for a credential.
+          The default limit is 120 requests per minute for an Authorization bearer credential.
           Job history, status refreshes, and other API reads count toward this limit.
         </Text>
       </Card>
       <Card className="p-6">
         <H3>Job submissions</H3>
         <Text className="mt-2">
-          The default limit is 20 job submissions per minute for a credential.
+          The default limit is 10 job submissions per minute for an Authorization bearer credential.
           Submissions have a separate limit because they consume execution resources.
           Scheduled jobs still enforce the five-minute minimum schedule interval.
         </Text>
@@ -228,17 +229,18 @@ const RateLimitsPane = () => (
       </Text>
       <Text className="mt-3">
         If an office has a documented operational need for more capacity, an
-        administrator can request increased limits for that office. HQ
-        administrators can set office-specific request and job limits in the
-        Admin rate limits panel.
+        administrators can request increased limits for that office. National
+        Team members can set office-specific request and job limits on the{" "}
+        <Link to="/admin" className="font-medium text-blue-700 underline">Batch Admin page</Link>.
       </Text>
     </Card>
     <Card className="p-6">
-      <H3>Scope</H3>
+      <H3>Who shares a limit</H3>
       <Text className="mt-2">
-        Limits are applied at the API process and should also be enforced at the
-        deployment gateway when multiple API workers share an environment.
-        Health checks and internal service callbacks use separate access controls.
+        Limits are tracked per authenticated bearer credential, not per human
+        user. A shared bearer token shares one bucket, while different bearer
+        tokens have separate buckets. Office-specific values can replace the
+        defaults.
       </Text>
     </Card>
   </section>

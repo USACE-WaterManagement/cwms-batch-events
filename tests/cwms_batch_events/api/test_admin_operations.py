@@ -30,7 +30,7 @@ def test_task_sort_options_are_bounded(client, user, db_session, query):
 def test_hq_admin_can_save_and_reset_office_rate_limits(client, user, db_session, monkeypatch):
     user.roles = {"HQ": ["Data Acquisition Mgr"]}
     db_session.scalars.return_value = ["SWT"]
-    store = OfficeRateLimitStore(OfficeRateLimit(120, 20), session_factory=lambda: db_session)
+    store = OfficeRateLimitStore(OfficeRateLimit(120, 10), session_factory=lambda: db_session)
     monkeypatch.setattr(store, "_refresh_if_due", lambda force=False: None)
     monkeypatch.setattr(app.state, "rate_limit_store", store)
 
@@ -44,4 +44,12 @@ def test_hq_admin_can_save_and_reset_office_rate_limits(client, user, db_session
     reset = client.delete("/admin/rate-limits/SWT")
 
     assert reset.status_code == 204
-    assert store.get(["SWT"]) == OfficeRateLimit(120, 20)
+    assert store.get(["SWT"]) == OfficeRateLimit(120, 10)
+
+
+@pytest.mark.parametrize("office", ["EL", "SW", "SWT1", "SWT-"])
+def test_rate_limit_office_code_requires_three_or_four_letters(client, user, db_session, office):
+    user.roles = {"HQ": ["Data Acquisition Mgr"]}
+    response = client.put(f"/admin/rate-limits/{office}", json={"requestsPerMinute": 120, "jobSubmissionsPerMinute": 10})
+    assert response.status_code == 422
+    db_session.execute.assert_not_called()
