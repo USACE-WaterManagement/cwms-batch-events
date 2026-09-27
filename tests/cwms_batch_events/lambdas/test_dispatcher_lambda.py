@@ -1,3 +1,4 @@
+from tests.factories import make_lambda_context
 import json
 from unittest import mock
 
@@ -84,15 +85,15 @@ def test_lambda_handler_processes_messages_and_binds_external_job_id():
         "cwms_batch_events.lambdas.dispatch_job.dispatcher.API_BASE_URL",
         "http://events",
     ):
-        lambda_handler({"Records": [{"body": message.model_dump_json()}]}, None)
+        lambda_handler({"Records": [{"body": message.model_dump_json()}]}, make_lambda_context())
 
     requests_post.assert_called_once()
     assert requests_post.call_args.kwargs["json"] == {"external_job_id": "ext-123"}
 
 
-def test_lambda_handler_raises_when_api_rejects_message():
+def test_lambda_handler_raises_when_api_rejects_message(caplog):
     message = make_job_message()
-    response = mock.Mock(status_code=500, text="bad")
+    response = mock.Mock(status_code=500, text="private-response-body")
 
     with mock.patch(
         "cwms_batch_events.lambdas.dispatch_job.dispatcher.get_internal_token",
@@ -105,7 +106,17 @@ def test_lambda_handler_raises_when_api_rejects_message():
         return_value=response,
     ):
         with pytest.raises(RuntimeError, match="Events API rejected message"):
-            lambda_handler({"Records": [{"body": message.model_dump_json()}]}, None)
+            lambda_handler({"Records": [{"body": message.model_dump_json()}]}, make_lambda_context())
+    assert "private-response-body" not in caplog.text
+    assert any(getattr(record, "status_code", None) == 500 for record in caplog.records)
+
+
+def test_invalid_queue_message_does_not_log_payload(caplog):
+    with mock.patch("cwms_batch_events.lambdas.dispatch_job.dispatcher.get_internal_token", return_value="secret"):
+        with pytest.raises(ValueError, match="Invalid job queue message") as error:
+            lambda_handler({"Records": [{"body": '{"password":"private-payload"}'}]}, make_lambda_context())
+    assert "private-payload" not in caplog.text
+    assert "private-payload" not in str(error.value)
 
 
 def test_lambda_handler_reraises_batch_submit_error():
@@ -119,4 +130,4 @@ def test_lambda_handler_reraises_batch_submit_error():
         side_effect=ClientError({"Error": {"Code": "Oops", "Message": "bad"}}, "Submit"),
     ):
         with pytest.raises(ClientError):
-            lambda_handler({"Records": [{"body": message.model_dump_json()}]}, None)
+            lambda_handler({"Records": [{"body": message.model_dump_json()}]}, make_lambda_context())

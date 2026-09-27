@@ -1,0 +1,14 @@
+.command-modal [id^="headlessui-dialog-panel"] {
+  padding: 0 !important;
+  width: 100%;
+  max-width: 48rem;
+  overflow: hidden;
+  border-radius: 0.875rem;
+}
+.command-modal [id^="headlessui-dialog-panel"] > * { margin-top: 0 !important; }
+.command-modal [id^="headlessui-dialog-title"] {
+  background: #142d4e;
+  color: white;
+  padding: 1rem 1.25rem;
+  font-size: 1.125rem;
+}

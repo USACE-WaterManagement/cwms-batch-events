@@ -17,6 +17,9 @@ services:
       # Comment out MOCK_USER to test a "real" keycloak workflow
       MOCK_USER: true
       AUTH_ENVIRONMENT: LOCAL
+      API_VERSION: local
+      BUILD_REVISION: local
+      DEPLOYMENT_ENVIRONMENT: local
       S3_ENDPOINT_URL: http://minio:9000
       SQS_ENDPOINT_URL: http://elasticmq:9324
       AWS_ACCESS_KEY_ID: eventsadmin
@@ -27,6 +30,7 @@ services:
       AUTH_REALM: cwms
       CDA_API_ROOT: http://traefik/cwms-data/
       DEFAULT_JOB_RUNNER: docker-local
+      DATABASE_SCHEMA: wm_events_schema
       PGUSER: *application_user
       PGPASSWORD: *application_password
       PGDATABASE: postgres
@@ -62,6 +66,7 @@ services:
       PGDATABASE: postgres
       PGHOST: db
       QUEUE_URL: http://elasticmq:9324/000000000000/cwms-batch-events
+      CDA_API_ROOT: http://traefik/cwms-data/
       S3_BUCKET: wm-event-manager-local
       S3_ENDPOINT_URL: http://minio:9000
     volumes:

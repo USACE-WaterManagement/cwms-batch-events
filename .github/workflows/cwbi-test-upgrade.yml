@@ -1,0 +1,20 @@
+name: Database upgrade compatibility
+on:
+  pull_request:
+    branches: [cwbi-dev, cwbi-test, cwbi-prod]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  upgrade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      - name: Test fresh installation and historical upgrade
+        run: python integration/upgrade/run.py

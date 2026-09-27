@@ -11,6 +11,7 @@ from cwms_batch_events.core.auth.user.dependencies import (
     get_current_user_mock,
     user_cache,
 )
+from cwms_batch_events.core.auth.user.roles import CdaUserProfileError
 
 
 class DummyRequest:
@@ -83,6 +84,25 @@ async def test_get_current_user_cwms_builds_user_from_bearer_token():
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize("claims,expected", [
+    ({"name": "Jane Doe"}, "Jane Doe"),
+    ({"given_name": "Jane", "family_name": "Doe"}, "Jane Doe"),
+    ({"name": "1234567890", "preferred_username": "jane.doe"}, "jane.doe"),
+    ({"preferred_username": "1234567890@mil"}, "Name unavailable"),
+])
+async def test_display_name_comes_from_verified_claims(claims, expected):
+    credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="name-token")
+    with mock.patch("cwms_batch_events.core.auth.user.dependencies.verify_jwt",
+                    return_value={"azp": "cwms", **claims}), mock.patch(
+        "cwms_batch_events.core.auth.user.dependencies.get_user_profile_jwt",
+        return_value=SimpleNamespace(user_name="1234567890", roles={"SWT": ["CWMS Users"]}),
+    ):
+        user = await get_current_user_cwms(credentials)
+    assert user.display_name == expected
+    assert user.username == "1234567890"
+
+
+@pytest.mark.anyio
 async def test_get_current_user_cwms_rejects_unsupported_scheme():
     credentials = HTTPAuthorizationCredentials(scheme="Basic", credentials="secret")
 
@@ -121,6 +141,26 @@ async def test_get_current_user_cwms_rejects_wrong_azp():
 
     assert exc_info.value.status_code == 401
     assert "not authorized" in exc_info.value.detail
+
+
+@pytest.mark.anyio
+async def test_get_current_user_cwms_preserves_cda_profile_error():
+    credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="token")
+
+    with mock.patch(
+        "cwms_batch_events.core.auth.user.dependencies.verify_jwt",
+        return_value={"azp": "cwms"},
+    ), mock.patch(
+        "cwms_batch_events.core.auth.user.dependencies.get_user_profile_jwt",
+        side_effect=CdaUserProfileError(
+            401, "CDA rejected the supplied credentials: Invalid issuer"
+        ),
+    ):
+        with pytest.raises(HTTPException) as exc_info:
+            await get_current_user_cwms(credentials)
+
+    assert exc_info.value.status_code == 401
+    assert exc_info.value.detail.endswith("Invalid issuer")
 
 
 @pytest.mark.anyio
