@@ -41,7 +41,7 @@ export const getNotifications = () => notifications;
 export function notifyError(notification: ErrorNotification) {
   sources.set(notification.id, [notification]);
   update();
-  window.setTimeout(() => {
+  globalThis.setTimeout(() => {
     if (sources.get(notification.id)?.includes(notification)) {
       sources.delete(notification.id);
       update();
