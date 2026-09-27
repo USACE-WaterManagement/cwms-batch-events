@@ -41,6 +41,12 @@ export const getNotifications = () => notifications;
 export function notifyError(notification: ErrorNotification) {
   sources.set(notification.id, [notification]);
   update();
+  globalThis.setTimeout(() => {
+    if (sources.get(notification.id)?.includes(notification)) {
+      sources.delete(notification.id);
+      update();
+    }
+  }, 6000);
 }
 export function reportWarnings(source: string, data: unknown, retry: ErrorNotification["retry"]) {
   const warnings = data && typeof data === "object" && "warnings" in data ? data.warnings : undefined;
@@ -59,6 +65,15 @@ export function dismissError(id: string) {
   for (const [source, entries] of sources) {
     const remaining = entries.filter(entry => normalize(entry.message) !== id);
     if (remaining.length) sources.set(source, remaining);
+    else sources.delete(source);
+  }
+  update();
+}
+
+export function clearErrorToasts() {
+  for (const [source, entries] of sources) {
+    const warnings = entries.filter(entry => entry.kind === "warning");
+    if (warnings.length) sources.set(source, warnings);
     else sources.delete(source);
   }
   update();

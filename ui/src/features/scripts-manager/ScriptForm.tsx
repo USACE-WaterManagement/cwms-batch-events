@@ -50,7 +50,12 @@ const fieldHelp: Record<string, React.ReactNode> = {
       </p>
     </div>
   ),
-  name: "A descriptive name for this job. Its slug is generated from the name when you create it.",
+  name: (
+    <>
+      A slug is a URL-friendly identifier generated from the job name. It is useful
+      for calling your jobs programmatically. See the <a href="/api/docs" target="_blank" rel="noopener noreferrer">Swagger UI</a> for the API details.
+    </>
+  ),
   description: "Describe what this job does and when someone should run it.",
   repoPath: <>Enter a path relative to /jobs. Repository files are checked out there. With the Java artifact loader deployed, enabled pins in java/artifacts.json download release JARs into java-artifacts/ before the job runs. Enter those generated paths manually. Browse lists only files committed to GitHub. Files and directories cannot be created here. <Link to="/help/script-files" target="_blank" rel="noopener noreferrer">Script setup (new tab)</Link>. For an installed command, enter its executable. That mode skips checkout and artifact downloads.</>,
   executionType: (
@@ -379,7 +384,7 @@ export const ScriptForm = ({
             <div className="space-y-3">
               <Text>These values are passed to every run of this script. <b>Do NOT</b> enter secrets, or otherwise sensitive values.</Text>
               {(form.environmentVariables ?? []).map((variable, index) => (
-                <div className="grid gap-2 rounded border p-3 @md/script-panel:grid-cols-[1fr_1fr_auto]" key={`${index}-${variable.name}`}>
+                <div className="grid gap-2 rounded border p-3 @md/script-panel:grid-cols-[1fr_1fr_auto]" key={index}>
                   <Input
                     aria-label={`Environment variable ${index + 1} name`}
                     placeholder="NAME"
