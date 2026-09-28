@@ -1,7 +1,6 @@
 import { useSyncExternalStore } from "react";
 
-export interface ActionNoticeAction { label: string; onClick: () => void | Promise<void> }
-interface ActionNotice { id: number; message: string; action?: ActionNoticeAction }
+interface ActionNotice { id: number; message: string }
 let notices: ActionNotice[] = [];
 let sequence = 0;
 const listeners = new Set<() => void>();
@@ -10,8 +9,8 @@ const subscribe = (listener: () => void) => { listeners.add(listener); return ()
 const snapshot = () => notices;
 export const useActionNotices = () => useSyncExternalStore(subscribe, snapshot);
 export function dismissAction(id: number) { notices = notices.filter(item => item.id !== id); emit(); }
-export function notifySuccess(message: string, action?: ActionNoticeAction) {
+export function notifySuccess(message: string) {
   const id = ++sequence;
-  notices = [...notices.filter(item => item.message !== message), { id, message, action }]; emit();
+  notices = [...notices.filter(item => item.message !== message), { id, message }]; emit();
   window.setTimeout(() => dismissAction(id), 6000);
 }

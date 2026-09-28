@@ -22,17 +22,7 @@ export const exportConfiguration = async (scriptId: string, token?: string) => {
     link.download = fileName;
     link.click();
     URL.revokeObjectURL(url);
-    notifySuccess(`Configuration exported to ${savedPath}`, {
-      label: "Copy path",
-      onClick: async () => {
-        try {
-          await navigator.clipboard.writeText(savedPath);
-          notifySuccess("Export path copied to the clipboard");
-        } catch {
-          notifyError({ id: "configuration-export-copy", message: "The export path could not be copied to the clipboard." });
-        }
-      },
-    });
+    notifySuccess(`Configuration exported to ${savedPath}`);
   } catch (caught) {
     notifyError({ id: "configuration-export", message: caught instanceof Error ? caught.message : "The configuration could not be exported." });
   }
