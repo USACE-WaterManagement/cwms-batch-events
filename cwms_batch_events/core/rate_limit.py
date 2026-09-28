@@ -137,7 +137,7 @@ class OfficeRateLimitStore:
                     changed_by, changed_at
                     FROM office_rate_limits""")).mappings().all()
             overrides = {
-                row["office"]: OfficeRateLimitRecord(
+                row["office"].upper(): OfficeRateLimitRecord(
                     OfficeRateLimit(row["requests_per_minute"], row["job_submissions_per_minute"]),
                     row["changed_by"], row["changed_at"],
                 )

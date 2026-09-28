@@ -6,12 +6,16 @@ from uuid import uuid4
                                   {"HQ": ["Data Exchange Mgr"]}, {"HQ": ["CWMS Admin"]}])
 def test_scheduler_requires_hq_admin(client, user, roles):
     user.roles = roles
-    assert client.get("/users/me/system-admin").json() is False
     assert client.get("/scheduler/status").status_code == 403
 
 
 def test_hq_admin_capability(client, user):
     user.roles = {"HQ": ["Data Acquisition Mgr"]}
+    assert client.get("/users/me/system-admin").json() is True
+
+
+def test_hq_data_exchange_manager_has_admin_capability(client, user):
+    user.roles = {"HQ": ["Data Exchange Mgr"]}
     assert client.get("/users/me/system-admin").json() is True
 
 
