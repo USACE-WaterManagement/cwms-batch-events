@@ -20,6 +20,10 @@ import { Route as AboutOnboardingRouteImport } from './routes/about_.onboarding'
 import { Route as AboutRateLimitsRouteImport } from './routes/about_.rate-limits'
 import { Route as AboutScriptFilesRouteImport } from './routes/about_.script-files'
 import { Route as AboutVersionRouteImport } from './routes/about_.version'
+import { Route as AdminOperationsRouteImport } from './routes/admin_.operations'
+import { Route as AdminRateLimitsRouteImport } from './routes/admin_.rate-limits'
+import { Route as AdminSchedulerRouteImport } from './routes/admin_.scheduler'
+import { Route as AdminUsageRouteImport } from './routes/admin_.usage'
 import { Route as HelpOnboardingRouteImport } from './routes/help_.onboarding'
 import { Route as HelpScriptFilesRouteImport } from './routes/help_.script-files'
 import { Route as HelpScriptVersionsRouteImport } from './routes/help_.script-versions'
@@ -81,6 +85,26 @@ const AboutVersionRoute = AboutVersionRouteImport.update({
   path: '/about/version',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminOperationsRoute = AdminOperationsRouteImport.update({
+  id: '/admin_/operations',
+  path: '/admin/operations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRateLimitsRoute = AdminRateLimitsRouteImport.update({
+  id: '/admin_/rate-limits',
+  path: '/admin/rate-limits',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminSchedulerRoute = AdminSchedulerRouteImport.update({
+  id: '/admin_/scheduler',
+  path: '/admin/scheduler',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminUsageRoute = AdminUsageRouteImport.update({
+  id: '/admin_/usage',
+  path: '/admin/usage',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HelpOnboardingRoute = HelpOnboardingRouteImport.update({
   id: '/help_/onboarding',
   path: '/help/onboarding',
@@ -119,6 +143,10 @@ export interface FileRoutesByFullPath {
   '/about/rate-limits': typeof AboutRateLimitsRoute
   '/about/script-files': typeof AboutScriptFilesRoute
   '/about/version': typeof AboutVersionRoute
+  '/admin/operations': typeof AdminOperationsRoute
+  '/admin/rate-limits': typeof AdminRateLimitsRoute
+  '/admin/scheduler': typeof AdminSchedulerRoute
+  '/admin/usage': typeof AdminUsageRoute
   '/help/onboarding': typeof HelpOnboardingRoute
   '/help/script-files': typeof HelpScriptFilesRoute
   '/help/script-versions': typeof HelpScriptVersionsRoute
@@ -137,6 +165,10 @@ export interface FileRoutesByTo {
   '/about/rate-limits': typeof AboutRateLimitsRoute
   '/about/script-files': typeof AboutScriptFilesRoute
   '/about/version': typeof AboutVersionRoute
+  '/admin/operations': typeof AdminOperationsRoute
+  '/admin/rate-limits': typeof AdminRateLimitsRoute
+  '/admin/scheduler': typeof AdminSchedulerRoute
+  '/admin/usage': typeof AdminUsageRoute
   '/help/onboarding': typeof HelpOnboardingRoute
   '/help/script-files': typeof HelpScriptFilesRoute
   '/help/script-versions': typeof HelpScriptVersionsRoute
@@ -156,6 +188,10 @@ export interface FileRoutesById {
   '/about_/rate-limits': typeof AboutRateLimitsRoute
   '/about_/script-files': typeof AboutScriptFilesRoute
   '/about_/version': typeof AboutVersionRoute
+  '/admin_/operations': typeof AdminOperationsRoute
+  '/admin_/rate-limits': typeof AdminRateLimitsRoute
+  '/admin_/scheduler': typeof AdminSchedulerRoute
+  '/admin_/usage': typeof AdminUsageRoute
   '/help_/onboarding': typeof HelpOnboardingRoute
   '/help_/script-files': typeof HelpScriptFilesRoute
   '/help_/script-versions': typeof HelpScriptVersionsRoute
@@ -176,6 +212,10 @@ export interface FileRouteTypes {
     | '/about/rate-limits'
     | '/about/script-files'
     | '/about/version'
+    | '/admin/operations'
+    | '/admin/rate-limits'
+    | '/admin/scheduler'
+    | '/admin/usage'
     | '/help/onboarding'
     | '/help/script-files'
     | '/help/script-versions'
@@ -194,6 +234,10 @@ export interface FileRouteTypes {
     | '/about/rate-limits'
     | '/about/script-files'
     | '/about/version'
+    | '/admin/operations'
+    | '/admin/rate-limits'
+    | '/admin/scheduler'
+    | '/admin/usage'
     | '/help/onboarding'
     | '/help/script-files'
     | '/help/script-versions'
@@ -212,6 +256,10 @@ export interface FileRouteTypes {
     | '/about_/rate-limits'
     | '/about_/script-files'
     | '/about_/version'
+    | '/admin_/operations'
+    | '/admin_/rate-limits'
+    | '/admin_/scheduler'
+    | '/admin_/usage'
     | '/help_/onboarding'
     | '/help_/script-files'
     | '/help_/script-versions'
@@ -231,6 +279,10 @@ export interface RootRouteChildren {
   AboutRateLimitsRoute: typeof AboutRateLimitsRoute
   AboutScriptFilesRoute: typeof AboutScriptFilesRoute
   AboutVersionRoute: typeof AboutVersionRoute
+  AdminOperationsRoute: typeof AdminOperationsRoute
+  AdminRateLimitsRoute: typeof AdminRateLimitsRoute
+  AdminSchedulerRoute: typeof AdminSchedulerRoute
+  AdminUsageRoute: typeof AdminUsageRoute
   HelpOnboardingRoute: typeof HelpOnboardingRoute
   HelpScriptFilesRoute: typeof HelpScriptFilesRoute
   HelpScriptVersionsRoute: typeof HelpScriptVersionsRoute
@@ -317,6 +369,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AboutVersionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin_/operations': {
+      id: '/admin_/operations'
+      path: '/admin/operations'
+      fullPath: '/admin/operations'
+      preLoaderRoute: typeof AdminOperationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin_/rate-limits': {
+      id: '/admin_/rate-limits'
+      path: '/admin/rate-limits'
+      fullPath: '/admin/rate-limits'
+      preLoaderRoute: typeof AdminRateLimitsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin_/scheduler': {
+      id: '/admin_/scheduler'
+      path: '/admin/scheduler'
+      fullPath: '/admin/scheduler'
+      preLoaderRoute: typeof AdminSchedulerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin_/usage': {
+      id: '/admin_/usage'
+      path: '/admin/usage'
+      fullPath: '/admin/usage'
+      preLoaderRoute: typeof AdminUsageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/help_/onboarding': {
       id: '/help_/onboarding'
       path: '/help/onboarding'
@@ -367,6 +447,10 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRateLimitsRoute: AboutRateLimitsRoute,
   AboutScriptFilesRoute: AboutScriptFilesRoute,
   AboutVersionRoute: AboutVersionRoute,
+  AdminOperationsRoute: AdminOperationsRoute,
+  AdminRateLimitsRoute: AdminRateLimitsRoute,
+  AdminSchedulerRoute: AdminSchedulerRoute,
+  AdminUsageRoute: AdminUsageRoute,
   HelpOnboardingRoute: HelpOnboardingRoute,
   HelpScriptFilesRoute: HelpScriptFilesRoute,
   HelpScriptVersionsRoute: HelpScriptVersionsRoute,
