@@ -39,3 +39,4 @@ class ScriptConfigurationImport(CamelModel):
     target_office: str = Field(min_length=1, max_length=16)
     package: ScriptConfigurationExport
     selections: dict[str, Literal["existing", "imported"]] = Field(default_factory=dict)
+    create_new: bool = False

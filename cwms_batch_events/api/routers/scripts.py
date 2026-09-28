@@ -1,4 +1,4 @@
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import NoResultFound
@@ -54,7 +54,7 @@ def import_script_configuration(
 ):
     check_user_office_admin(user, payload.target_office)
     incoming = dict(payload.package.configuration)
-    existing = job_db.get_script_by_configuration_key(
+    existing = None if payload.create_new else job_db.get_script_by_configuration_key(
         payload.package.configuration_key, payload.target_office
     )
     try:
@@ -73,7 +73,9 @@ def import_script_configuration(
         if create_payload.release_jar:
             validate_selection(payload.target_office, create_payload.release_jar)
         return job_db.store_script(
-            create_payload, actor=user, configuration_key=payload.package.configuration_key
+            create_payload,
+            actor=user,
+            configuration_key=uuid4() if payload.create_new else payload.package.configuration_key,
         )
     except SlugError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
