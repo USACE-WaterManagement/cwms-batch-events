@@ -68,6 +68,28 @@ test("modern script actions keep submission explicit and open the latest run", a
   }
 });
 
+test("automatic job cards show the next run and interval while manual cards stay blank", async ({ page }) => {
+  await page.clock.install({ time: now });
+  const automatic = { ...script, id: "scheduled", name: "Scheduled diagnostics",
+    scheduleEnabled: true, scheduleType: "hourly", scheduleMinute: 51, scheduleTimezone: "America/Chicago" };
+  await page.route("**/api/**", async route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/admin-offices")) return route.fulfill({ json: ["SWT"] });
+    if (path.endsWith("/job-runners/default")) return route.fulfill({ json: { id: "runner", slug: "batch" } });
+    if (path.endsWith("/scripts")) return route.fulfill({ json: [script, automatic] });
+    if (path.endsWith("/scripts/" + automatic.id + "/schedule-status")) return route.fulfill({ json: { nextRunAt: "2026-09-14T18:51:00Z" } });
+    if (path.endsWith("/jobs")) return route.fulfill({ json: [] });
+    return route.fulfill({ json: [] });
+  });
+  await openManager(page);
+  const scheduledRow = page.getByRole("row").filter({ hasText: automatic.name });
+  await expect(scheduledRow).toContainText("Next run:");
+  await expect(scheduledRow).toContainText("Interval: Hourly at 51 mins");
+  const manualRow = page.getByRole("row").filter({ hasText: script.name });
+  await expect(manualRow).not.toContainText("Next run:");
+  await expect(manualRow).not.toContainText("Interval:");
+});
+
 test("selected run shares Starting and Running status with the manager badge without extra requests", async ({ page }) => {
   await page.clock.install({ time: now });
   const current = { ...job, jobStatus: "Pending", batchStatus: "STARTING" };
