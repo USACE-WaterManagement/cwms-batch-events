@@ -27,6 +27,7 @@ from cwms_batch_events.api.openapi import configure_rate_limit_openapi
 from cwms_batch_events.api.request_logging import RequestLoggingMiddleware
 from cwms_batch_events.core.maintenance import lifespan
 from cwms_batch_events.core.rate_limit import OfficeRateLimit, OfficeRateLimitStore, RateLimitMiddleware
+from cwms_batch_events.api.openapi import configure_rate_limit_openapi
 
 configure_logging(api=True)
 configure_log_diagnostics()

@@ -7,6 +7,13 @@ import { useNavigate } from "@tanstack/react-router";
 import { components } from "../../generated/api-types";
 
 export type ExecuteScriptPayload = Omit<components["schemas"]["ScriptRunRequest"], "runTrigger">;
+export type JobRateLimitStatus = {
+  office: string;
+  limit: number;
+  used: number;
+  remaining: number;
+  resetAfterSeconds: number;
+};
 
 export type JobRateLimitStatus = {
   office: string;
