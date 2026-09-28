@@ -23,6 +23,7 @@ from cwms_batch_events.api.routers import (
 )
 from cwms_batch_events.core.log_diagnostics import configure_log_diagnostics
 from cwms_batch_events.core.logging_config import configure_logging
+from cwms_batch_events.api.openapi import configure_rate_limit_openapi
 from cwms_batch_events.api.request_logging import RequestLoggingMiddleware
 from cwms_batch_events.core.maintenance import lifespan
 from cwms_batch_events.core.rate_limit import OfficeRateLimit, OfficeRateLimitStore, RateLimitMiddleware
@@ -32,6 +33,7 @@ configure_log_diagnostics()
 logging.getLogger(__name__).info("API initialized", extra={"event": "api_initialized"})
 
 app = FastAPI(root_path=settings.fastapi_root_path, lifespan=lifespan)
+configure_rate_limit_openapi(app)
 app.state.rate_limit_store = OfficeRateLimitStore(OfficeRateLimit(
     settings.rate_limit_requests_per_minute,
     settings.rate_limit_job_submissions_per_minute,
