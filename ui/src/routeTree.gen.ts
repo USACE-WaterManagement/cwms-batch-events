@@ -9,24 +9,20 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SubmitRouteImport } from './routes/submit'
-import { Route as ScriptsManagerRouteImport } from './routes/scripts-manager'
-import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AboutRouteImport } from './routes/about'
+import { Route as DependenciesRouteImport } from './routes/dependencies'
+import { Route as ScriptsManagerRouteImport } from './routes/scripts-manager'
+import { Route as SubmitRouteImport } from './routes/submit'
+import { Route as AboutControlsRouteImport } from './routes/about_.controls'
+import { Route as AboutOnboardingRouteImport } from './routes/about_.onboarding'
+import { Route as AboutVersionRouteImport } from './routes/about_.version'
 import { Route as JobsIndexRouteImport } from './routes/jobs/index'
 import { Route as JobsJobIdRouteImport } from './routes/jobs/$jobId'
-import { Route as AboutVersionRouteImport } from './routes/about_.version'
-import { Route as AboutOnboardingRouteImport } from './routes/about_.onboarding'
-import { Route as AboutControlsRouteImport } from './routes/about_.controls'
 
-const SubmitRoute = SubmitRouteImport.update({
-  id: '/submit',
-  path: '/submit',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ScriptsManagerRoute = ScriptsManagerRouteImport.update({
-  id: '/scripts-manager',
-  path: '/scripts-manager',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AboutRoute = AboutRouteImport.update({
@@ -34,9 +30,34 @@ const AboutRoute = AboutRouteImport.update({
   path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const DependenciesRoute = DependenciesRouteImport.update({
+  id: '/dependencies',
+  path: '/dependencies',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ScriptsManagerRoute = ScriptsManagerRouteImport.update({
+  id: '/scripts-manager',
+  path: '/scripts-manager',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SubmitRoute = SubmitRouteImport.update({
+  id: '/submit',
+  path: '/submit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutControlsRoute = AboutControlsRouteImport.update({
+  id: '/about_/controls',
+  path: '/about/controls',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutOnboardingRoute = AboutOnboardingRouteImport.update({
+  id: '/about_/onboarding',
+  path: '/about/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutVersionRoute = AboutVersionRouteImport.update({
+  id: '/about_/version',
+  path: '/about/version',
   getParentRoute: () => rootRouteImport,
 } as any)
 const JobsIndexRoute = JobsIndexRouteImport.update({
@@ -49,25 +70,11 @@ const JobsJobIdRoute = JobsJobIdRouteImport.update({
   path: '/jobs/$jobId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AboutVersionRoute = AboutVersionRouteImport.update({
-  id: '/about_/version',
-  path: '/about/version',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AboutOnboardingRoute = AboutOnboardingRouteImport.update({
-  id: '/about_/onboarding',
-  path: '/about/onboarding',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AboutControlsRoute = AboutControlsRouteImport.update({
-  id: '/about_/controls',
-  path: '/about/controls',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/dependencies': typeof DependenciesRoute
   '/scripts-manager': typeof ScriptsManagerRoute
   '/submit': typeof SubmitRoute
   '/about/controls': typeof AboutControlsRoute
@@ -79,6 +86,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/dependencies': typeof DependenciesRoute
   '/scripts-manager': typeof ScriptsManagerRoute
   '/submit': typeof SubmitRoute
   '/about/controls': typeof AboutControlsRoute
@@ -91,6 +99,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/dependencies': typeof DependenciesRoute
   '/scripts-manager': typeof ScriptsManagerRoute
   '/submit': typeof SubmitRoute
   '/about_/controls': typeof AboutControlsRoute
@@ -104,6 +113,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
+    | '/dependencies'
     | '/scripts-manager'
     | '/submit'
     | '/about/controls'
@@ -115,6 +125,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/about'
+    | '/dependencies'
     | '/scripts-manager'
     | '/submit'
     | '/about/controls'
@@ -126,6 +137,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/about'
+    | '/dependencies'
     | '/scripts-manager'
     | '/submit'
     | '/about_/controls'
@@ -138,6 +150,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  DependenciesRoute: typeof DependenciesRoute
   ScriptsManagerRoute: typeof ScriptsManagerRoute
   SubmitRoute: typeof SubmitRoute
   AboutControlsRoute: typeof AboutControlsRoute
@@ -149,18 +162,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/submit': {
-      id: '/submit'
-      path: '/submit'
-      fullPath: '/submit'
-      preLoaderRoute: typeof SubmitRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/scripts-manager': {
-      id: '/scripts-manager'
-      path: '/scripts-manager'
-      fullPath: '/scripts-manager'
-      preLoaderRoute: typeof ScriptsManagerRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/about': {
@@ -170,11 +176,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/dependencies': {
+      id: '/dependencies'
+      path: '/dependencies'
+      fullPath: '/dependencies'
+      preLoaderRoute: typeof DependenciesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/scripts-manager': {
+      id: '/scripts-manager'
+      path: '/scripts-manager'
+      fullPath: '/scripts-manager'
+      preLoaderRoute: typeof ScriptsManagerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/submit': {
+      id: '/submit'
+      path: '/submit'
+      fullPath: '/submit'
+      preLoaderRoute: typeof SubmitRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about_/controls': {
+      id: '/about_/controls'
+      path: '/about/controls'
+      fullPath: '/about/controls'
+      preLoaderRoute: typeof AboutControlsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about_/onboarding': {
+      id: '/about_/onboarding'
+      path: '/about/onboarding'
+      fullPath: '/about/onboarding'
+      preLoaderRoute: typeof AboutOnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about_/version': {
+      id: '/about_/version'
+      path: '/about/version'
+      fullPath: '/about/version'
+      preLoaderRoute: typeof AboutVersionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/jobs/': {
@@ -191,33 +232,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof JobsJobIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/about_/version': {
-      id: '/about_/version'
-      path: '/about/version'
-      fullPath: '/about/version'
-      preLoaderRoute: typeof AboutVersionRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/about_/onboarding': {
-      id: '/about_/onboarding'
-      path: '/about/onboarding'
-      fullPath: '/about/onboarding'
-      preLoaderRoute: typeof AboutOnboardingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/about_/controls': {
-      id: '/about_/controls'
-      path: '/about/controls'
-      fullPath: '/about/controls'
-      preLoaderRoute: typeof AboutControlsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  DependenciesRoute: DependenciesRoute,
   ScriptsManagerRoute: ScriptsManagerRoute,
   SubmitRoute: SubmitRoute,
   AboutControlsRoute: AboutControlsRoute,
