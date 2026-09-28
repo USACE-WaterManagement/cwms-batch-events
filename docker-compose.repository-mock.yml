@@ -1,0 +1,6 @@
+# Sample file browsing only; this does not mock job execution or download JARs.
+services:
+  api:
+    environment:
+      DEPLOYMENT_ENVIRONMENT: local
+      REPOSITORY_MOCK_MODE: "true"

@@ -11,7 +11,9 @@ from cwms_batch_events.core.job_logger.base import JobLogger
 from cwms_batch_events.core.job_logger.cloudwatch import CloudWatchJobLogger
 from cwms_batch_events.core.job_logger.s3 import S3JobLogger
 from cwms_batch_events.core.queue import JobQueue
-from cwms_batch_events.core.settings import settings
+from cwms_batch_events.core.settings import get_settings
+
+settings = get_settings()
 
 if settings.mock_user:
     get_current_user = get_current_user_mock

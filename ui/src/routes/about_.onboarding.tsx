@@ -1,6 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { AboutPage } from "../features/about/AboutPage";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/about_/onboarding")({
-  component: () => <AboutPage initialTab="onboarding" />,
+  beforeLoad: () => { throw redirect({ to: "/help/onboarding", replace: true }); },
 });

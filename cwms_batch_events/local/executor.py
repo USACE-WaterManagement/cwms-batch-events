@@ -1,9 +1,20 @@
+import logging
 from cwms_batch_events.core.job_database.base import JobDatabase
 from cwms_batch_events.core.job_logger.base import JobLogger
+from cwms_batch_events.core.execution import command_for_payload, skips_repository_checkout
 from cwms_batch_events.core.models import JobMessage, JobStatus
-from cwms_batch_events.core.settings import settings
+from cwms_batch_events.core.models import RESOURCE_PROFILES
+from cwms_batch_events.core.settings import ExecutorSettings, get_settings
+from cwms_batch_events.core.release_jars import jar_command
+import os
+
+from cwms_batch_events.core.job_correlation import runner_environment
+from cwms_batch_events.core.logging_config import bind_log_context
+
+settings = get_settings(ExecutorSettings)
 
 CDA_API_ROOT = settings.cda_api_root
+logger = logging.getLogger(__name__)
 
 
 class LocalExecutor:
@@ -12,6 +23,10 @@ class LocalExecutor:
         self.logger = logger
 
     def run_job(self, message: JobMessage):
+        with bind_log_context(service="cwms-batch-events-local-runner", job_id=str(message.job_id), request_id=message.request_id):
+            return self._run_job(message)
+
+    def _run_job(self, message: JobMessage):
         from docker import DockerClient
         from docker.client import from_env
 
@@ -19,22 +34,34 @@ class LocalExecutor:
         container = None
 
         try:
+            command = command_for_payload(message.payload, runner="local")
+            if message.payload.release_jar:
+                command = jar_command(message, os.environ.get("ARTIFACT_API_URL"), os.environ.get("APP_KEY"))
             container = client.containers.run(
                 image=f"{message.payload.office}-jobs",
-                command=f"python /jobs/{message.payload.repo_path}",
+                command=command,
                 detach=True,
                 stderr=True,
+                nano_cpus=int(float(RESOURCE_PROFILES[message.payload.resource_size]["vcpus"]) * 1_000_000_000),
+                mem_limit=int(RESOURCE_PROFILES[message.payload.resource_size]["memory"]) * 1024 * 1024,
                 environment=[
+                    *(f"{key}={value}" for key, value in runner_environment(message).items()),
                     f"OFFICE={message.payload.office}",
+                    f"TZ={message.payload.schedule_timezone}",
+                    *(f"{item.name}={item.value}" for item in message.payload.environment_variables),
                     "GITHUB_BRANCH=cwbi-dev",
+                    "ENVIRONMENT=cwbi-dev",
+                    f"SKIP_GIT_CLONE={str(skips_repository_checkout(message.payload)).lower()}",
                     f"CDA_API_ROOT={CDA_API_ROOT}",
                 ],
             )
 
             self.db.update_job_status(message.job_id, JobStatus.RUNNING)
+            logger.info("Local job started", extra={"event": "local_job_started", "job_id": message.job_id})
 
             result = container.wait()
             status_code = result["StatusCode"]
+            logger.log(logging.INFO if status_code == 0 else logging.WARNING, "Local job exited", extra={"event": "local_job_exited", "job_id": message.job_id, "exit_code": status_code})
 
             logs = container.logs().decode("utf-8")
             self.logger.push_logs_for_job(message.job_id, logs)
@@ -45,6 +72,7 @@ class LocalExecutor:
                 self.db.update_job_status(message.job_id, JobStatus.FAILED)
 
         except Exception:
+            logger.exception("Local job execution failed", extra={"event": "local_job_failed", "job_id": message.job_id})
             self.db.update_job_status(message.job_id, JobStatus.FAILED)
             raise
 
@@ -52,5 +80,5 @@ class LocalExecutor:
             if container:
                 try:
                     container.remove()
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.warning("Local job container cleanup failed", extra={"event": "local_cleanup_failed", "job_id": message.job_id, "error_type": type(exc).__name__})

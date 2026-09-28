@@ -2,6 +2,23 @@
 
 CWMS Batch Events provides users an API and user interface to execute water management jobs on a manual or event-driven basis.
 
+## Managing and running scripts
+
+Scripts Manager provides **Details**, **Run job**, and **Job runs** tabs for each script.
+Use **Run job** or **View job runs** at the end of a row to open the matching tab.
+**Job History** shares runs and logs across your CWMS offices, with readable submitter names
+and Manual/Scheduled badges when the trigger was recorded. See [run history and logs](docs/job-logs.md)
+for migration and scheduler setup. Script execution roles are optional;
+an empty role list requires office access with no additional CDA execution role.
+See the [script manager guide](docs/script-manager.md) and [registered commands](docs/registered-commands.md)
+for setup, Bash examples, and access rules. Updated screenshots are included in the in-app Help pages.
+
+## Server logs
+
+Signed-in users can open the header checkmark or warning indicator to view API
+server logs, filter loaded entries by level, and expand CloudWatch event details.
+See [server logs](docs/server-logs.md) for endpoint and deployment configuration.
+
 ## Contributions
 
 To get your local environment setup and/or make contributions please see the contributions documentation: [CONTRIBUTING.md](https://github.com/USACE-WaterManagement/cwms-batch-events/blob/cwbi-dev/CONTRIBUTING.md)

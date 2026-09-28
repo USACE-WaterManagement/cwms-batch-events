@@ -17,7 +17,7 @@ def test_application_info_returns_deployment_and_user_details(client, user):
         "environment": "local",
         "buildRevision": "local",
         "buildTime": None,
-        "authenticationEnvironment": "local mock",
+        "authenticationEnvironment": "TEST",
         "jobRunner": "batch",
         "rootPath": "/",
         "user": {
@@ -41,7 +41,7 @@ def test_schema_info_returns_latest_applied_migration(client, db_session):
 
     assert response.status_code == 200
     assert response.json() == {
-        "name": "wm_events_schema",
+        "name": "events",
         "version": "1.01.03",
         "description": "Extend Jobs Table",
         "installedOn": "2026-08-26T12:30:00Z",

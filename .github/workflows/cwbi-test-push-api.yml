@@ -12,6 +12,7 @@ on:
       - "requirements.txt"
       - "requirements-dev.txt"
       - "pytest.ini"
+      - "integration/*lambda*.py"
       - ".github/workflows/cwbi-test-push-api.yml"
 
 permissions:
@@ -39,6 +40,9 @@ jobs:
 
       - name: Run pytest
         run: pytest --cov-report=html --cov-report=json
+
+      - name: Verify Lambda deployment packages
+        run: python integration/check_lambda_packages.py
 
       - name: Upload coverage HTML report
         if: always()

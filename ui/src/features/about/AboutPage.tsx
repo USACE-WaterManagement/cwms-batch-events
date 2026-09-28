@@ -140,12 +140,14 @@ const AboutOverview = () => <div className="space-y-8 py-6">
 </div>;
 
 const controls = [
-  { action: "Review jobs you ran", access: "An authenticated account",
-    result: "Jobs List shows jobs submitted by your username. It does not show every job for the office." },
-  { action: "Execute a job", access: "An office role that matches one of the script's allowed roles",
-    result: "Active, matching scripts appear under Submit Job. Most office scripts allow CWMS Users." },
+  { action: "Review office runs and logs", access: "CWMS Users in the job's office",
+    result: "Job History shares office runs and shows who submitted them. Manual and Scheduled badges identify the trigger when recorded." },
+  { action: "Execute a job", access: "Office access, plus a matching execution role when the script specifies roles",
+    result: "An empty script role list requires no additional CDA role. Run active scripts from Submit Job or Job Manager." },
   { action: "Define or change a job", access: "Data Acquisition Mgr or Data Exchange Mgr for the office",
-    result: "Scripts Manager allows create, edit, and delete. The definition sets which roles may run it." },
+    result: "Job Manager provides Details, Run job, and Job runs tabs. Editing still requires office administrator access." },
+  { action: "View admin dashboards", access: "Data Acquisition Mgr in HQ",
+    result: "View organization-wide office usage, failures, queue health, and scheduler status from Admin. This role in another office does not grant dashboard access. Contact your HQ administrator to request access." },
 ];
 
 const ControlsPane = ({ user }: { user?: ApplicationInfo["user"] }) => {
@@ -154,20 +156,19 @@ const ControlsPane = ({ user }: { user?: ApplicationInfo["user"] }) => {
     <div><H2 id="controls-heading">Controls</H2>
       <Text>Batch Events uses office roles from your CDA profile. It does not assign or change roles.</Text>
     </div>
-    <div className="overflow-x-auto rounded-lg border border-slate-200"><Table>
-      <TableHead><TableRow><TableHeader>Action</TableHeader><TableHeader>Required access</TableHeader>
-        <TableHeader>What happens</TableHeader></TableRow></TableHead>
-      <TableBody>{controls.map((control) => <TableRow key={control.action}>
-        <TableCell className="font-medium">{control.action}</TableCell><TableCell>{control.access}</TableCell>
-        <TableCell>{control.result}</TableCell></TableRow>)}</TableBody>
-    </Table></div>
+    <div className="grid min-w-0 gap-4 md:grid-cols-2">{controls.map(control => <Card key={control.action} className="min-w-0 border-t-4 border-t-red-700 p-5">
+      <H3>{control.action}</H3><dl className="mt-4 space-y-4 text-sm">
+        <div><dt className="font-semibold text-slate-700">Required access</dt><dd className="mt-1 whitespace-normal text-slate-600">{control.access}</dd></div>
+        <div><dt className="font-semibold text-slate-700">What happens</dt><dd className="mt-1 whitespace-normal text-slate-600">{control.result}</dd></div>
+      </dl></Card>)}</div>
     <Card className="p-6"><H3>How roles are set</H3>
       <div className="mt-3 space-y-3 text-sm text-slate-700">
         <p>Roles are managed in the CDA user profile and grouped by office.</p>
         <p><strong>CWMS Users</strong> makes an office available in Batch Events. A script can require
-          that role or another role assigned to you for the same office.</p>
+          that role or another role assigned to you for the same office. Leave the script roles empty
+          when no additional execution role is needed. Office access is still required.</p>
         <p><strong>Data Acquisition Mgr</strong> or <strong>Data Exchange Mgr</strong> allows you to
-          define and maintain scripts for that office in Scripts Manager.</p>
+          define and maintain scripts for that office in Job Manager.</p>
         <p>The <strong>Roles</strong> field on each script definition controls who may execute it.</p>
         <p>See the <ExternalLink href={github.cda}>CWMS Data API repository</ExternalLink> for the
           source of CDA profile behavior and the{" "}
@@ -282,9 +283,10 @@ const OnboardingPane = ({ user }: { user?: ApplicationInfo["user"] }) => {
     </Card>
     <ol className="space-y-6">
       <OnboardingStep number={1} title="Confirm your office access">
-        <p>Open the <strong>Controls</strong> tab above. To define a job for {officeLabel}, your CDA
+        <p>Open <strong>About → Controls</strong>. To define a job for {officeLabel}, your CDA
           profile needs <strong>Data Acquisition Mgr</strong> or <strong>Data Exchange Mgr</strong> for
-          that office. To run it, you need an office role allowed by the script.</p>
+          that office. To run it, you need access to the office and a matching execution role only
+          when the script specifies roles.</p>
         <p>If a role is missing, contact the person who manages CDA user roles for your office.</p>
       </OnboardingStep>
       <OnboardingStep number={2} title="Prepare the job in your office repository">
@@ -296,32 +298,29 @@ const OnboardingPane = ({ user }: { user?: ApplicationInfo["user"] }) => {
           <ExternalLink href={github.application + "#readme"}>Batch Events README</ExternalLink>.</p>
       </OnboardingStep>
       <OnboardingStep number={3} title="Define the job">
-        <p>Use Scripts Manager to add the office script in two parts.</p>
+        <p>Use Job Manager to add the office script in two parts.</p>
         <ol className="mt-4 space-y-5">
           <OnboardingSubstep number="3.1" title="Choose the office and start a definition">
-            <p>Open <strong>Scripts Manager</strong>, choose {officeLabel}, then select <strong>New +</strong>.</p>
+            <p>Open <strong>Job Manager</strong>, choose {officeLabel}, then select <strong>New +</strong>.</p>
             <OnboardingScreenshot
               src="/events/about/onboarding-scripts-manager.png"
-              alt="Scripts Manager with the office selector and New button marked."
-              frameClassName="aspect-[16/5]"
-              callouts={[
-                { label: "Choose " + officeLabel, style: { left: "1%", top: "39%", width: "12%", height: "12%" } },
-                { label: "Select New +", style: { left: "43%", top: "51%", width: "9%", height: "14%" } },
-              ]}
+              alt="Job Manager with row actions and Details, Run job, and Job runs tabs."
+              frameClassName="aspect-[16/10]"
+              callouts={[]}
             />
           </OnboardingSubstep>
           <OnboardingSubstep number="3.2" title="Complete the job definition">
             <p>Enter a name and description. <strong>GitHub Repo Path</strong> is the path to the
               script inside the office repository, such as <code>python/my_job.py</code>—not a GitHub URL.</p>
-            <p>Select the roles allowed to run the job, keep it active, and save.</p>
+            <p>For a command already in the runner, choose <strong>Installed command</strong> and
+              enter its executable and arguments. The example below uses Bash to print the runner time zone.</p>
+            <p>Roles are optional. Leave them empty when the job needs no additional CDA execution role,
+              or select roles to restrict who can run it. Keep the script active and save.</p>
             <OnboardingScreenshot
               src="/events/about/onboarding-script-form.png"
-              alt="New script form with the repository path and roles fields marked."
+              alt="New job form with source, runtime, arguments, and optional roles."
               frameClassName="aspect-[16/9]"
-              callouts={[
-                { label: "Repository path", style: { left: "63%", top: "56%", width: "35%", height: "9%" } },
-                { label: "Allowed roles", style: { left: "63%", top: "68%", width: "35%", height: "15%" } },
-              ]}
+              callouts={[]}
             />
           </OnboardingSubstep>
         </ol>
@@ -329,29 +328,39 @@ const OnboardingPane = ({ user }: { user?: ApplicationInfo["user"] }) => {
       <OnboardingStep number={4} title="Execute the job">
         <ol className="mt-4 space-y-5">
           <OnboardingSubstep number="4.1" title="Choose the office and script">
-            <p>Open <strong>Submit Job</strong>, select {officeLabel}, then choose the script.
-              Only active scripts that allow one of your {officeLabel} roles are listed.</p>
+            <p>In <strong>Job Manager</strong>, select <strong>Run job</strong> at the end of the
+              script row. The script opens with its <strong>Run job</strong> tab selected.
+              You can also switch between <strong>Details</strong>, <strong>Run job</strong>, and
+              <strong> Job runs</strong> in the selected script.</p>
             <OnboardingScreenshot
               src="/events/about/onboarding-submit-job.png"
-              alt="Submit Job with the office, script, and Execute controls marked."
-              frameClassName="aspect-[16/5]"
-              callouts={[
-                { label: "Choose " + officeLabel, style: { left: "1%", top: "39%", width: "12%", height: "12%" } },
-                { label: "Choose script", style: { left: "1%", top: "59%", width: "31%", height: "13%" } },
-                { label: "Execute", style: { left: "1%", top: "76%", width: "8%", height: "14%" } },
-              ]}
+              alt="Run job tab reviewing a Bash command with no additional CDA role."
+              frameClassName="aspect-[16/10]"
+              callouts={[]}
             />
           </OnboardingSubstep>
           <OnboardingSubstep number="4.2" title="Review inputs and execute">
-            <p>Enter any parameters required by the selected script, review the values, then select
-              <strong> Execute</strong>.</p>
+            <p>Review the saved executable or file and arguments, then select <strong>Submit job</strong>.
+              Successful submission opens the new run in <strong>Job runs</strong>. To change inputs,
+              use <strong>Details → Edit</strong> and save before submitting.</p>
+            <p>Users who do not administer scripts can continue to use <strong>Submit Job</strong>{" "}
+              to choose an active script from their permitted catalog and select <strong>Submit job</strong>, or use <strong>Custom run</strong> to override arguments for one run.</p>
           </OnboardingSubstep>
         </ol>
       </OnboardingStep>
       <OnboardingStep number={5} title="Review the result">
-        <p>Open <strong>Jobs List</strong>. Select <strong>Details</strong> for the run to review its
-          status and output. This list contains jobs submitted by your username, not every job for
-          {office ? " " + office : " the office"}.</p>
+        <p>Select <strong>View job runs</strong> at the end of a script row to open its <strong>Job runs</strong>{" "}
+          tab. Select a run to view status and output. Use <strong>Refresh</strong> to reload the list.
+          The selected run updates until it finishes, then loads its output.</p>
+        <p>Open <strong>Job History</strong> to review runs across scripts in your offices. Both lists
+          share office runs and show who submitted them. <strong>Manual</strong> and <strong>Scheduled</strong>{" "}
+          badges distinguish the trigger. Older runs may show <strong>Unknown</strong>.</p>
+        <p>Script rows show a spinner for queued or running office jobs and a <strong>Recent failure</strong>{" "}
+          warning for a failure in the past 24 hours. Select either indicator to open that exact run.
+          The manager refreshes status every five seconds while visible. If status cannot be loaded,
+          use <strong>Retry run status</strong>.</p>
+        <OnboardingScreenshot src="/events/about/onboarding-job-runs.png"
+          alt="Job runs tab with a completed Bash job and its output." frameClassName="aspect-[16/10]" callouts={[]} />
       </OnboardingStep>
     </ol>
   </section>;
@@ -366,17 +375,21 @@ export const AboutPage = ({ initialTab = "about" }: { initialTab?: AboutTab }) =
   const tabs = [
     { name: "About", content: <AboutOverview /> },
     { name: "Controls", content: <ControlsPane user={user} /> },
-    { name: "Onboarding", content: <OnboardingPane user={user} /> },
     ...(auth.isAuth ? [{ name: "Version", content: <VersionPane /> }] : []),
   ];
   const requestedTabIndex = {
     about: 0,
     controls: 1,
     onboarding: 2,
-    version: 3,
+    version: 2,
   }[initialTab];
   const defaultTabIndex =
-    requestedTabIndex === 3 && !auth.isAuth ? 0 : requestedTabIndex;
+    requestedTabIndex === 2 && !auth.isAuth ? 0 : requestedTabIndex;
+
+  if (initialTab === "onboarding") return <div className="mx-auto max-w-6xl">
+    <H1>Onboarding</H1>
+    <OnboardingPane user={user} />
+  </div>;
 
   return <div className="mx-auto max-w-6xl">
     <section className="space-y-4 py-4">

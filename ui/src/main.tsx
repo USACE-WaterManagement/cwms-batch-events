@@ -1,7 +1,9 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "./utils/queryClient";
+import ErrorToasts from "./components/ErrorToasts";
 import { LinkProvider } from "@usace/groundwork";
 import {
   AuthProvider,
@@ -49,14 +51,13 @@ const authMethod = (() => {
   }
 })();
 
-const queryClient = new QueryClient();
-
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <AuthProvider method={authMethod}>
         <LinkProvider component={Link} hrefMap="to">
           <RouterProvider router={router} />
+          <ErrorToasts />
         </LinkProvider>
       </AuthProvider>
     </QueryClientProvider>

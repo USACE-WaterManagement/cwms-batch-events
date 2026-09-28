@@ -1,7 +1,9 @@
 from typing import Protocol
 from uuid import UUID
+from cwms_batch_events.core.models import JobLogPage
 
 
 class JobLogger(Protocol):
+    def get_log_page(self, job_id: UUID, cursor: str | None = None) -> JobLogPage: ...
     def get_logs_for_job(self, job_id: UUID) -> str: ...
     def push_logs_for_job(self, job_id: UUID, logs: str) -> None: ...

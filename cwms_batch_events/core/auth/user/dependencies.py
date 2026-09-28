@@ -4,7 +4,9 @@ from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBea
 from cachetools import TTLCache
 from cwms_batch_events.core.auth.user.jwt import verify_jwt
 from cwms_batch_events.core.auth.user.models import User
+from cwms_batch_events.core.display_names import readable_name
 from cwms_batch_events.core.auth.user.roles import (
+    CdaUserProfileError,
     get_user_admin_offices,
     get_user_allowed_offices,
     get_user_profile_apikey,
@@ -54,6 +56,7 @@ async def get_current_user_cwms(
     if cache_key in user_cache:
         return user_cache[cache_key]
 
+    claims = {}
     if credentials.scheme.lower() == "bearer":
         token = credentials.credentials
         try:
@@ -66,10 +69,22 @@ async def get_current_user_cwms(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=f"Invalid token: {str(e)}",
             )
-        cda_user = get_user_profile_jwt(token)
+        try:
+            cda_user = get_user_profile_jwt(token)
+        except CdaUserProfileError as exc:
+            raise HTTPException(
+                status_code=exc.status_code,
+                detail=exc.detail,
+            ) from exc
     elif credentials.scheme.lower() == "apikey":
         apikey = credentials.credentials
-        cda_user = get_user_profile_apikey(apikey)
+        try:
+            cda_user = get_user_profile_apikey(apikey)
+        except CdaUserProfileError as exc:
+            raise HTTPException(
+                status_code=exc.status_code,
+                detail=exc.detail,
+            ) from exc
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -80,6 +95,12 @@ async def get_current_user_cwms(
     admin_offices = get_user_admin_offices(cda_user)
     user = User(
         username=cda_user.user_name,
+        display_name=readable_name(
+            claims.get("name"),
+            " ".join(str(claims.get(part) or "") for part in ("given_name", "family_name")),
+            claims.get("preferred_username"),
+            cda_user.user_name,
+        ),
         offices=allowed_offices,
         admin_offices=admin_offices,
         roles=cda_user.roles,

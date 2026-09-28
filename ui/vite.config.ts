@@ -17,6 +17,7 @@ export default defineConfig(({ mode }) => {
     ],
     base: "/events/",
     server: {
+      allowedHosts: [".apps.hecdev.net"],
       proxy: {
         "/api": {
           target: env.VITE_API_PROXY_TARGET ?? "http://localhost:8000",

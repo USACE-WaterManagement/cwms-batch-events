@@ -54,3 +54,11 @@ jobs:
             ui/playwright-report/
             ui/test-results/
           if-no-files-found: ignore
+
+      - name: Upload header review screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: header-review-screenshots
+          path: ui/test-results/**/screenshots/*.png
+          if-no-files-found: ignore
