@@ -126,6 +126,14 @@ def test_import_script_configuration_merges_selected_existing_fields(client, job
     assert update_payload.name == "Existing"
     assert update_payload.description == "new description"
 
+    package["configuration"]["name"] = "Existing"
+    response = client.post("/scripts/configuration-import", json={
+        "targetOffice": "SWT", "package": package, "createNew": True,
+    })
+
+    assert response.status_code == 422
+    assert "different name" in response.json()["detail"]
+
 
 def test_post_script_returns_created_script(client, job_db):
     script = make_script_read()

@@ -32,6 +32,7 @@ export function ConfigurationImport({ office, scripts, opened, onClose, onImport
   const auth = useAuth();
   const [packageData, setPackageData] = useState<TransferPackage | null>(null);
   const [fileName, setFileName] = useState("");
+  const [newName, setNewName] = useState("");
   const [selections, setSelections] = useState<Record<string, "existing" | "imported">>({});
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -46,6 +47,7 @@ export function ConfigurationImport({ office, scripts, opened, onClose, onImport
   const reset = useCallback(() => {
     setPackageData(null);
     setFileName("");
+    setNewName("");
     setSelections({});
     setError(null);
     setPending(false);
@@ -68,6 +70,7 @@ export function ConfigurationImport({ office, scripts, opened, onClose, onImport
       if (parsed.schemaVersion !== 1 || !parsed.configurationKey || !parsed.configuration) throw new Error("This is not a supported script configuration file.");
       setPackageData(parsed);
       setFileName(file.name);
+      setNewName(typeof parsed.configuration.name === "string" ? parsed.configuration.name : "");
       setSelections({});
       setReviewValues(false);
       setMode("new");
@@ -86,10 +89,14 @@ export function ConfigurationImport({ office, scripts, opened, onClose, onImport
     setPending(true);
     setError(null);
     try {
+      const importPackage = existing && mode === "new" ? {
+        ...packageData,
+        configuration: { ...packageData.configuration, name: newName.trim() },
+      } : packageData;
       const response = await fetchWithAuth("/api/scripts/configuration-import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ targetOffice: office, package: packageData, selections, createNew: mode === "new" && Boolean(existing) }),
+        body: JSON.stringify({ targetOffice: office, package: importPackage, selections, createNew: mode === "new" && Boolean(existing) }),
       }, auth.token);
       const imported = await response.json() as Script;
       onImported(imported.id);
@@ -136,9 +143,13 @@ export function ConfigurationImport({ office, scripts, opened, onClose, onImport
           <div className="mt-4 flex flex-wrap gap-2"><Button type="button" onClick={() => { setMode("update"); setChoiceMade(true); setReviewValues(true); }}>Review values</Button><Button type="button" onClick={() => { setMode("new"); setChoiceMade(true); setReviewValues(false); }}>Make new configuration</Button></div>
         </div> : <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
           <p className="font-semibold text-emerald-950">{existing && mode === "new" ? "New configuration" : existing ? "Update existing configuration" : "New configuration"}</p>
-          <p className="mt-1 text-sm text-emerald-900">{existing && mode === "new" ? <>A new configuration named <span className="font-semibold">{String(packageData.configuration.name ?? "(unnamed)")}</span> will be created. The existing configuration will not change.</> : existing ? <>Review the values to import into <span className="font-semibold">{existing.name}</span>.</> : <>A new configuration named <span className="font-semibold">{String(packageData.configuration.name ?? "(unnamed)")}</span> will be imported with <span className="font-semibold">{valueCount} values</span>.</>}</p>
+          <p className="mt-1 text-sm text-emerald-900">{existing && mode === "new" ? <>A new configuration named <span className="font-semibold">{newName || "(unnamed)"}</span> will be created. The existing configuration will not change.</> : existing ? <>Review the values to import into <span className="font-semibold">{existing.name}</span>.</> : <>A new configuration named <span className="font-semibold">{String(packageData.configuration.name ?? "(unnamed)")}</span> will be imported with <span className="font-semibold">{valueCount} values</span>.</>}</p>
+          {existing && mode === "new" && <label className="mt-4 block text-sm font-medium text-slate-800">New configuration name
+            <input value={newName} onChange={event => setNewName(event.target.value)} aria-describedby="new-configuration-name-help" className="mt-1 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 focus:outline-2 focus:outline-blue-600" />
+            <span id="new-configuration-name-help" className="mt-1 block text-xs text-slate-600">Choose a name different from {existing.name}.</span>
+          </label>}
           {reviewValues && renderValues()}
-          <div className="mt-4 flex flex-wrap justify-end gap-2"><Button type="button" onClick={() => { setReviewValues(false); setMode("new"); setChoiceMade(false); }}>Cancel</Button>{!reviewValues && <Button type="button" onClick={() => setReviewValues(true)}>Review values</Button>}{reviewValues && existing && mode === "update" && <Button type="button" onClick={() => { setMode("new"); setChoiceMade(true); setReviewValues(false); }}>Make new configuration</Button>}<Button type="button" disabled={pending} onClick={() => void apply()}>{pending ? "Importing…" : existing && mode === "update" ? "Update configuration" : "Import configuration"}</Button></div>
+          <div className="mt-4 flex flex-wrap justify-end gap-2"><Button type="button" onClick={() => { setReviewValues(false); setMode("new"); setChoiceMade(false); }}>Cancel</Button>{!reviewValues && <Button type="button" onClick={() => setReviewValues(true)}>Review values</Button>}{reviewValues && existing && mode === "update" && <Button type="button" onClick={() => { setMode("new"); setChoiceMade(true); setReviewValues(false); }}>Make new configuration</Button>}<Button type="button" disabled={pending || Boolean(existing && mode === "new" && (!newName.trim() || newName.trim() === existing.name))} onClick={() => void apply()}>{pending ? "Importing…" : existing && mode === "update" ? "Update configuration" : "Import configuration"}</Button></div>
         </div>}
       </>}
       {error && <p role="alert" className="rounded border border-red-500 bg-red-50 p-3 text-red-800">{error}</p>}

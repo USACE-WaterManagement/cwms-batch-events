@@ -54,9 +54,15 @@ def import_script_configuration(
 ):
     check_user_office_admin(user, payload.target_office)
     incoming = dict(payload.package.configuration)
-    existing = None if payload.create_new else job_db.get_script_by_configuration_key(
+    matched = job_db.get_script_by_configuration_key(
         payload.package.configuration_key, payload.target_office
     )
+    if payload.create_new and matched is not None and incoming.get("name") == matched.name:
+        raise HTTPException(
+            status_code=422,
+            detail="A new configuration must have a different name from the matching configuration",
+        )
+    existing = None if payload.create_new else matched
     try:
         if existing is not None:
             for field, choice in payload.selections.items():
