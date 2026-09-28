@@ -282,12 +282,16 @@ class PostgresJobDatabase:
         ]
 
     def get_script_by_configuration_key(self, configuration_key: uuid.UUID, office: str):
-        script = self.db.scalars(
-            select(ScriptModel).where(
-                ScriptModel.configuration_key == configuration_key,
-                ScriptModel.office == office,
-            )
-        ).one_or_none()
+        with self.db.begin():
+            script = self.db.scalars(
+                select(ScriptModel).where(
+                    ScriptModel.configuration_key == configuration_key,
+                    ScriptModel.office == office,
+                )
+            ).one_or_none()
+            if script is None:
+                return None
+            self.db.expunge(script)
         return ScriptRead.model_validate(script) if script else None
 
     def _load_job_for_update(self, job_id: uuid.UUID):
@@ -329,6 +333,7 @@ class PostgresJobDatabase:
         return [ScriptRead.model_validate(script) for script in runnable_scripts]
 
     def store_script(self, payload: ScriptCreate, actor: User | None = None, configuration_key: uuid.UUID | None = None) -> ScriptRead:
+        self.db.rollback()
         try:
             with self.db.begin():
                 script = ScriptModel()
@@ -403,6 +408,7 @@ class PostgresJobDatabase:
     def update_script(
         self, script_id: uuid.UUID, payload: ScriptUpdate, admin_offices: list[str], actor: User | None = None
     ) -> ScriptRead:
+        self.db.rollback()
         with self.db.begin():
             script = self.db.scalars(select(ScriptModel).where(ScriptModel.id == script_id).with_for_update()).one()
             if script.office not in admin_offices:
