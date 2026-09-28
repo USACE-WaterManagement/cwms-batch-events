@@ -8,6 +8,7 @@ import { Button, Card, Container, H1, SiteWrapper, Text } from "@usace/groundwor
 import { useAuth } from "@usace-watermanagement/groundwork-water";
 import "@usace/groundwork/dist/groundwork.css";
 import AuthButton from "../features/auth/AuthButton";
+import { useApplicationInfo } from "../features/about/useAboutInfo";
 
 const primaryLinks = [
   { id: "jobs", text: "Jobs List", href: "/jobs" },
@@ -37,6 +38,7 @@ export const Route = createRootRoute({
 
 function RootShell({ children }: { children: ReactNode }) {
   const auth = useAuth();
+  const application = useApplicationInfo();
   const aboutLink = {
     id: "about-menu",
     text: "About",
@@ -45,7 +47,14 @@ function RootShell({ children }: { children: ReactNode }) {
       ? [...publicAboutLinks, ...authenticatedAboutLinks]
       : publicAboutLinks,
   };
-  const navLinks = [...primaryLinks, aboutLink];
+  const navLinks = [
+    ...primaryLinks.filter(
+      (link) =>
+        link.id !== "dependencies" ||
+        (application.data?.user.offices.length ?? 0) > 0,
+    ),
+    aboutLink,
+  ];
 
   return (
     <SiteWrapper links={navLinks} navRight={<AuthButton />}>

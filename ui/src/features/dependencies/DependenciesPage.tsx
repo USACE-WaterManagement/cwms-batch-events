@@ -1,5 +1,8 @@
 import { Card, H1, H2, Text } from "@usace/groundwork";
 import { FiExternalLink, FiPackage } from "react-icons/fi";
+import { useAuth } from "@usace-watermanagement/groundwork-water";
+import LoginPrompt from "../auth/LoginPrompt";
+import { useApplicationInfo } from "../about/useAboutInfo";
 
 const pythonCwmsUrl =
   "https://github.com/USACE-WaterManagement/pythonCWMS";
@@ -38,6 +41,30 @@ const ExternalLink = ({ href, children }: { href: string; children: React.ReactN
 );
 
 export default function DependenciesPage() {
+  const auth = useAuth();
+  const application = useApplicationInfo();
+
+  if (!auth.isAuth) {
+    return (
+      <LoginPrompt
+        title="Sign in to view dependencies"
+        description="The WM base image package list is available to users who can submit batch jobs."
+      />
+    );
+  }
+
+  if (application.isLoading) {
+    return <Text>Checking your Batch Events access...</Text>;
+  }
+
+  if (application.isError || !application.data) {
+    return <Text>Unable to verify your Batch Events access.</Text>;
+  }
+
+  if (application.data.user.offices.length === 0) {
+    return <Text>You do not have the office roles required to submit a batch job.</Text>;
+  }
+
   return (
     <main className="mx-auto max-w-6xl py-6 sm:py-10">
       <div className="max-w-3xl">
