@@ -9,7 +9,7 @@ type ScriptWithConfigurationKey = Script & { configurationKey?: string };
 type ImportMode = "new" | "update";
 
 const fieldLabels: Record<string, string> = {
-  configVersion: "Configuration version", name: "Name", description: "Description",
+  name: "Name", description: "Description",
   repoPath: "Path or executable", executionType: "Source type", runtime: "Runtime",
   commandArgs: "Arguments", commandPlaceholder: "Command placeholder", commandMode: "Command mode",
   shellCommand: "Shell command", releaseJar: "Release JAR", environmentVariables: "Environment variables",
@@ -42,7 +42,8 @@ export function ConfigurationImport({ office, scripts, opened, onClose, onImport
   const [choiceMade, setChoiceMade] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const existing = useMemo(() => packageData && scripts.find(script => (script as ScriptWithConfigurationKey).configurationKey === packageData.configurationKey), [packageData, scripts]);
-  const valueCount = packageData ? Object.keys(packageData.configuration).length : 0;
+  const importedEntries = packageData ? Object.entries(packageData.configuration).filter(([field]) => field !== "configVersion") : [];
+  const valueCount = importedEntries.length;
 
   const reset = useCallback(() => {
     setPackageData(null);
@@ -109,7 +110,7 @@ export function ConfigurationImport({ office, scripts, opened, onClose, onImport
   };
 
   const renderValues = () => <div className="max-h-80 space-y-2 overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-3">
-    {Object.entries(packageData?.configuration ?? {}).map(([field, importedValue]) => <div key={field} className="grid gap-2 border-b border-slate-200 pb-2 last:border-b-0 sm:grid-cols-[12rem_1fr]">
+    {importedEntries.map(([field, importedValue]) => <div key={field} className="grid gap-2 border-b border-slate-200 pb-2 last:border-b-0 sm:grid-cols-[12rem_1fr]">
       <span className="font-semibold text-slate-700">{fieldLabels[field] ?? field}</span>
       {mode === "update" && existing ? <div className="space-y-1 text-sm">
         <label className="block"><input type="radio" name={`choice-${field}`} checked={selections[field] !== "existing"} onChange={() => setSelections(previous => ({ ...previous, [field]: "imported" }))} /> Imported: <code>{displayValue(importedValue)}</code></label>
@@ -140,7 +141,7 @@ export function ConfigurationImport({ office, scripts, opened, onClose, onImport
         <p className="text-sm text-slate-600">Source office: <span className="font-medium text-slate-900">{packageData.sourceOffice}</span>. This will import into <span className="font-medium text-slate-900">{office.toUpperCase()}</span>.</p>
         {existing && !choiceMade ? <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
           <p className="font-semibold text-amber-950">Matching configuration found</p>
-          <p className="mt-1 text-sm text-amber-900">This backup has the same configuration ID as <span className="font-semibold">{existing.name}</span>. Would you like to update that configuration or make a new one?</p>
+          <p className="mt-1 text-sm text-amber-900">This imported configuration has the same configuration ID as <span className="font-semibold">{existing.name}</span>. Would you like to update that configuration or make a new one?</p>
           <div className="mt-4 flex flex-wrap gap-2"><Button type="button" onClick={() => { setMode("update"); setChoiceMade(true); setReviewValues(true); }}>Review values</Button><Button type="button" onClick={() => { setMode("new"); setChoiceMade(true); setReviewValues(false); }}>Make new configuration</Button></div>
         </div> : <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
           <p className="font-semibold text-emerald-950">{existing && mode === "new" ? "New configuration" : existing ? "Update existing configuration" : "New configuration"}</p>

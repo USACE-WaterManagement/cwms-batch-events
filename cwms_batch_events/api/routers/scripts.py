@@ -54,6 +54,7 @@ def import_script_configuration(
 ):
     check_user_office_admin(user, payload.target_office)
     incoming = dict(payload.package.configuration)
+    incoming.pop("config_version", None)
     matched = job_db.get_script_by_configuration_key(
         payload.package.configuration_key, payload.target_office
     )

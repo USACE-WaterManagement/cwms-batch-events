@@ -7,7 +7,7 @@ from cwms_batch_events.core.models import CamelModel, ScriptRead
 
 
 PORTABLE_FIELDS = (
-    "config_version", "name", "description", "repo_path", "execution_type",
+    "name", "description", "repo_path", "execution_type",
     "runtime", "command_args", "command_placeholder", "command_mode",
     "shell_command", "release_jar", "environment_variables", "resource_size",
     "active", "roles", "schedule_enabled", "schedule_type", "schedule_minute",
