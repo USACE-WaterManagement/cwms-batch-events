@@ -22,6 +22,7 @@ permissions:
 jobs:
   Build-Push-UI-to-Env:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Git clone the repository
         uses: actions/checkout@v4

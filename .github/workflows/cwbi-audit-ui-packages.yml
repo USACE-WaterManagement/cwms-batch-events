@@ -14,6 +14,7 @@ jobs:
   npm-audit:
     name: Audit UI packages for high or critical vulnerabilities
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout repository
