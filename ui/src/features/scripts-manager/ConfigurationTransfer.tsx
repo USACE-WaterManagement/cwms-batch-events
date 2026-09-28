@@ -1,5 +1,5 @@
 import { Button, Modal, Text } from "@usace/groundwork";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import type { Script } from "./types";
 import fetchWithAuth from "../../utils/fetchWithAuth";
 import { useAuth } from "@usace-watermanagement/groundwork-water";
@@ -47,7 +47,23 @@ export function ConfigurationImport({ office, scripts, opened, onClose, onImport
   const [selections, setSelections] = useState<Record<string, "existing" | "imported">>({});
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const existing = useMemo(() => packageData && scripts.find(script => (script as ScriptWithConfigurationKey).configurationKey === packageData.configurationKey), [packageData, scripts]);
+
+  const reset = useCallback(() => {
+    setPackageData(null);
+    setSelections({});
+    setError(null);
+    setPending(false);
+    setDragActive(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }, []);
+
+  const close = useCallback(() => {
+    reset();
+    onClose();
+  }, [onClose, reset]);
 
   const readFile = async (file: File) => {
     setError(null);
@@ -56,9 +72,11 @@ export function ConfigurationImport({ office, scripts, opened, onClose, onImport
       if (parsed.schemaVersion !== 1 || !parsed.configurationKey || !parsed.configuration) throw new Error("This is not a supported script configuration file.");
       setPackageData(parsed);
       setSelections({});
+      setDragActive(false);
     } catch (caught) {
       setPackageData(null);
       setError(caught instanceof Error ? caught.message : "The configuration file could not be read.");
+      setDragActive(false);
     }
   };
 
@@ -74,7 +92,7 @@ export function ConfigurationImport({ office, scripts, opened, onClose, onImport
       }, auth.token);
       const imported = await response.json() as Script;
       onImported(imported.id);
-      onClose();
+      close();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "The configuration could not be restored.");
     } finally {
@@ -82,12 +100,26 @@ export function ConfigurationImport({ office, scripts, opened, onClose, onImport
     }
   };
 
-  return <Modal opened={opened} onClose={onClose} dialogTitle={`Restore configuration · ${office.toUpperCase()}`} size="3xl">
+  return <Modal opened={opened} onClose={close} dialogTitle={`Restore configuration · ${office.toUpperCase()}`} size="3xl">
     <div className="space-y-4 p-2">
-      <input aria-label="Configuration JSON file" type="file" accept="application/json,.json" onChange={event => {
-        const file = event.target.files?.[0];
-        if (file) void readFile(file);
-      }} />
+      <div
+        className={`rounded-lg border-2 border-dashed p-5 text-center ${dragActive ? "border-blue-700 bg-blue-50" : "border-slate-300 bg-slate-50"}`}
+        onDragEnter={event => { event.preventDefault(); setDragActive(true); }}
+        onDragOver={event => { event.preventDefault(); setDragActive(true); }}
+        onDragLeave={event => { event.preventDefault(); setDragActive(false); }}
+        onDrop={event => {
+          event.preventDefault();
+          const file = event.dataTransfer.files[0];
+          if (file) void readFile(file);
+        }}
+      >
+        <input ref={fileInputRef} id="configuration-file" aria-label="Configuration JSON file" className="sr-only" type="file" accept="application/json,.json" onChange={event => {
+          const file = event.target.files?.[0];
+          if (file) void readFile(file);
+        }} />
+        <Button type="button" onClick={() => fileInputRef.current?.click()}>Choose configuration file</Button>
+        <p className="mt-2 text-sm text-slate-600">Or drag and drop a JSON configuration file here.</p>
+      </div>
       {error && <p role="alert" className="rounded border border-red-500 bg-red-50 p-3 text-red-800">{error}</p>}
       {packageData && <>
         <Text>Source office: {packageData.sourceOffice}. This will restore into {office.toUpperCase()}.</Text>
@@ -102,7 +134,7 @@ export function ConfigurationImport({ office, scripts, opened, onClose, onImport
           </div>)}
         </div>}
         <div className="flex justify-end gap-3">
-          <Button type="button" onClick={onClose}>Cancel</Button>
+          <Button type="button" onClick={close}>Cancel</Button>
           <Button type="button" disabled={pending} onClick={() => void apply()}>{pending ? "Restoring…" : existing ? "Apply selected values" : "Create configuration"}</Button>
         </div>
       </>}
