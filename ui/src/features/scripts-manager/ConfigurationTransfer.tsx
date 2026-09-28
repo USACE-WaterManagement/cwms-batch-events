@@ -38,6 +38,7 @@ export function ConfigurationImport({ office, scripts, opened, onClose, onImport
   const [dragActive, setDragActive] = useState(false);
   const [reviewValues, setReviewValues] = useState(false);
   const [mode, setMode] = useState<ImportMode>("new");
+  const [choiceMade, setChoiceMade] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const existing = useMemo(() => packageData && scripts.find(script => (script as ScriptWithConfigurationKey).configurationKey === packageData.configurationKey), [packageData, scripts]);
   const valueCount = packageData ? Object.keys(packageData.configuration).length : 0;
@@ -51,6 +52,7 @@ export function ConfigurationImport({ office, scripts, opened, onClose, onImport
     setDragActive(false);
     setReviewValues(false);
     setMode("new");
+    setChoiceMade(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }, []);
 
@@ -69,6 +71,7 @@ export function ConfigurationImport({ office, scripts, opened, onClose, onImport
       setSelections({});
       setReviewValues(false);
       setMode("new");
+      setChoiceMade(false);
       setDragActive(false);
     } catch (caught) {
       setPackageData(null);
@@ -109,7 +112,7 @@ export function ConfigurationImport({ office, scripts, opened, onClose, onImport
   </div>;
 
   return <Modal opened={opened} onClose={close} dialogTitle={`Import job configuration · ${office.toUpperCase()}`} size="3xl" className="[&_[id^=headlessui-dialog-panel]]:overflow-hidden [&_[id^=headlessui-dialog-panel]]:rounded-2xl [&_[id^=headlessui-dialog-panel]]:border [&_[id^=headlessui-dialog-panel]]:border-slate-200 [&_[id^=headlessui-dialog-panel]]:shadow-2xl">
-    <div className="space-y-4 p-1 sm:p-2">
+    <div className="space-y-5 p-4 sm:p-6">
       {!packageData ? <div
         className={`rounded-xl border-2 border-dashed p-8 text-center transition ${dragActive ? "border-blue-700 bg-blue-50" : "border-slate-300 bg-gradient-to-br from-slate-50 to-blue-50/40"}`}
         onDragEnter={event => { event.preventDefault(); setDragActive(true); }}
@@ -127,15 +130,15 @@ export function ConfigurationImport({ office, scripts, opened, onClose, onImport
           <button type="button" aria-label="Choose a different configuration file" title="Choose a different file" onClick={reset} className="ml-3 rounded-full px-3 py-1 text-2xl leading-none text-slate-500 hover:bg-white hover:text-slate-900">×</button>
         </div>
         <p className="text-sm text-slate-600">Source office: <span className="font-medium text-slate-900">{packageData.sourceOffice}</span>. This will import into <span className="font-medium text-slate-900">{office.toUpperCase()}</span>.</p>
-        {existing && !reviewValues && mode === "new" ? <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+        {existing && !choiceMade ? <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
           <p className="font-semibold text-amber-950">Matching configuration found</p>
           <p className="mt-1 text-sm text-amber-900">This backup has the same configuration ID as <span className="font-semibold">{existing.name}</span>. Would you like to update that configuration or make a new one?</p>
-          <div className="mt-4 flex flex-wrap gap-2"><Button type="button" onClick={() => { setMode("update"); setReviewValues(true); }}>Review values</Button><Button type="button" onClick={() => { setMode("new"); setReviewValues(false); }}>Make new configuration</Button></div>
+          <div className="mt-4 flex flex-wrap gap-2"><Button type="button" onClick={() => { setMode("update"); setChoiceMade(true); setReviewValues(true); }}>Review values</Button><Button type="button" onClick={() => { setMode("new"); setChoiceMade(true); setReviewValues(false); }}>Make new configuration</Button></div>
         </div> : <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
           <p className="font-semibold text-emerald-950">{existing && mode === "new" ? "New configuration" : existing ? "Update existing configuration" : "New configuration"}</p>
           <p className="mt-1 text-sm text-emerald-900">{existing && mode === "new" ? <>A new configuration named <span className="font-semibold">{String(packageData.configuration.name ?? "(unnamed)")}</span> will be created. The existing configuration will not change.</> : existing ? <>Review the values to import into <span className="font-semibold">{existing.name}</span>.</> : <>A new configuration named <span className="font-semibold">{String(packageData.configuration.name ?? "(unnamed)")}</span> will be imported with <span className="font-semibold">{valueCount} values</span>.</>}</p>
           {reviewValues && renderValues()}
-          <div className="mt-4 flex flex-wrap justify-end gap-2"><Button type="button" onClick={() => { setReviewValues(false); setMode("new"); }}>Cancel</Button>{!reviewValues && <Button type="button" onClick={() => setReviewValues(true)}>Review values</Button>}{reviewValues && existing && mode === "update" && <Button type="button" onClick={() => { setMode("new"); setReviewValues(false); }}>Make new configuration</Button>}<Button type="button" disabled={pending} onClick={() => void apply()}>{pending ? "Importing…" : existing && mode === "update" ? "Update configuration" : "Import configuration"}</Button></div>
+          <div className="mt-4 flex flex-wrap justify-end gap-2"><Button type="button" onClick={() => { setReviewValues(false); setMode("new"); setChoiceMade(false); }}>Cancel</Button>{!reviewValues && <Button type="button" onClick={() => setReviewValues(true)}>Review values</Button>}{reviewValues && existing && mode === "update" && <Button type="button" onClick={() => { setMode("new"); setChoiceMade(true); setReviewValues(false); }}>Make new configuration</Button>}<Button type="button" disabled={pending} onClick={() => void apply()}>{pending ? "Importing…" : existing && mode === "update" ? "Update configuration" : "Import configuration"}</Button></div>
         </div>}
       </>}
       {error && <p role="alert" className="rounded border border-red-500 bg-red-50 p-3 text-red-800">{error}</p>}
