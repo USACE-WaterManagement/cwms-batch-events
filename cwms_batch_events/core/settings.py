@@ -94,6 +94,9 @@ class Settings(LoggingSettings, StorageSettings, ExecutorSettings, RunnerSetting
     server_log_stream_prefix: str = "ecs/cwms-batch-events-api/"
     mock_user: bool = False
     root_path: str | None = None
+    rate_limit_requests_per_minute: int = Field(default=120, ge=1, le=10000)
+    rate_limit_job_submissions_per_minute: int = Field(default=10, ge=1, le=1000)
+    rate_limit_documentation_url: str = "/events/about/rate-limits"
     database_schema: str = "events"
 
     @property

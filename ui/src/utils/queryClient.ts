@@ -25,10 +25,11 @@ export const queryClient = new QueryClient({
   }),
   defaultOptions: {
     queries: {
+      networkMode: "online",
       retry: (failureCount, error) => failureCount < 1 && !(error instanceof ApiError && error.status >= 400 && error.status < 500),
       retryOnMount: false,
       refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
+      refetchOnReconnect: true,
     },
     // Retrying a write could create a duplicate job after a lost response.
     mutations: { retry: false },

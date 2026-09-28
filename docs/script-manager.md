@@ -26,6 +26,18 @@ only.
    **Open** link on each entry that goes directly to its details and output.
 
 The Groundwork tabs keep details, submission, and run output in the selected script's workspace.
+
+## Configuration backups
+
+Script administrators can select **Export** in a script's Details view to download a versioned JSON
+backup of the saved configuration. The package contains the settings represented by the current form,
+including source and command settings, environment values, task size, access roles, and schedules.
+
+Select **Import** in the office workspace to review a backup before restoring it. A matching configuration
+offers an old-versus-imported choice for each field. A package without a match creates a new configuration
+after confirmation. The selected office is the restore target. Database IDs, run records, logs, and run
+history are not restored.
+
 In the edit form, **Add arguments** or **Edit arguments** opens the command editor modal.
 Review the numbered values and command preview, then **Apply arguments** to update the
 form. Cancel or close discards the modal draft; **Save** persists the script changes.

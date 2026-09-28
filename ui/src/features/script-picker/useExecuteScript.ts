@@ -7,13 +7,20 @@ import { useNavigate } from "@tanstack/react-router";
 import { components } from "../../generated/api-types";
 
 export type ExecuteScriptPayload = Omit<components["schemas"]["ScriptRunRequest"], "runTrigger">;
+export type JobRateLimitStatus = {
+  office: string;
+  limit: number;
+  used: number;
+  remaining: number;
+  resetAfterSeconds: number;
+};
 
 const useExecuteScript = (onSubmitted?: (job: JobDetails) => void) => {
   const auth = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  return useMutation({
+  const mutation = useMutation({
     mutationFn: (payload: ExecuteScriptPayload) =>
       executeScript(payload, auth.token),
     onSuccess: (job: JobDetails, payload) => {
@@ -28,6 +35,19 @@ const useExecuteScript = (onSubmitted?: (job: JobDetails) => void) => {
       else void navigate({ to: "/jobs/$jobId", params: { jobId: job.id } });
     },
   });
+  return {
+    ...mutation,
+    checkRateLimit: (office: string) => getJobRateLimitStatus(office, auth.token),
+  };
+};
+
+export const getJobRateLimitStatus = async (office: string, token?: string): Promise<JobRateLimitStatus> => {
+  const response = await fetchWithAuth(`/api/jobs/rate-limit-status?office=${encodeURIComponent(office)}`, {}, token);
+  const status: unknown = await response.json();
+  if (!status || typeof status !== "object" || typeof (status as { remaining?: unknown }).remaining !== "number") {
+    throw new Error("The server returned an invalid rate-limit status.");
+  }
+  return status as JobRateLimitStatus;
 };
 
 const executeScript = async (

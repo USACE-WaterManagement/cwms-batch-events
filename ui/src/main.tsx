@@ -4,6 +4,7 @@ import "./index.css";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./utils/queryClient";
 import ErrorToasts from "./components/ErrorToasts";
+import ConnectivityStatus from "./shared/components/ConnectivityStatus";
 import { LinkProvider } from "@usace/groundwork";
 import {
   AuthProvider,
@@ -51,6 +52,12 @@ const authMethod = (() => {
   }
 })();
 
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`);
+  });
+}
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
@@ -58,6 +65,7 @@ createRoot(document.getElementById("root")!).render(
         <LinkProvider component={Link} hrefMap="to">
           <RouterProvider router={router} />
           <ErrorToasts />
+          <ConnectivityStatus showBanner={false} />
         </LinkProvider>
       </AuthProvider>
     </QueryClientProvider>

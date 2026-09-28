@@ -3,8 +3,10 @@ from uuid import uuid4
 
 from sqlalchemy.exc import NoResultFound
 
+from cwms_batch_events.api.main import app
 from cwms_batch_events.core.models import JobSource
 from cwms_batch_events.core.models import JobLogPage
+from cwms_batch_events.core.rate_limit import OfficeRateLimit, RateLimitStatus
 from tests.factories import make_job_record
 
 
@@ -57,6 +59,16 @@ def test_get_jobs_page_returns_total_and_office_scoped_page(client, job_db, user
     assert response.headers["X-Total-Count"] == "23"
     job_db.get_jobs_for_offices.assert_called_once_with(user.offices, limit=10, offset=10)
     job_db.count_jobs_for_offices.assert_called_once_with(user.offices)
+
+
+def test_job_rate_limit_status_is_office_scoped(client, user, monkeypatch):
+    monkeypatch.setattr(app.state.rate_limit_store, "get", lambda offices: OfficeRateLimit(120, 10))
+    monkeypatch.setattr(app.state.rate_limit_store, "status", lambda caller_key, office_key, policy, limit: RateLimitStatus(limit=10, used=3, remaining=7, reset_after_seconds=12))
+
+    response = client.get("/jobs/rate-limit-status?office=SWT")
+
+    assert response.status_code == 200
+    assert response.json() == {"office": "SWT", "limit": 10, "used": 3, "remaining": 7, "resetAfterSeconds": 12}
 
 
 @pytest.mark.parametrize("query", ["limit=0", "limit=101", "offset=-1", "limit=all"])
@@ -114,6 +126,16 @@ def test_get_job_by_id_returns_job(client, job_db):
     assert response.status_code == 200
     assert response.json()["id"] == str(job.id)
     job_db.get_job_by_id.assert_called_once_with(job.id)
+
+
+def test_get_job_by_id_matches_user_office_case_insensitively(client, job_db, user):
+    user.offices = ["swt"]
+    job = make_job_record(office="SWT")
+    job_db.get_job_by_id.return_value = job
+
+    response = client.get(f"/jobs/{job.id}")
+
+    assert response.status_code == 200
 
 
 def test_get_job_by_id_returns_404_when_missing(client, job_db):

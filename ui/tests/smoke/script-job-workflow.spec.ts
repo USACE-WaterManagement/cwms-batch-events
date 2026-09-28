@@ -24,6 +24,7 @@ test("run from a script row, inspect its runs, and switch Groundwork tabs", asyn
     endTime: "2026-09-14T15:00:03Z", jobRunnerId: "runner-1", externalJobId: "batch-example",
   };
   let posts = 0;
+  let nearLimit = false;
   let failSubmission = false;
   let failHistory = false;
   let finishSubmission!: () => void;
@@ -39,6 +40,7 @@ test("run from a script row, inspect its runs, and switch Groundwork tabs", asyn
     if (path.endsWith("/job-runners/default")) return route.fulfill({ json: { id: "runner-1", slug: "batch" } });
     if (path.endsWith("/repository-files")) return route.fulfill({ json: {repository:"USACE-WaterManagement/swt-wm-cwbi-jobs",ref:"cwbi-dev",paths:["bin/report.sh"]} });
     if (path.endsWith("/scripts")) return route.fulfill({ json: [script, second, inactive] });
+    if (path.endsWith("/jobs/rate-limit-status")) return route.fulfill({ json: { office: "SWT", limit: 10, used: nearLimit ? 9 : 0, remaining: nearLimit ? 1 : 10, resetAfterSeconds: nearLimit ? 18 : 0 } });
     if (path.endsWith("/jobs") && route.request().method() === "POST") {
       posts++;
       expect(route.request().postDataJSON()).toEqual({ scriptId: script.id, runTrigger: "manual" });
@@ -92,6 +94,14 @@ test("run from a script row, inspect its runs, and switch Groundwork tabs", asyn
   await expect(page).toHaveURL(/\/events\/scripts-manager$/);
   expect(posts).toBe(1);
   await page.getByRole("button", { name: `Back to office runs for ${script.name}` }).click();
+  nearLimit = true;
+  await page.getByRole("tab", { name: "Run job", exact: true }).click();
+  await page.getByRole("button", { name: "Submit job", exact: true }).click();
+  await expect(page.getByRole("dialog")).toContainText("1 job submission remaining");
+  await expect(page.getByRole("dialog")).toContainText("18 seconds");
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  nearLimit = false;
+  await page.getByRole("tab", { name: "Run history", exact: true }).click();
   await expect(page.getByRole("list").filter({ has: page.getByRole("button", { name: /Completed/ }) }).getByRole("button")).toHaveCount(1);
   await page.getByRole("tabpanel").getByRole("button", { name: /Completed/ }).click();
   await expect(page.getByRole("region", { name: "Selected job run" })).toContainText(job.id);

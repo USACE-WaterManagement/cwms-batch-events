@@ -78,6 +78,7 @@ test("office filters support multiple accessible offices and apply before pagina
   await page.goto("/events/jobs");
   await page.getByRole("button", { name: "Login", exact: true }).first().click();
   await expect(page.getByText("Click a job to open it", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Filter offices", exact: true }).click();
   await page.getByRole("checkbox", { name: "SWT", exact: true }).check();
   await expect.poll(() => requested.at(-1)).toEqual(["SWT"]);
   await page.getByRole("checkbox", { name: "SWF", exact: true }).check();

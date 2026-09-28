@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { useAuth } from "@usace-watermanagement/groundwork-water";
+import { Link } from "@tanstack/react-router";
 import {
   Card, H1, H2, H3, Table, TableBody, TableCell, TableHead, TableHeader,
   TableRow, Tabs, Text,
@@ -193,6 +194,81 @@ const ControlsPane = ({ user }: { user?: ApplicationInfo["user"] }) => {
   </section>;
 };
 
+const RateLimitsPane = () => (
+  <section aria-labelledby="rate-limits-heading" className="space-y-6 py-6">
+    <div>
+      <H2 id="rate-limits-heading">API rate limits</H2>
+      <Text>
+        Batch Events limits requests by the authenticated bearer credential to
+        protect shared office execution capacity and avoid submission storms.
+      </Text>
+    </div>
+    <div className="grid gap-4 md:grid-cols-2">
+      <Card className="p-6">
+        <H3>General API requests</H3>
+        <Text className="mt-2">
+          The default limit is 120 requests per minute for an Authorization bearer credential.
+          Job history, status refreshes, and other API reads count toward this limit.
+        </Text>
+      </Card>
+      <Card className="p-6">
+        <H3>Job submissions</H3>
+        <Text className="mt-2">
+          The default limit is 10 job submissions per minute for an Authorization bearer credential.
+          Submissions have a separate limit because they consume execution resources.
+          Scheduled jobs still enforce the five-minute minimum schedule interval.
+        </Text>
+      </Card>
+    </div>
+    <Card className="border-blue-200 bg-blue-50 p-6">
+      <H3>When a limit is reached</H3>
+      <Text className="mt-2">
+        The API returns HTTP 429 with a Retry-After header, the URL that was
+        limited, and this documentation link. Wait for the indicated period before
+        retrying. Client applications should honor Retry-After and avoid tight retry loops.
+      </Text>
+      <Text className="mt-3">
+        If an office has a documented operational need for more capacity, its
+        administrators can request increased limits for that office. National
+        Team members can set office-specific request and job limits on the{" "}
+        <Link to="/admin" className="font-medium text-blue-700 underline">Batch Admin page</Link>.
+      </Text>
+    </Card>
+    <Card className="p-6">
+      <H3>Who shares a limit</H3>
+      <Text className="mt-2">
+        Limits are tracked per authenticated bearer credential, not per human
+        user. A shared bearer token shares one counter, while different bearer
+        tokens have separate counters. Office-specific values can replace the
+        defaults.
+      </Text>
+    </Card>
+    <Card className="border-amber-200 bg-amber-50 p-6 text-amber-950">
+      <H3>Credential examples</H3>
+      <Text className="mt-2">
+        Imagine the same user has access to SWT and uses both sign-in methods
+        below. The credentials are different, so their counters are different.
+      </Text>
+      <div className="mt-4 grid gap-3 md:grid-cols-2">
+        <div className="rounded border border-amber-300 bg-white p-4">
+          <p className="font-semibold">CAC sign-in through CDA and Keycloak</p>
+          <p className="mt-1 text-sm">The user submits up to 10 jobs per minute to SWT using the current Keycloak bearer token.</p>
+        </div>
+        <div className="rounded border border-amber-300 bg-white p-4">
+          <p className="font-semibold">API key registered for SWT</p>
+          <p className="mt-1 text-sm">The same user can submit up to another 10 jobs per minute to SWT using the API key. This is a separate credential counter.</p>
+        </div>
+      </div>
+      <Text className="mt-4">
+        In this example, the same person and office could submit up to 20 jobs
+        in the process-local counters during one minute, subject to the API
+        key&apos;s CDA authorization and any deployment gateway limit. Sharing
+        the API key shares its counter with everyone using that key.
+      </Text>
+    </Card>
+  </section>
+);
+
 type Callout = { label: string; style: CSSProperties };
 const OnboardingScreenshot = ({
   src,
@@ -366,7 +442,7 @@ const OnboardingPane = ({ user }: { user?: ApplicationInfo["user"] }) => {
   </section>;
 };
 
-export type AboutTab = "about" | "controls" | "onboarding" | "version";
+export type AboutTab = "about" | "controls" | "onboarding" | "rate-limits" | "version";
 
 export const AboutPage = ({ initialTab = "about" }: { initialTab?: AboutTab }) => {
   const auth = useAuth();
@@ -381,6 +457,7 @@ export const AboutPage = ({ initialTab = "about" }: { initialTab?: AboutTab }) =
     about: 0,
     controls: 1,
     onboarding: 2,
+    "rate-limits": 3,
     version: 2,
   }[initialTab];
   const defaultTabIndex =
@@ -389,6 +466,11 @@ export const AboutPage = ({ initialTab = "about" }: { initialTab?: AboutTab }) =
   if (initialTab === "onboarding") return <div className="mx-auto max-w-6xl">
     <H1>Onboarding</H1>
     <OnboardingPane user={user} />
+  </div>;
+
+  if (initialTab === "rate-limits") return <div className="mx-auto max-w-6xl">
+    <H1>Rate limits</H1>
+    <RateLimitsPane />
   </div>;
 
   return <div className="mx-auto max-w-6xl">

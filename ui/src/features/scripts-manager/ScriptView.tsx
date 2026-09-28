@@ -2,10 +2,9 @@ import { RequiredRoles } from "./RequiredRoles";
 import dayjs from "dayjs";
 import { ScheduleTiming } from "./ScheduleTiming";
 import { ViewField } from "./ViewField";
-import { Button, Text } from "@usace/groundwork";
-import { MdEdit } from "react-icons/md";
+import { Text } from "@usace/groundwork";
 import type { Script } from "../scripts-manager/types";
-import { savedCommandPreview, supportsScriptVersion } from "./commandArguments";
+import { savedCommandPreview } from "./commandArguments";
 import { ArgumentValues } from "./CommandSummary";
 import { ScriptSections, ConfigSection } from "./ScriptSections";
 import type { ScriptSection } from "./configurationSections";
@@ -28,7 +27,6 @@ function scriptRuntime(script: Script) {
 
 interface ScriptViewProps {
   script?: Script;
-  onEdit: () => void;
   section: ScriptSection;
   onSectionChange: (section: ScriptSection) => void;
 }
@@ -43,13 +41,16 @@ function scheduleDescription(script: Script): string {
   return script.scheduleCron || "Not configured";
 }
 
-export const ScriptView = ({ script, onEdit, section, onSectionChange }: ScriptViewProps) => {
+const resourceProfiles = {
+  small: { label: "Small", cpu: "0.5 vCPU", memory: "1 GiB" },
+  medium: { label: "Medium", cpu: "1 vCPU", memory: "2 GiB" },
+  large: { label: "Large", cpu: "2 vCPU", memory: "4 GiB" },
+} as const;
+
+export const ScriptView = ({ script, section, onSectionChange }: ScriptViewProps) => {
   if (script) {
     return (
       <div className="flex flex-col gap-y-6">
-        <div className="flex justify-end">
-          <Button disabled={(script.configVersion ?? 1) === 1 || !supportsScriptVersion(script.configVersion ?? 1)} onClick={onEdit}><MdEdit aria-hidden /> Edit</Button>
-        </div>
         <ScriptSections active={section} onSelect={onSectionChange}>
         <div className="flex flex-col gap-2">
           <ConfigSection id="general" active={section}>
@@ -86,6 +87,62 @@ export const ScriptView = ({ script, onEdit, section, onSectionChange }: ScriptV
           {[2, 3, 4].includes(script.configVersion ?? 1) && script.commandMode !== "shell" && <ViewField label="Arguments">
             <ArgumentValues args={script.commandArgs ?? []} />
           </ViewField>}
+          </ConfigSection>
+          <ConfigSection id="environment" active={section}>
+            <div className="space-y-3">
+              <p className="text-sm text-slate-600">
+                These values are passed to every run of this job. Do not use this
+                section for passwords, API keys, or other secret values.
+              </p>
+              {(script.environmentVariables ?? []).length > 0 ? (
+                <div className="overflow-hidden rounded-lg border border-slate-200">
+                  <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-4 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                    <span>Name</span>
+                    <span>Value</span>
+                  </div>
+                  <div className="divide-y divide-slate-200">
+                    {(script.environmentVariables ?? []).map((variable, index) => (
+                      <div key={`${variable.name}-${index}`} className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-4 px-4 py-3">
+                        <code className="min-w-0 break-all font-semibold text-slate-900">{variable.name}</code>
+                        <code className="min-w-0 break-all text-slate-700">{variable.value}</code>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
+                  No environment variables are configured for this job.
+                </div>
+              )}
+            </div>
+          </ConfigSection>
+          <ConfigSection id="resources" active={section}>
+            {script.resourceSize && resourceProfiles[script.resourceSize] ? (
+              <div className="rounded-xl border-2 border-blue-200 bg-blue-50 p-5 text-blue-950">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold uppercase tracking-wide text-blue-700">Selected task size</p>
+                    <h4 className="mt-1 text-2xl font-bold">{resourceProfiles[script.resourceSize].label}</h4>
+                  </div>
+                  <span className="rounded-full bg-white px-3 py-1 text-sm font-semibold text-blue-800 shadow-sm">Fixed platform profile</span>
+                </div>
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-lg bg-white p-4 shadow-sm">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">CPU</p>
+                    <p className="mt-1 text-lg font-semibold text-slate-900">{resourceProfiles[script.resourceSize].cpu}</p>
+                  </div>
+                  <div className="rounded-lg bg-white p-4 shadow-sm">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Memory</p>
+                    <p className="mt-1 text-lg font-semibold text-slate-900">{resourceProfiles[script.resourceSize].memory}</p>
+                  </div>
+                </div>
+                <p className="mt-4 text-sm text-blue-900">Applied to manual and automatic runs.</p>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
+                No task size is configured for this job.
+              </div>
+            )}
           </ConfigSection>
           <ConfigSection id="schedule" active={section}>
           {script && <ScheduleTiming script={script} enabled={section === "schedule"} />}

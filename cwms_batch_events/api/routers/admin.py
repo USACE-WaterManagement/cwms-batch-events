@@ -1,16 +1,189 @@
 """HQ operations reporting from stored job records, without AWS billing calls."""
 from datetime import datetime, timedelta
+from typing import Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from pydantic import Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from cwms_batch_events.api.dependencies import get_current_user, get_db_session
 from cwms_batch_events.core.auth.user.models import User
 from cwms_batch_events.core.models import CamelModel
+from cwms_batch_events.core.rate_limit import OfficeRateLimit, OfficeRateLimitStore
+from cwms_batch_events.core.utils import ALL_OFFICES
 
 router = APIRouter(prefix="/admin", tags=["administration"])
+
+
+class RateLimitOverride(CamelModel):
+    requests_per_minute: int = Field(ge=1, le=10000)
+    job_submissions_per_minute: int = Field(ge=1, le=1000)
+
+
+class RateLimitRow(CamelModel):
+    office: str
+    requests_per_minute: int
+    job_submissions_per_minute: int
+    request_override: bool
+    job_submission_override: bool
+    changed_by: str | None = None
+    changed_at: datetime | None = None
+
+
+class RateLimitHistoryRow(CamelModel):
+    id: int
+    office: str
+    action: Literal["created", "updated", "reset", "legacy"]
+    previous_requests_per_minute: int | None = None
+    previous_job_submissions_per_minute: int | None = None
+    new_requests_per_minute: int | None = None
+    new_job_submissions_per_minute: int | None = None
+    changed_by: str
+    changed_at: datetime
+
+
+def require_hq_admin(user: User) -> None:
+    if "Data Acquisition Mgr" not in user.roles.get("HQ", []):
+        raise HTTPException(403, "HQ Data Acquisition Mgr role required")
+
+
+def require_hq_rate_limit_admin(user: User) -> None:
+    if not {"Data Acquisition Mgr", "Data Exchange Mgr"}.intersection(
+        user.roles.get("HQ", [])
+    ):
+        raise HTTPException(403, "HQ Data Acquisition Mgr or Data Exchange Mgr role required")
+
+
+def rate_limit_store(request: Request) -> OfficeRateLimitStore:
+    return request.app.state.rate_limit_store
+
+
+@router.get("/rate-limits", response_model=list[RateLimitRow])
+def get_rate_limits(
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+):
+    require_hq_rate_limit_admin(user)
+    store = rate_limit_store(request)
+    database_offices = db.scalars(text("""SELECT office FROM scripts
+        UNION SELECT office FROM jobs
+        UNION SELECT office FROM office_rate_limits"""))
+    offices = sorted({office.upper() for office in ALL_OFFICES} | {
+        office.upper() for office in database_offices if office
+    })
+    overrides = store.snapshot()
+    rows = []
+    for office in offices:
+        limits = store.get([office])
+        override = overrides.get(office.upper())
+        rows.append(RateLimitRow(
+            office=office,
+            requests_per_minute=limits.requests_per_minute,
+            job_submissions_per_minute=limits.job_submissions_per_minute,
+            request_override=override is not None,
+            job_submission_override=override is not None,
+            changed_by=override.changed_by if override else None,
+            changed_at=override.changed_at if override else None,
+        ))
+    return rows
+
+
+@router.get("/rate-limits/{office}/history", response_model=list[RateLimitHistoryRow])
+def get_rate_limit_history(
+    office: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+):
+    require_hq_rate_limit_admin(user)
+    office = office.upper()
+    if not office.isascii() or not office.isalpha() or not 3 <= len(office) <= 4:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Office must be 3-4 letters")
+    rows = db.execute(text("""SELECT id, office, action,
+        previous_requests_per_minute, previous_job_submissions_per_minute,
+        new_requests_per_minute, new_job_submissions_per_minute,
+        changed_by, changed_at
+        FROM office_rate_limit_history
+        WHERE office=:office
+        ORDER BY changed_at DESC, id DESC
+        LIMIT 100"""), {"office": office}).mappings().all()
+    return [RateLimitHistoryRow(**row) for row in rows]
+
+
+@router.put("/rate-limits/{office}", response_model=RateLimitRow)
+def update_rate_limit(
+    office: str,
+    payload: RateLimitOverride,
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+):
+    require_hq_rate_limit_admin(user)
+    office = office.upper()
+    if not office.isascii() or not office.isalpha() or not 3 <= len(office) <= 4:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Office must be 3-4 letters")
+    previous = db.execute(text("""SELECT requests_per_minute, job_submissions_per_minute
+        FROM office_rate_limits WHERE office=:office FOR UPDATE"""), {"office": office}).mappings().first()
+    action = "updated" if previous else "created"
+    result = db.execute(text("""INSERT INTO office_rate_limits
+        (office, requests_per_minute, job_submissions_per_minute, changed_by, changed_at)
+        VALUES (:office, :requests, :jobs, :changed_by, CURRENT_TIMESTAMP)
+        ON CONFLICT (office) DO UPDATE SET
+          requests_per_minute=EXCLUDED.requests_per_minute,
+          job_submissions_per_minute=EXCLUDED.job_submissions_per_minute,
+          changed_by=EXCLUDED.changed_by,
+          changed_at=CURRENT_TIMESTAMP,
+          updated_time=CURRENT_TIMESTAMP
+        RETURNING changed_by, changed_at"""), {
+        "office": office, "requests": payload.requests_per_minute,
+        "jobs": payload.job_submissions_per_minute, "changed_by": user.username,
+    })
+    audit = result.mappings().one()
+    db.execute(text("""INSERT INTO office_rate_limit_history (
+        office, action, previous_requests_per_minute, previous_job_submissions_per_minute,
+        new_requests_per_minute, new_job_submissions_per_minute, changed_by, changed_at
+    ) VALUES (:office, :action, :previous_requests, :previous_jobs,
+        :new_requests, :new_jobs, :changed_by, :changed_at)"""), {
+        "office": office, "action": action,
+        "previous_requests": previous["requests_per_minute"] if previous else None,
+        "previous_jobs": previous["job_submissions_per_minute"] if previous else None,
+        "new_requests": payload.requests_per_minute, "new_jobs": payload.job_submissions_per_minute,
+        "changed_by": audit["changed_by"], "changed_at": audit["changed_at"],
+    })
+    db.commit()
+    limits = OfficeRateLimit(payload.requests_per_minute, payload.job_submissions_per_minute)
+    store = rate_limit_store(request)
+    store.set(office, limits, audit["changed_by"], audit["changed_at"])
+    return RateLimitRow(
+        office=office, **payload.model_dump(), request_override=True,
+        job_submission_override=True, changed_by=audit["changed_by"], changed_at=audit["changed_at"],
+    )
+
+
+@router.delete("/rate-limits/{office}", status_code=204)
+def reset_rate_limit(
+    office: str,
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+):
+    require_hq_rate_limit_admin(user)
+    office = office.upper()
+    previous = db.execute(text("""SELECT requests_per_minute, job_submissions_per_minute,
+        changed_by, changed_at FROM office_rate_limits WHERE office=:office FOR UPDATE"""), {"office": office}).mappings().first()
+    db.execute(text("DELETE FROM office_rate_limits WHERE office=:office"), {"office": office})
+    if previous:
+        db.execute(text("""INSERT INTO office_rate_limit_history (
+            office, action, previous_requests_per_minute, previous_job_submissions_per_minute,
+            changed_by, changed_at
+        ) VALUES (:office, 'reset', :previous_requests, :previous_jobs, :changed_by, CURRENT_TIMESTAMP)"""), {
+            "office": office, "previous_requests": previous["requests_per_minute"],
+            "previous_jobs": previous["job_submissions_per_minute"], "changed_by": user.username,
+        })
+    db.commit()
+    rate_limit_store(request).remove(office)
 
 
 class Usage(CamelModel):
@@ -92,8 +265,7 @@ def operations(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db_session),
 ):
-    if "Data Acquisition Mgr" not in user.roles.get("HQ", []):
-        raise HTTPException(403, "HQ Data Acquisition Mgr role required")
+    require_hq_admin(user)
     now = db.scalar(text("SELECT CURRENT_TIMESTAMP"))
     since = now - timedelta(days=days)
     params = dict(now=now, since=since, office=office.upper() if office else None,

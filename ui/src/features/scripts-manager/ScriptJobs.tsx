@@ -2,11 +2,11 @@ import { RunDatePicker, RunPagination, type RunDateRange } from "../jobs-list/Ru
 import { LoadingRows } from "../../shared/components/LoadingRows";
 import { RequestErrorPage } from "../../shared/components/StatePage";
 import { RequiredRoles } from "./RequiredRoles";
-import { Button, H3 } from "@usace/groundwork";
+import { Button, H3, Modal } from "@usace/groundwork";
 import { Link } from "@tanstack/react-router";
 import { MdArrowBack } from "react-icons/md";
 import useExecuteScript from "../script-picker/useExecuteScript";
-import type { ExecuteScriptPayload } from "../script-picker/useExecuteScript";
+import type { ExecuteScriptPayload, JobRateLimitStatus } from "../script-picker/useExecuteScript";
 import { useJobsPage } from "../jobs-list/useJobsList";
 import JobDetailFull from "../jobs-list/JobDetailFull";
 import type { JobDetails } from "../jobs-list/useJobDetails";
@@ -49,11 +49,35 @@ export const ScriptRunJob = ({ script, onSubmitted, onEdit }: {
     commandMode: script.commandMode === "shell" ? "shell" : "arguments" };
   const [command, setCommand] = useState(initialCommand);
   const [commandValid, setCommandValid] = useState(true);
+  const [checkingRateLimit, setCheckingRateLimit] = useState(false);
+  const [rateLimitWarning, setRateLimitWarning] = useState<JobRateLimitStatus | null>(null);
+  const [pendingPayload, setPendingPayload] = useState<ExecuteScriptPayload | null>(null);
   const version = script.configVersion ?? 1;
-  const submit = () => {
-    run.mutate({ scriptId: script.id,
+  const payload = (): ExecuteScriptPayload => ({ scriptId: script.id,
       ...customRunOptions(custom, command, script),
     });
+  const submit = async () => {
+    const nextPayload = payload();
+    setCheckingRateLimit(true);
+    try {
+      const status = await run.checkRateLimit(script.office);
+      if (status.remaining <= 1) {
+        setPendingPayload(nextPayload);
+        setRateLimitWarning(status);
+        return;
+      }
+    } catch (error) {
+      console.warn("Unable to check the job submission rate limit before submitting.", error);
+    } finally {
+      setCheckingRateLimit(false);
+    }
+    run.mutate(nextPayload);
+  };
+  const continueSubmit = () => {
+    if (!pendingPayload || !rateLimitWarning?.remaining) return;
+    setRateLimitWarning(null);
+    setPendingPayload(null);
+    run.mutate(pendingPayload);
   };
   return <div className="min-w-0 max-w-full space-y-4 p-4">
     <H3>Run {script.name}</H3>
@@ -72,14 +96,23 @@ export const ScriptRunJob = ({ script, onSubmitted, onEdit }: {
     {version === 1 && <p className="text-sm text-gray-600">To use custom arguments, a script administrator must use Upgrade configuration in Details first.</p>}
     {!script.active && <p role="status">This script is inactive. Enable it in Details before running a job.</p>}
     <div className="flex flex-wrap gap-3">
-    <Button title="Submit a job using the saved settings, or the custom settings shown for this run." disabled={!supportsScriptVersion(version) || !script.active || run.isPending || (custom && (!commandValid || (version < 3 && command.commandMode === "shell")))} onClick={submit}>
-      {submitButtonLabel(run.isPending, custom)}
+    <Button title="Submit a job using the saved settings, or the custom settings shown for this run." disabled={!supportsScriptVersion(version) || !script.active || run.isPending || checkingRateLimit || (custom && (!commandValid || (version < 3 && command.commandMode === "shell")))} onClick={() => void submit()}>
+      {submitButtonLabel(run.isPending || checkingRateLimit, custom)}
     </Button>
     <Button title="Change arguments for one run without saving changes to the script." disabled={!supportsScriptVersion(version) || !script.active || run.isPending || version < 2} onClick={() => {
       setCustom(!custom); setCommand(initialCommand); setCommandValid(true); run.reset();
     }}>{custom ? "Cancel custom run" : "Custom run"}</Button>
     {onEdit && <Button disabled={run.isPending} onClick={onEdit}>Edit job</Button>}
     </div>
+    <Modal opened={rateLimitWarning !== null} onClose={() => { setRateLimitWarning(null); setPendingPayload(null); }} dialogTitle="Job submission limit"
+      buttons={<div className="flex flex-wrap justify-end gap-3"><Button type="button" onClick={() => { setRateLimitWarning(null); setPendingPayload(null); }}>Close</Button><Button type="button" disabled={!rateLimitWarning?.remaining} onClick={continueSubmit}>Submit anyway</Button></div>}>
+      {rateLimitWarning && <div className="space-y-3 text-sm">
+        <p>{rateLimitWarning.remaining === 0 ? `You have used all ${rateLimitWarning.limit} job submissions allowed for ${rateLimitWarning.office} during the current minute.` : `You have ${rateLimitWarning.remaining} job submission remaining for ${rateLimitWarning.office} during the current minute.`}</p>
+        <p>{rateLimitWarning.resetAfterSeconds > 0 ? `The oldest submission will leave the current rate period in about ${rateLimitWarning.resetAfterSeconds} seconds.` : "The rate period is ready for a new submission."}</p>
+        <p><Link to="/about/rate-limits" className="font-medium text-blue-700 underline">Review API rate-limit documentation</Link></p>
+        <p className="text-slate-600">This check is informational. The API performs the final rate-limit check when you submit.</p>
+      </div>}
+    </Modal>
     {custom && version < 3 && command.commandMode === "shell" && <p role="status">Upgrade configuration in Details before using Bash command mode.</p>}
   </div>;
 };

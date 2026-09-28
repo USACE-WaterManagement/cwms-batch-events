@@ -18,6 +18,8 @@ import useAdminOffices from "../features/scripts-manager/useAdminOffices";
 import { AboutMenu } from "../components/AboutMenu";
 import { EnvironmentBadge } from "../components/EnvironmentBadge";
 import { useSystemAdmin } from "../features/auth/useSystemAdmin";
+import { ConnectivityBanner } from "../shared/components/ConnectivityStatus";
+import { useConnectivityStatus } from "../shared/components/useConnectivityStatus";
 
 const primaryLinks = [
   { id: "jobs", text: "Job History", href: "/jobs" },
@@ -30,6 +32,7 @@ const batchRepository = "https://github.com/USACE-WaterManagement/cwms-batch-eve
 const footerLinks = [
   { text: "About Batch Events", href: "/events/about" },
   { text: "Controls and access", href: "/events/about/controls" },
+  { text: "API rate limits", href: "/events/about/rate-limits" },
   { text: "Onboarding", href: "/events/help/onboarding" },
   { text: "Script setup", href: "/events/help/script-files" },
   { text: "Report an issue", href: `${batchRepository}/issues` },
@@ -56,6 +59,7 @@ function RootShell({ children }: { children: ReactNode }) {
   const location = useLocation();
   const auth = useAuth();
   const application = useApplicationInfo();
+  const { isOnline } = useConnectivityStatus();
   const systemAdmin = useSystemAdmin();
   const [githubOpen, setGithubOpen] = useState(false);
   const [selectedOffice] = useRememberedOffice([]);
@@ -84,6 +88,8 @@ function RootShell({ children }: { children: ReactNode }) {
       </span>}
       missionText="Support USACE water management teams with shared tools to run district jobs and track their results."
       aboutText="CWMS Batch Events lets authorized district users submit jobs, review job history and logs, and manage registered jobs. For access or job support, contact your district Batch Events administrator."
+      msgBanner={!isOnline ? <ConnectivityBanner /> : undefined}
+      msgBannerPosition="top"
       usaceLinks={[
         ...footerLinks,
         ...(auth.isAuth ? [{ text: "Version and environment", href: "/events/about/version" }] : []),
