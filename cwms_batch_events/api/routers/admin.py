@@ -12,6 +12,7 @@ from cwms_batch_events.api.dependencies import get_current_user, get_db_session
 from cwms_batch_events.core.auth.user.models import User
 from cwms_batch_events.core.models import CamelModel
 from cwms_batch_events.core.rate_limit import OfficeRateLimit, OfficeRateLimitStore
+from cwms_batch_events.core.utils import ALL_OFFICES
 
 router = APIRouter(prefix="/admin", tags=["administration"])
 
@@ -48,6 +49,13 @@ def require_hq_admin(user: User) -> None:
         raise HTTPException(403, "HQ Data Acquisition Mgr role required")
 
 
+def require_hq_rate_limit_admin(user: User) -> None:
+    if not {"Data Acquisition Mgr", "Data Exchange Mgr"}.intersection(
+        user.roles.get("HQ", [])
+    ):
+        raise HTTPException(403, "HQ Data Acquisition Mgr or Data Exchange Mgr role required")
+
+
 def rate_limit_store(request: Request) -> OfficeRateLimitStore:
     return request.app.state.rate_limit_store
 
@@ -58,11 +66,14 @@ def get_rate_limits(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db_session),
 ):
-    require_hq_admin(user)
+    require_hq_rate_limit_admin(user)
     store = rate_limit_store(request)
-    offices = list(db.scalars(text("""SELECT office FROM scripts
+    database_offices = db.scalars(text("""SELECT office FROM scripts
         UNION SELECT office FROM jobs
-        UNION SELECT office FROM office_rate_limits ORDER BY office""")))
+        UNION SELECT office FROM office_rate_limits"""))
+    offices = sorted({office.upper() for office in ALL_OFFICES} | {
+        office.upper() for office in database_offices if office
+    })
     overrides = store.snapshot()
     rows = []
     for office in offices:
@@ -86,7 +97,7 @@ def get_rate_limit_history(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db_session),
 ):
-    require_hq_admin(user)
+    require_hq_rate_limit_admin(user)
     office = office.upper()
     if not office.isascii() or not office.isalpha() or not 3 <= len(office) <= 4:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Office must be 3-4 letters")
@@ -109,7 +120,7 @@ def update_rate_limit(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db_session),
 ):
-    require_hq_admin(user)
+    require_hq_rate_limit_admin(user)
     office = office.upper()
     if not office.isascii() or not office.isalpha() or not 3 <= len(office) <= 4:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Office must be 3-4 letters")
@@ -158,7 +169,7 @@ def reset_rate_limit(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db_session),
 ):
-    require_hq_admin(user)
+    require_hq_rate_limit_admin(user)
     office = office.upper()
     previous = db.execute(text("""SELECT requests_per_minute, job_submissions_per_minute,
         changed_by, changed_at FROM office_rate_limits WHERE office=:office FOR UPDATE"""), {"office": office}).mappings().first()

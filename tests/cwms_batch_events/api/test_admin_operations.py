@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 
 from cwms_batch_events.api.main import app
 from cwms_batch_events.core.rate_limit import OfficeRateLimit, OfficeRateLimitStore
+from cwms_batch_events.core.utils import ALL_OFFICES
 
 
 @pytest.mark.parametrize("roles", [{}, {"SWT": ["Data Acquisition Mgr"]}, {"HQ": ["CWMS Users"]},
@@ -65,6 +66,56 @@ def test_hq_admin_can_save_and_reset_office_rate_limits(client, user, db_session
 
     assert reset.status_code == 204
     assert store.get(["SWT"]) == OfficeRateLimit(120, 10)
+
+
+def test_hq_data_exchange_manager_can_save_office_rate_limits(
+    client, user, db_session, monkeypatch
+):
+    user.roles = {"HQ": ["Data Exchange Mgr"]}
+    db_session.execute.side_effect = [
+        MagicMock(mappings=MagicMock(return_value=MagicMock(first=MagicMock(return_value=None)))),
+        MagicMock(
+            mappings=MagicMock(
+                return_value=MagicMock(
+                    one=MagicMock(
+                        return_value={
+                            "changed_by": "test-user",
+                            "changed_at": datetime(2026, 9, 27, tzinfo=timezone.utc),
+                        }
+                    )
+                )
+            )
+        ),
+        MagicMock(),
+    ]
+    store = OfficeRateLimitStore(OfficeRateLimit(120, 10), session_factory=lambda: db_session)
+    monkeypatch.setattr(store, "_refresh_if_due", lambda force=False: None)
+    monkeypatch.setattr(app.state, "rate_limit_store", store)
+
+    response = client.put(
+        "/admin/rate-limits/lrh",
+        json={"requestsPerMinute": 240, "jobSubmissionsPerMinute": 40},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["office"] == "LRH"
+
+
+def test_rate_limit_list_uses_all_canonical_offices_and_deduplicates_case(
+    client, user, db_session, monkeypatch
+):
+    user.roles = {"HQ": ["Data Acquisition Mgr"]}
+    db_session.scalars.return_value = ["swt", "SWT", "custom"]
+    store = OfficeRateLimitStore(OfficeRateLimit(120, 10), session_factory=lambda: db_session)
+    monkeypatch.setattr(store, "_refresh_if_due", lambda force=False: None)
+    monkeypatch.setattr(app.state, "rate_limit_store", store)
+
+    response = client.get("/admin/rate-limits")
+
+    offices = [row["office"] for row in response.json()]
+    assert response.status_code == 200
+    assert offices == sorted(set(ALL_OFFICES) | {"CUSTOM", "SWT"})
+    assert offices.count("SWT") == 1
 
 
 @pytest.mark.parametrize("office", ["EL", "SW", "SWT1", "SWT-"])
