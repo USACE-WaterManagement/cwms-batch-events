@@ -1,7 +1,7 @@
 from uuid import UUID
 from datetime import datetime
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy.exc import NoResultFound
 
 from cwms_batch_events.api.dependencies import (
@@ -16,6 +16,7 @@ from cwms_batch_events.core.job_database.base import JobDatabase
 from cwms_batch_events.core.job_logger.base import JobLogger
 from cwms_batch_events.core.job_logger.cloudwatch import CloudWatchJobLogger
 from cwms_batch_events.core.models import (
+    CamelModel,
     JobLogs,
     JobLogPage,
     JobRecord,
@@ -23,9 +24,18 @@ from cwms_batch_events.core.models import (
     ScriptRunOptions,
     ScriptRunRequest,
 )
+from cwms_batch_events.core.rate_limit import RateLimitMiddleware
 from cwms_batch_events.core.queue import JobQueue
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
+
+
+class JobRateLimitStatus(CamelModel):
+    office: str
+    limit: int
+    used: int
+    remaining: int
+    reset_after_seconds: int
 
 
 def get_office_job(job_id: UUID, user: User, job_db: JobDatabase) -> JobRecord:
@@ -91,6 +101,23 @@ def get_jobs_for_user(
         return job_db.get_jobs_for_offices(offices, limit=limit, offset=offset, **dates)
     job_list = job_db.get_jobs_for_offices(offices, **dates)
     return job_list
+
+
+@router.get("/rate-limit-status", response_model=JobRateLimitStatus)
+def get_job_rate_limit_status(
+    request: Request,
+    office: str = Query(min_length=3, max_length=4),
+    user: User = Depends(get_current_user),
+) -> JobRateLimitStatus:
+    office = office.upper()
+    if office.casefold() not in {value.casefold() for value in user.offices}:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Office access required")
+    store = getattr(request.app.state, "rate_limit_store", None)
+    if store is None:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Rate-limit status is unavailable")
+    limit = store.get([office]).job_submissions_per_minute
+    current = store.status(RateLimitMiddleware._caller_key(request), office, "job-submission", limit)
+    return JobRateLimitStatus(office=office, **current.__dict__)
 
 
 @router.post("")

@@ -1,6 +1,7 @@
 import hashlib
 import json
 import logging
+import math
 import time
 from collections import defaultdict, deque
 from dataclasses import dataclass
@@ -34,6 +35,14 @@ class OfficeRateLimitRecord:
     changed_at: datetime | None = None
 
 
+@dataclass(frozen=True)
+class RateLimitStatus:
+    limit: int
+    used: int
+    remaining: int
+    reset_after_seconds: int
+
+
 class OfficeRateLimitStore:
     """Persisted office overrides with a short refresh window for API workers."""
 
@@ -43,6 +52,33 @@ class OfficeRateLimitStore:
         self._overrides: dict[str, OfficeRateLimitRecord] = {}
         self._last_refresh = 0.0
         self._lock = Lock()
+        self._request_counters: dict[tuple[str, str], deque[float]] = defaultdict(deque)
+        self._request_lock = Lock()
+
+    def consume(self, caller_key: str, office_key: str, policy: str, limit: int) -> tuple[bool, int, int]:
+        key = (f"{caller_key}:{office_key}", policy)
+        now = time.monotonic()
+        with self._request_lock:
+            timestamps = self._request_counters[key]
+            while timestamps and timestamps[0] <= now - 60:
+                timestamps.popleft()
+            if len(timestamps) >= limit:
+                return False, max(1, math.ceil(60 - (now - timestamps[0]))), 0
+            timestamps.append(now)
+            return True, 0, limit - len(timestamps)
+
+    def status(self, caller_key: str | None, office_key: str, policy: str, limit: int) -> RateLimitStatus:
+        if caller_key is None:
+            return RateLimitStatus(limit=limit, used=0, remaining=limit, reset_after_seconds=0)
+        key = (f"{caller_key}:{office_key}", policy)
+        now = time.monotonic()
+        with self._request_lock:
+            timestamps = self._request_counters[key]
+            while timestamps and timestamps[0] <= now - 60:
+                timestamps.popleft()
+            used = len(timestamps)
+            reset_after = math.ceil(60 - (now - timestamps[0])) if timestamps else 0
+        return RateLimitStatus(limit=limit, used=used, remaining=max(0, limit - used), reset_after_seconds=max(0, reset_after))
 
     def get(self, offices: list[str]) -> OfficeRateLimit:
         if not offices:
@@ -142,8 +178,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.office_rate_limit_store = office_rate_limit_store or OfficeRateLimitStore(
             OfficeRateLimit(requests_per_minute, job_submissions_per_minute)
         )
-        self._requests: dict[tuple[str, str], deque[float]] = defaultdict(deque)
         self._lock = Lock()
+
+    def job_submission_status(self, request: Request, offices: list[str]) -> RateLimitStatus:
+        caller_key = self._caller_key(request)
+        office_key = ",".join(sorted(set(offices))) or "default"
+        limit = self.office_rate_limit_store.get(offices).job_submissions_per_minute
+        return self.office_rate_limit_store.status(caller_key, office_key, "job-submission", limit)
 
     async def dispatch(self, request: Request, call_next):
         if self._is_exempt(request):
@@ -159,38 +200,27 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         office_limits = self.office_rate_limit_store.get(offices)
         policy, limit = self._policy(request, office_limits)
         office_key = ",".join(sorted(set(offices))) or "default"
-        key = (f"{caller_key}:{office_key}", policy)
-        now = time.monotonic()
-        window = 60.0
-
-        with self._lock:
-            timestamps = self._requests[key]
-            while timestamps and timestamps[0] <= now - window:
-                timestamps.popleft()
-            if len(timestamps) >= limit:
-                retry_after = max(1, int(window - (now - timestamps[0])) + 1)
-                return JSONResponse(
-                    status_code=429,
-                    content={
-                        "detail": {
-                            "code": "rate_limit_exceeded",
-                            "message": f"Request limit exceeded for {request.url.path}",
-                            "requestUrl": request.url.path,
-                            "documentationUrl": self.documentation_url,
-                            "limit": limit,
-                            "windowSeconds": 60,
-                            "retryAfterSeconds": retry_after,
-                        }
-                    },
-                    headers={
-                        "Retry-After": str(retry_after),
-                        "X-RateLimit-Limit": str(limit),
-                        "X-RateLimit-Remaining": "0",
-                    },
-                )
-            timestamps.append(now)
-            remaining = limit - len(timestamps)
-
+        allowed, retry_after, remaining = self.office_rate_limit_store.consume(caller_key, office_key, policy, limit)
+        if not allowed:
+            return JSONResponse(
+                status_code=429,
+                content={
+                    "detail": {
+                        "code": "rate_limit_exceeded",
+                        "message": f"Request limit exceeded for {request.url.path}",
+                        "requestUrl": request.url.path,
+                        "documentationUrl": self.documentation_url,
+                        "limit": limit,
+                        "windowSeconds": 60,
+                        "retryAfterSeconds": retry_after,
+                    }
+                },
+                headers={
+                    "Retry-After": str(retry_after),
+                    "X-RateLimit-Limit": str(limit),
+                    "X-RateLimit-Remaining": "0",
+                },
+            )
         response = await call_next(request)
         response.headers["X-RateLimit-Limit"] = str(limit)
         response.headers["X-RateLimit-Remaining"] = str(remaining)
