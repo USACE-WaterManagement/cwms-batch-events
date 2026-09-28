@@ -1,3 +1,5 @@
+import { currentEnvironmentLabel } from "../utils/environment";
+
 const environments: Record<string, { label: string; color: string }> = {
   dev: { label: "Dev", color: "border-blue-300 bg-blue-50 text-blue-900" },
   test: { label: "Test", color: "border-amber-300 bg-amber-50 text-amber-900" },
@@ -10,7 +12,7 @@ export function EnvironmentBadge() {
   // Deployment builds explicitly select dev, test, or prod. Vite's generic
   // "production" mode alone does not identify a deployed environment.
   const environment = environments[import.meta.env.MODE] ?? {
-    label: "Unknown", color: "border-gray-400 bg-gray-100 text-gray-900",
+    label: currentEnvironmentLabel(), color: "border-gray-400 bg-gray-100 text-gray-900",
   };
   return <span aria-label={`Environment: ${environment.label}`}
     title={`Environment: ${environment.label}`}
