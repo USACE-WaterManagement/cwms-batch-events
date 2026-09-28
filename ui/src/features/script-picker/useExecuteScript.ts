@@ -15,14 +15,6 @@ export type JobRateLimitStatus = {
   resetAfterSeconds: number;
 };
 
-export type JobRateLimitStatus = {
-  office: string;
-  limit: number;
-  used: number;
-  remaining: number;
-  resetAfterSeconds: number;
-};
-
 const useExecuteScript = (onSubmitted?: (job: JobDetails) => void) => {
   const auth = useAuth();
   const navigate = useNavigate();
