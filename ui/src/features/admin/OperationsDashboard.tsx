@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { useAuth } from "@usace-watermanagement/groundwork-water";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Button, Modal, UsaceBox } from "@usace/groundwork";
 import { MdDashboard, MdWarningAmber, MdPieChart, MdSchedule, MdSpeed, MdRefresh, MdOpenInNew, MdHelpOutline } from "react-icons/md";
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line } from "recharts";
@@ -34,9 +34,14 @@ type RateLimitHistoryRow = {
 };
 const colors = ["#1d4ed8", "#0f766e", "#9333ea", "#c2410c", "#be123c", "#0369a1", "#4d7c0f", "#475569"];
 const number = (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 1 });
-const tabs = [{ id: "overview", label: "Overview", icon: MdDashboard }, { id: "operations", label: "Operations", icon: MdWarningAmber },
-  { id: "usage", label: "Usage", icon: MdPieChart }, { id: "scheduler", label: "Scheduler", icon: MdSchedule },
-  { id: "rate-limits", label: "Rate limits", icon: MdSpeed }] as const;
+export type AdminTab = "overview" | "operations" | "usage" | "scheduler" | "rate-limits";
+const tabs = [
+  { id: "overview", label: "Overview", icon: MdDashboard, to: "/admin" },
+  { id: "operations", label: "Operations", icon: MdWarningAmber, to: "/admin/operations" },
+  { id: "usage", label: "Usage", icon: MdPieChart, to: "/admin/usage" },
+  { id: "scheduler", label: "Scheduler", icon: MdSchedule, to: "/admin/scheduler" },
+  { id: "rate-limits", label: "Rate limits", icon: MdSpeed, to: "/admin/rate-limits" },
+] as const;
 
 function RateLimitHistory({ office, authToken, open }: { office: string; authToken?: string; open: boolean }) {
   const query = useQuery<RateLimitHistoryRow[]>({
@@ -99,7 +104,7 @@ function RateLimitsPanel({ authToken }: { authToken?: string }) {
   <UsaceBox title="Office rate limits">
     <button type="button" className="action-link mb-4" onClick={() => setHelpOpen(true)}><MdHelpOutline aria-hidden />How rate limits are applied</button>
     <p className="mb-4 text-sm text-slate-600">Defaults are 120 API requests and 10 job submissions per minute. Set a higher or lower value for an office when its workload requires it. Scheduled jobs still have a separate five-minute minimum interval.</p>
-    <div className="space-y-2" aria-label="Per-office API rate limit overrides">{query.data?.map(row => { const value = valueFor(row); const isOpen = Boolean(expanded[row.office]); return <details key={row.office} open={isOpen} onToggle={event => setExpanded(previous => ({ ...previous, [row.office]: event.currentTarget.open }))} className="rounded border border-slate-200 bg-white shadow-sm">
+    <div className="space-y-2" aria-label="Per-office API rate limit overrides">{query.data?.map(row => { const value = valueFor(row); const isOpen = Boolean(expanded[row.office]); return <details key={row.office} open={isOpen} onToggle={event => { const open = event.currentTarget.open; setExpanded(previous => ({ ...previous, [row.office]: open })); }} className="rounded border border-slate-200 bg-white shadow-sm">
       <summary className="grid cursor-pointer list-none gap-2 p-3 pr-10 marker:hidden focus-visible:outline-2 sm:grid-cols-[minmax(5rem,1fr)_minmax(8rem,1.2fr)_minmax(7rem,1.2fr)_minmax(8rem,1.2fr)_minmax(12rem,1.5fr)] [&::-webkit-details-marker]:hidden">
         <span className="font-semibold">{row.office}</span><span><span className="text-slate-500 sm:hidden">Requests/min: </span>{row.requestsPerMinute}</span><span><span className="text-slate-500 sm:hidden">Jobs/min: </span>{row.jobSubmissionsPerMinute}</span><span>{row.changedBy || "Default"}</span><span>{row.changedAt ? new Date(row.changedAt).toLocaleString() : "Default"}</span>
       </summary>
@@ -135,9 +140,10 @@ function UsageTable({ rows, jobs = false, onOffice }: { rows: Usage[]; jobs?: bo
   </table>{!rows.length && <p className="p-4 text-slate-500">No recorded runs in this period.</p>}</div>;
 }
 
-export function OperationsDashboard() {
+export function OperationsDashboard({ initialTab = "overview" }: { initialTab?: AdminTab }) {
   const auth = useAuth();
-  const [tab, setTab] = useState<typeof tabs[number]["id"]>("overview");
+  const navigate = useNavigate();
+  const tab = initialTab;
   const [usageView, setUsageView] = useState("Offices");
   const [days, setDays] = useState(30);
   const [office, setOffice] = useState("");
@@ -174,7 +180,11 @@ export function OperationsDashboard() {
     }
   }
   const loading = query.isPending || query.isPlaceholderData;
-  const chooseOffice = (value: string) => { setOffice(value); setTab("usage"); setUsageView("Jobs"); };
+  const chooseOffice = (value: string) => {
+    setOffice(value);
+    setUsageView("Jobs");
+    void navigate({ to: "/admin/usage" });
+  };
   const changeTaskSort = (value: string) => {
     if (value === taskSort) setTaskDirection(previous => previous === "asc" ? "desc" : "asc");
     else { setTaskSort(value); setTaskDirection(value === "name" ? "asc" : "desc"); }
@@ -182,7 +192,7 @@ export function OperationsDashboard() {
   return <section className="mx-auto max-w-7xl space-y-5">
     <header><h1 className="text-2xl font-bold">Administration</h1><p className="mt-1 text-sm text-slate-600">Organization usage and operations across district jobs.</p></header>
     <nav aria-label="Admin sections" className="flex flex-wrap gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2">
-      {tabs.map(item => <button key={item.id} aria-pressed={tab === item.id} onClick={() => setTab(item.id)} className={`inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold ${tab === item.id ? "bg-blue-700 text-white" : "text-slate-600 hover:bg-white"}`}><item.icon aria-hidden />{item.label}</button>)}
+      {tabs.map(item => <Link key={item.id} to={item.to} aria-current={tab === item.id ? "page" : undefined} className={`inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold ${tab === item.id ? "bg-blue-700 text-white" : "text-slate-600 hover:bg-white"}`}><item.icon aria-hidden />{item.label}</Link>)}
     </nav>
     {tab === "scheduler" ? <UsaceBox title="Scheduler health"><SchedulerStatus office={office || undefined} /></UsaceBox> : <>
       {tab === "rate-limits" ? <RateLimitsPanel authToken={auth.token} /> : <>
