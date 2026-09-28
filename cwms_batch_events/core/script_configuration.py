@@ -21,6 +21,7 @@ class ScriptConfigurationExport(CamelModel):
     schema_version: Literal[1] = 1
     configuration_key: UUID
     source_office: str
+    environment: str | None = None
     configuration: dict[str, Any]
 
     @classmethod

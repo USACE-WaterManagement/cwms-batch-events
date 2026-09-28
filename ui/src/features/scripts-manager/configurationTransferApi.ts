@@ -1,6 +1,7 @@
 import fetchWithAuth from "../../utils/fetchWithAuth";
 import { notifyError } from "../../utils/errorNotifications";
 import { notifySuccess } from "../../utils/actionNotifications";
+import { currentEnvironmentLabel } from "../../utils/environment";
 
 interface SaveFileHandle {
   name: string;
@@ -15,13 +16,15 @@ export type TransferPackage = {
   schemaVersion: 1;
   configurationKey: string;
   sourceOffice: string;
+  environment?: string;
   configuration: Record<string, unknown>;
 };
 
 export const exportConfiguration = async (scriptId: string, token?: string) => {
   try {
     const response = await fetchWithAuth(`/api/scripts/${scriptId}/configuration-export`, {}, token);
-    const packageData = await response.json() as TransferPackage;
+    const exportedPackage = await response.json() as TransferPackage;
+    const packageData: TransferPackage = { ...exportedPackage, environment: currentEnvironmentLabel() };
     const fileName = `${String(packageData.configuration.name ?? "script")}-configuration.json`;
     const blob = new Blob([JSON.stringify(packageData, null, 2)], { type: "application/json" });
     if (saveFilePicker) {

@@ -5,6 +5,7 @@ import fetchWithAuth from "../../utils/fetchWithAuth";
 import { useAuth } from "@usace-watermanagement/groundwork-water";
 import type { TransferPackage } from "./configurationTransferApi";
 import { notifySuccess } from "../../utils/actionNotifications";
+import { currentEnvironmentLabel } from "../../utils/environment";
 
 type ScriptWithConfigurationKey = Script & { configurationKey?: string };
 type ImportMode = "new" | "update";
@@ -140,7 +141,8 @@ export function ConfigurationImport({ office, scripts, opened, onClose, onImport
           <div className="min-w-0"><p className="text-xs font-semibold uppercase tracking-wide text-blue-800">Selected backup</p><p className="truncate text-sm font-medium text-slate-800">{fileName}</p></div>
           <button type="button" aria-label="Choose a different configuration file" title="Choose a different file" onClick={reset} className="ml-3 rounded-full px-3 py-1 text-2xl leading-none text-slate-500 hover:bg-white hover:text-slate-900">×</button>
         </div>
-        <p className="text-sm text-slate-600">Source office: <span className="font-medium text-slate-900">{packageData.sourceOffice}</span>. This will import into <span className="font-medium text-slate-900">{office.toUpperCase()}</span>.</p>
+        <p className="text-sm text-slate-600">Imported from environment: <span className="font-medium text-slate-900">{packageData.environment ?? "Unknown"}</span>. This will import into environment: <span className="font-medium text-slate-900">{currentEnvironmentLabel()}</span>.</p>
+        <p className="text-sm text-slate-600">Source office: <span className="font-medium text-slate-900">{packageData.sourceOffice}</span>. Target office: <span className="font-medium text-slate-900">{office.toUpperCase()}</span>.</p>
         {existing && !choiceMade ? <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
           <p className="font-semibold text-amber-950">Matching configuration found</p>
           <p className="mt-1 text-sm text-amber-900">This imported configuration has the same configuration ID as <span className="font-semibold">{existing.name}</span>. Would you like to update that configuration or make a new one?</p>
