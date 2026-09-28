@@ -22,6 +22,12 @@ def test_environment_variable_names_and_values_are_preserved():
     assert script.environment_variables[0].value == "daily"
 
 
+def test_cda_api_root_can_be_overridden():
+    variable = EnvironmentVariable(name="CDA_API_ROOT", value="https://cda.example/")
+
+    assert variable.name == "CDA_API_ROOT"
+
+
 def test_duplicate_environment_variable_names_are_rejected():
     with pytest.raises(ValidationError, match="unique"):
         ScriptCreate(**make_script_create_payload(environmentVariables=[
