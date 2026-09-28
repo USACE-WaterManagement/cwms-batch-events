@@ -281,6 +281,15 @@ class PostgresJobDatabase:
             ScriptRead.model_validate(script_model) for script_model in script_models
         ]
 
+    def get_script_by_configuration_key(self, configuration_key: uuid.UUID, office: str):
+        script = self.db.scalars(
+            select(ScriptModel).where(
+                ScriptModel.configuration_key == configuration_key,
+                ScriptModel.office == office,
+            )
+        ).one_or_none()
+        return ScriptRead.model_validate(script) if script else None
+
     def _load_job_for_update(self, job_id: uuid.UUID):
         job = (
             self.db.query(JobModel)
@@ -319,10 +328,12 @@ class PostgresJobDatabase:
 
         return [ScriptRead.model_validate(script) for script in runnable_scripts]
 
-    def store_script(self, payload: ScriptCreate, actor: User | None = None) -> ScriptRead:
+    def store_script(self, payload: ScriptCreate, actor: User | None = None, configuration_key: uuid.UUID | None = None) -> ScriptRead:
         try:
             with self.db.begin():
                 script = ScriptModel()
+                if configuration_key is not None:
+                    script.configuration_key = configuration_key
                 script.config_version = payload.config_version
                 script.office = payload.office
                 script.name = payload.name

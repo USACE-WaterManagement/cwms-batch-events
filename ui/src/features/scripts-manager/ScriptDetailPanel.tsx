@@ -16,6 +16,7 @@ interface ScriptDetailPanelProps {
   onSave: (data: ScriptFormData) => void | Promise<void>;
   onValidationChange?: (invalid: boolean) => void;
   onCancelEdit: () => void;
+  onExport?: (scriptId: string) => void;
   existingNames?: string[];
 }
 
@@ -29,6 +30,7 @@ export const ScriptDetailPanel = ({
   onEdit,
   onSave,
   onCancelEdit,
+  onExport,
   onValidationChange,
   existingNames,
 }: ScriptDetailPanelProps) => {
@@ -43,7 +45,7 @@ export const ScriptDetailPanel = ({
   let innerComponent;
 
   if (mode === "view") {
-    innerComponent = <ScriptView script={script} onEdit={onEdit} section={section} onSectionChange={setSection} />;
+    innerComponent = <ScriptView script={script} onEdit={onEdit} onExport={onExport} section={section} onSectionChange={setSection} />;
   } else if (mode === "edit") {
     innerComponent = (
       <ScriptForm

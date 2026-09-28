@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_valid
 from cwms_batch_events.core.display_names import readable_name
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from pydantic.alias_generators import to_camel
-from uuid import UUID
+from uuid import UUID, uuid4
 from cwms_batch_events.core.schedules import validate_cron, validate_schedule_interval
 
 
@@ -408,6 +408,7 @@ class ScriptRead(ScriptBase, ExecutionRecord):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
+    configuration_key: UUID = Field(default_factory=uuid4)
     slug: str
     office: str
     created_time: datetime

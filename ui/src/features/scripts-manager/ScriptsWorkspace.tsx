@@ -14,6 +14,9 @@ import { useDefaultJobRunner } from "./useDefaultJobRunner";
 import { MdCode } from "react-icons/md";
 import useJobsList from "../jobs-list/useJobsList";
 import { useNavigate } from "@tanstack/react-router";
+import { ConfigurationImport } from "./ConfigurationTransfer";
+import { exportConfiguration } from "./configurationTransferApi";
+import { useAuth } from "@usace-watermanagement/groundwork-water";
 
 interface ScriptsWorkspaceProps {
   officeSelector?: ReactNode;
@@ -28,6 +31,7 @@ interface ScriptsWorkspaceProps {
 
 export const ScriptsWorkspace = ({ officeSelector, office, initialScriptId, initialEdit, initialJobId, search, searchTerm, onSearch }: ScriptsWorkspaceProps) => {
   const navigate = useNavigate();
+  const auth = useAuth();
   const scripts = useOfficeScripts(office);
   const jobs = useJobsList(true, true);
   const createScriptMutation = useCreateScript(office);
@@ -44,6 +48,7 @@ export const ScriptsWorkspace = ({ officeSelector, office, initialScriptId, init
   const [invalidDetails, setInvalidDetails] = useState(false);
   const [panelTab, setPanelTab] = useState({ index: initialJobId ? 2 : 0, revision: 0 });
   const [selectedJobId, setSelectedJobId] = useState<string | undefined>(initialJobId);
+  const [importOpened, setImportOpened] = useState(false);
   const showTab = (index: number) => setPanelTab(previous => ({ index, revision: previous.revision + 1 }));
 
   const routeState = JSON.stringify([initialScriptId, initialJobId, initialEdit]);
@@ -153,7 +158,7 @@ export const ScriptsWorkspace = ({ officeSelector, office, initialScriptId, init
       <div className="min-w-0">
         <header className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3"><H2>{office.toUpperCase()} Jobs</H2>{officeSelector}</div>
-          {scripts.data.length > 0 && <Button onClick={onNew}>New +</Button>}
+          <div className="flex flex-wrap gap-2"><Button onClick={() => setImportOpened(true)}>Import</Button>{scripts.data.length > 0 && <Button onClick={onNew}>New +</Button>}</div>
         </header>
         {scripts.data.length > 0 && <div className="mt-3 space-y-2">
           <label htmlFor="script-search" className="text-sm font-medium text-slate-700">Search jobs</label>
@@ -207,6 +212,7 @@ export const ScriptsWorkspace = ({ officeSelector, office, initialScriptId, init
             office={office} script={selectedScript} mode={panelMode} isPending={isPending}
             mutationError={mutationError} onDelete={onDelete} onEdit={onEdit}
             onSave={onSave} onCancelEdit={onCancelEdit} onValidationChange={setInvalidDetails}
+            onExport={scriptId => void exportConfiguration(scriptId, auth.token)}
             existingNames={scripts.data.map(script => script.name)} /> },
           { name: "Run job", content: <ScriptRunJob script={selectedScript} onEdit={() => { showTab(0); onEdit(); }} onSubmitted={job => {
             setSelectedScriptId(job.scriptId ?? selectedScript.id);
@@ -232,6 +238,7 @@ export const ScriptsWorkspace = ({ officeSelector, office, initialScriptId, init
         onEdit={onEdit}
         onSave={onSave}
         onCancelEdit={onCancelEdit}
+        onExport={scriptId => void exportConfiguration(scriptId, auth.token)}
         existingNames={scripts.data.map(script => script.name)}
       />}
       </div>}
@@ -248,6 +255,12 @@ export const ScriptsWorkspace = ({ officeSelector, office, initialScriptId, init
           existingNames={scripts.data.map(script => script.name)}
         />}
       </Modal>
+      <ConfigurationImport office={office} scripts={scripts.data} opened={importOpened} onClose={() => setImportOpened(false)} onImported={scriptId => {
+        void scripts.refetch();
+        setSelectedScriptId(scriptId);
+        setPanelMode("view");
+        showTab(0);
+      }} />
     </div>
   );
 };

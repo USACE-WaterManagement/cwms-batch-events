@@ -13,6 +13,10 @@ from cwms_batch_events.core.models import (
     ScriptRead,
     ScriptUpdate,
 )
+from cwms_batch_events.core.script_configuration import (
+    ScriptConfigurationExport,
+    ScriptConfigurationImport,
+)
 
 
 def check_user_office_admin(user: User, office: str):
@@ -24,6 +28,59 @@ def check_user_office_admin(user: User, office: str):
 
 
 router = APIRouter(prefix="/scripts", tags=["scripts"])
+
+
+@router.get("/{script_id}/configuration-export", response_model=ScriptConfigurationExport)
+def export_script_configuration(
+    script_id: UUID,
+    user: User = Depends(get_current_user),
+    job_db: JobDatabase = Depends(get_job_database),
+):
+    try:
+        script = job_db.get_script_by_id(script_id)
+        if script is None:
+            raise NoResultFound
+        check_user_office_admin(user, script.office)
+        return ScriptConfigurationExport.from_script(script)
+    except NoResultFound:
+        raise HTTPException(status_code=404, detail="Script not found")
+
+
+@router.post("/configuration-import", response_model=ScriptRead)
+def import_script_configuration(
+    payload: ScriptConfigurationImport,
+    user: User = Depends(get_current_user),
+    job_db: JobDatabase = Depends(get_job_database),
+):
+    check_user_office_admin(user, payload.target_office)
+    incoming = dict(payload.package.configuration)
+    existing = job_db.get_script_by_configuration_key(
+        payload.package.configuration_key, payload.target_office
+    )
+    try:
+        if existing is not None:
+            for field, choice in payload.selections.items():
+                if choice == "existing" and field in incoming:
+                    incoming[field] = getattr(existing, field)
+            update_payload = ScriptUpdate.model_validate(incoming)
+            if update_payload.release_jar:
+                validate_selection(payload.target_office, update_payload.release_jar)
+            return job_db.update_script(
+                existing.id, update_payload, user.admin_offices, actor=user
+            )
+
+        create_payload = ScriptCreate.model_validate({**incoming, "office": payload.target_office})
+        if create_payload.release_jar:
+            validate_selection(payload.target_office, create_payload.release_jar)
+        return job_db.store_script(
+            create_payload, actor=user, configuration_key=payload.package.configuration_key
+        )
+    except SlugError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.post("/{script_id}/upgrade", response_model=ScriptRead)

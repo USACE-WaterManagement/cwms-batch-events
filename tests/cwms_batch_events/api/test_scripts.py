@@ -27,6 +27,106 @@ def test_get_scripts_for_office_returns_scripts(client, job_db):
     job_db.get_scripts_for_office.assert_called_once_with("SWT")
 
 
+def test_export_script_configuration_requires_office_admin(client, job_db):
+    script = make_script_read()
+    job_db.get_script_by_id.return_value = script
+
+    response = client.get(f"/scripts/{script.id}/configuration-export")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["schemaVersion"] == 1
+    assert body["configurationKey"] == str(script.configuration_key)
+    assert body["sourceOffice"] == "SWT"
+    assert body["configuration"]["name"] == script.name
+    job_db.get_script_by_id.assert_called_once_with(script.id)
+
+
+def test_import_script_configuration_creates_with_export_key(client, job_db):
+    script = make_script_read()
+    job_db.get_script_by_configuration_key.return_value = None
+    job_db.store_script.return_value = script
+    package = {
+        "schemaVersion": 1,
+        "configurationKey": str(script.configuration_key),
+        "sourceOffice": "LRH",
+        "configuration": {
+            "configVersion": 4,
+            "name": "Imported Script",
+            "description": "restored",
+            "repoPath": "run.py",
+            "executionType": "github_file",
+            "runtime": "python",
+            "commandArgs": [],
+            "commandPlaceholder": None,
+            "commandMode": "arguments",
+            "shellCommand": None,
+            "releaseJar": None,
+            "environmentVariables": [],
+            "resourceSize": "medium",
+            "active": True,
+            "roles": [],
+            "scheduleEnabled": False,
+            "scheduleType": "manual",
+            "scheduleMinute": None,
+            "scheduleCron": None,
+            "scheduleTimezone": "UTC",
+        },
+    }
+
+    response = client.post("/scripts/configuration-import", json={
+        "targetOffice": "SWT", "package": package,
+    })
+
+    assert response.status_code == 200
+    assert job_db.store_script.call_args.kwargs["configuration_key"] == script.configuration_key
+    assert job_db.store_script.call_args.kwargs["actor"].username == "test-user"
+
+
+def test_import_script_configuration_merges_selected_existing_fields(client, job_db):
+    existing = make_script_read(name="Existing")
+    imported = make_script_read(id=existing.id, configuration_key=existing.configuration_key)
+    job_db.get_script_by_configuration_key.return_value = existing
+    job_db.update_script.return_value = imported
+    package = {
+        "schemaVersion": 1,
+        "configurationKey": str(existing.configuration_key),
+        "sourceOffice": "SWT",
+        "configuration": {
+            "configVersion": 4,
+            "name": "Imported",
+            "description": "new description",
+            "repoPath": "run.py",
+            "executionType": "github_file",
+            "runtime": "python",
+            "commandArgs": [],
+            "commandPlaceholder": None,
+            "commandMode": "arguments",
+            "shellCommand": None,
+            "releaseJar": None,
+            "environmentVariables": [],
+            "resourceSize": "medium",
+            "active": True,
+            "roles": [],
+            "scheduleEnabled": False,
+            "scheduleType": "manual",
+            "scheduleMinute": None,
+            "scheduleCron": None,
+            "scheduleTimezone": "UTC",
+        },
+    }
+
+    response = client.post("/scripts/configuration-import", json={
+        "targetOffice": "SWT", "package": package,
+        "selections": {"name": "existing"},
+    })
+
+    assert response.status_code == 200
+    update_payload = job_db.update_script.call_args.args[1]
+    assert update_payload.name == "Existing"
+    assert update_payload.description == "new description"
+
+
 def test_post_script_returns_created_script(client, job_db):
     script = make_script_read()
     job_db.store_script.return_value = script
