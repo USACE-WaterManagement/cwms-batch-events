@@ -4,6 +4,7 @@ import type { Script } from "./types";
 import fetchWithAuth from "../../utils/fetchWithAuth";
 import { useAuth } from "@usace-watermanagement/groundwork-water";
 import type { TransferPackage } from "./configurationTransferApi";
+import { notifySuccess } from "../../utils/actionNotifications";
 
 type ScriptWithConfigurationKey = Script & { configurationKey?: string };
 type ImportMode = "new" | "update";
@@ -101,6 +102,7 @@ export function ConfigurationImport({ office, scripts, opened, onClose, onImport
       }, auth.token);
       const imported = await response.json() as Script;
       onImported(imported.id);
+      notifySuccess(existing && mode === "update" ? `Configuration updated: ${imported.name}` : `Configuration imported: ${imported.name}`);
       close();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "The configuration could not be imported.");
