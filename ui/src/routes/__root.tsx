@@ -10,7 +10,6 @@ import {
 import { Button, Container, Modal, SiteWrapper } from "@usace/groundwork";
 import { useAuth } from "@usace-watermanagement/groundwork-water";
 import AuthButton from "../features/auth/AuthButton";
-import { useApplicationInfo } from "../features/about/useAboutInfo";
 import { useRememberedOffice } from "../shared/hooks/useRememberedOffice";
 import { useRepositoryFiles, useRepositoryStatus } from "../features/scripts-manager/useRepositoryFiles";
 import { WarningIndicator } from "../components/WarningIndicator";
@@ -58,7 +57,6 @@ function repositoryButtonTitle(office: string | undefined, repositoryUrl: string
 function RootShell({ children }: { children: ReactNode }) {
   const location = useLocation();
   const auth = useAuth();
-  const application = useApplicationInfo();
   const { isOnline } = useConnectivityStatus();
   const systemAdmin = useSystemAdmin();
   const [githubOpen, setGithubOpen] = useState(false);
@@ -76,7 +74,7 @@ function RootShell({ children }: { children: ReactNode }) {
   const repositoryUrl = repository && /^[\w.-]+\/[\w.-]+$/.test(repository)
     ? `https://github.com/${repository}` : undefined;
   const navLinks = [...primaryLinks];
-  if ((application.data?.user.offices.length ?? 0) === 0) {
+  if (!auth.isAuth || offices.length === 0) {
     navLinks.splice(navLinks.findIndex((link) => link.id === "dependencies"), 1);
   }
   if (auth.isAuth && systemAdmin.data === true) navLinks.push({ id: "admin", text: "Admin", href: "/admin" });

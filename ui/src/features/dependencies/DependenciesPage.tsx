@@ -25,7 +25,7 @@ export default function DependenciesPage() {
   const auth = useAuth();
   const application = useApplicationInfo();
   const [office, setOffice] = useState<string>();
-  const offices = application.data?.user.offices ?? [];
+  const offices = application.data?.user?.offices ?? [];
   const selectedOffice = office && offices.includes(office) ? office : offices[0];
   const dependencies = useRepositoryDependencies(selectedOffice);
 
