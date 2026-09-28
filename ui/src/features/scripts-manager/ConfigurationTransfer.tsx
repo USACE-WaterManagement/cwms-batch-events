@@ -121,7 +121,8 @@ export function ConfigurationImport({ office, scripts, opened, onClose, onImport
   return <Modal opened={opened} onClose={close} dialogTitle={`Import job configuration · ${office.toUpperCase()}`} size="3xl" className="[&_[id^=headlessui-dialog-panel]]:overflow-hidden [&_[id^=headlessui-dialog-panel]]:rounded-2xl [&_[id^=headlessui-dialog-panel]]:border [&_[id^=headlessui-dialog-panel]]:border-slate-200 [&_[id^=headlessui-dialog-panel]]:shadow-2xl">
     <div className="space-y-5 p-4 sm:p-6">
       {!packageData ? <div
-        className={`rounded-xl border-2 border-dashed p-8 text-center transition ${dragActive ? "border-blue-700 bg-blue-50" : "border-slate-300 bg-gradient-to-br from-slate-50 to-blue-50/40"}`}
+        className={`mx-auto w-full max-w-xl rounded-xl border-2 border-dashed text-center transition ${dragActive ? "border-blue-700 bg-blue-50" : "border-slate-300 bg-gradient-to-br from-slate-50 to-blue-50/40"}`}
+        style={{ padding: "2rem" }}
         onDragEnter={event => { event.preventDefault(); setDragActive(true); }}
         onDragOver={event => { event.preventDefault(); setDragActive(true); }}
         onDragLeave={event => { event.preventDefault(); setDragActive(false); }}
