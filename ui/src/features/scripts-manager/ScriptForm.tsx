@@ -96,6 +96,67 @@ const slugify = (str: string) => {
     .replace(/^-+|-+$/g, "");
 };
 
+const DRAFT_STORAGE_PREFIX = "cwms-batch-events:script-form-draft";
+
+function draftStorageKey(office: string, script?: Script): string {
+  return `${DRAFT_STORAGE_PREFIX}:${encodeURIComponent(office)}:${encodeURIComponent(script?.id ?? "new")}`;
+}
+
+function initialForm(script?: Script): ScriptFormData {
+  return {
+    configVersion: editableVersion(script),
+    name: script?.name ?? "",
+    description: script?.description ?? "",
+    active: script?.active ?? true,
+    repoPath: script?.repoPath ?? "",
+    executionType: script?.executionType === "command" ? "command" : "github_file",
+    runtime: script?.runtime === "java" || script?.runtime === "shell" ? script.runtime : "python",
+    commandArgs: script?.commandArgs ?? [],
+    commandPlaceholder: script?.commandPlaceholder ?? null,
+    environmentVariables: script?.environmentVariables ?? [],
+    resourceSize: script?.resourceSize ?? "medium",
+    commandMode: script?.commandMode === "shell" ? "shell" : "arguments",
+    shellCommand: script?.shellCommand ?? null,
+    releaseJar: script?.releaseJar ?? null,
+    roles: script?.roles ?? [],
+    scheduleEnabled: script?.scheduleEnabled ?? false,
+    scheduleType: script?.scheduleType ?? "manual",
+    scheduleMinute: script?.scheduleMinute ?? 0,
+    scheduleCron: script?.scheduleCron ?? "",
+    scheduleTimezone: script?.scheduleTimezone ?? "UTC",
+  };
+}
+
+function readDraft(key: string, fallback: ScriptFormData): ScriptFormData {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const stored = window.localStorage.getItem(key);
+    if (!stored) return fallback;
+    const parsed: unknown = JSON.parse(stored);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return fallback;
+    return { ...fallback, ...parsed } as ScriptFormData;
+  } catch (error) {
+    console.warn("Unable to restore the saved script form draft.", error);
+    return fallback;
+  }
+}
+
+function writeDraft(key: string, value: ScriptFormData): void {
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    console.warn("Unable to save the script form draft in browser storage.", error);
+  }
+}
+
+function removeDraft(key: string): void {
+  try {
+    window.localStorage.removeItem(key);
+  } catch (error) {
+    console.warn("Unable to clear the saved script form draft.", error);
+  }
+}
+
 const FormRow = ({ children }: React.PropsWithChildren) => {
   return <Field className="grid min-w-0 grid-cols-1 gap-2">{children}</Field>;
 };
@@ -173,27 +234,16 @@ export const ScriptForm = ({
     return `${stem} ${suffix}`;
   };
   const initialName = script?.name ?? "";
-  const [form, setForm] = useState<ScriptFormData>({
-    configVersion: editableVersion(script),
-    name: initialName,
-    description: script?.description ?? "",
-    active: script?.active ?? true,
-    repoPath: script?.repoPath ?? "",
-    executionType: script?.executionType === "command" ? "command" : "github_file",
-    runtime: script?.runtime === "java" || script?.runtime === "shell" ? script.runtime : "python",
-    commandArgs: script?.commandArgs ?? [],
-    commandPlaceholder: script?.commandPlaceholder ?? null,
-    environmentVariables: script?.environmentVariables ?? [],
-    resourceSize: script?.resourceSize ?? "medium",
-    commandMode: script?.commandMode === "shell" ? "shell" : "arguments",
-    shellCommand: script?.shellCommand ?? null,
-    releaseJar: script?.releaseJar ?? null,
-    roles: script?.roles ?? [],
-    scheduleEnabled: script?.scheduleEnabled ?? false,
-    scheduleType: script?.scheduleType ?? "manual",
-    scheduleMinute: script?.scheduleMinute ?? 0,
-    scheduleCron: script?.scheduleCron ?? "",
-    scheduleTimezone: script?.scheduleTimezone ?? "UTC",
+  const storageKey = draftStorageKey(office, script);
+  const [form, setForm] = useState<ScriptFormData>(() => readDraft(storageKey, initialForm(script)));
+  const [draftRestored, setDraftRestored] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return window.localStorage.getItem(storageKey) !== null;
+    } catch (error) {
+      console.warn("Unable to check for a saved script form draft.", error);
+      return false;
+    }
   });
   const [suggestedName, setSuggestedName] = useState(initialName);
 
@@ -230,7 +280,11 @@ export const ScriptForm = ({
     const next = validateScriptForm(form);
     showErrors(next);
     if (Object.keys(next).length) return;
-    try { await onSave({ ...form, repoPath: form.repoPath.trim() }); }
+    try {
+      await onSave({ ...form, repoPath: form.repoPath.trim() });
+      removeDraft(storageKey);
+      setDraftRestored(false);
+    }
     catch (error) {
       if (error instanceof ApiError && error.fields) showErrors(error.fields);
     }
@@ -245,6 +299,8 @@ export const ScriptForm = ({
   const changeForm = (next: ScriptFormData) => {
     if (next.runtime !== "java" || next.executionType !== "github_file" || next.commandMode === "shell") next = { ...next, releaseJar: null };
     setForm(next);
+    writeDraft(storageKey, next);
+    setDraftRestored(true);
     if (submitted) {
       const nextErrors = validateScriptForm(next);
       setErrors(nextErrors);
@@ -257,6 +313,24 @@ export const ScriptForm = ({
     value: (typeof form)[K],
   ) => {
     changeForm({ ...form, [key]: value });
+  };
+
+  const clearForm = () => {
+    if (!window.confirm("Clear this form and discard the saved draft?")) return;
+    const next = initialForm(script);
+    setForm(next);
+    removeDraft(storageKey);
+    setDraftRestored(false);
+    setSuggestedName(initialName);
+    setSourcePaths({ [next.executionType ?? "github_file"]: next.repoPath });
+    const nextPreset = schedulePreset(next);
+    const fields = (next.scheduleCron ?? "").split(/\s+/);
+    setPreset(nextPreset);
+    setScheduleTime(nextPreset === "daily" || nextPreset === "monthly" ? `${fields[1].padStart(2, "0")}:${fields[0].padStart(2, "0")}` : "08:00");
+    setScheduleDay(nextPreset === "monthly" ? fields[2] : "1");
+    setErrors({});
+    setSubmitted(false);
+    onValidationChange?.(false);
   };
 
   if (script && ((script.configVersion ?? 1) === 1 || !supportsScriptVersion(script.configVersion ?? 1))) return <div className="space-y-4 p-4">
@@ -579,7 +653,7 @@ export const ScriptForm = ({
         </ScriptSections>
 
         </div>
-        <div className="script-form-actions mt-4 flex w-full flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+        <div id="script-form-actions" data-script-form-actions className="script-form-actions mt-4 flex w-full flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
           <div className="flex items-center gap-2">
             <fieldset className="flex flex-wrap gap-3" disabled={isPending}>
               <legend className="mb-1 text-xs text-slate-600">Run mode</legend>
@@ -594,6 +668,10 @@ export const ScriptForm = ({
           </div>
           {script && <DeleteConfirm onDelete={() => onDelete(script?.id)} />}
           <div className="ml-auto flex justify-between gap-3">
+            {draftRestored && <span className="self-center text-sm text-slate-600">Draft restored from this browser</span>}
+            <Button type="button" disabled={isPending} onClick={clearForm}>
+              Clear form
+            </Button>
             <Button type="submit" disabled={isPending}>
               Save
             </Button>
