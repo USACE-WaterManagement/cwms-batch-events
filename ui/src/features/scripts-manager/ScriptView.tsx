@@ -2,10 +2,9 @@ import { RequiredRoles } from "./RequiredRoles";
 import dayjs from "dayjs";
 import { ScheduleTiming } from "./ScheduleTiming";
 import { ViewField } from "./ViewField";
-import { Button, Text } from "@usace/groundwork";
-import { MdEdit, MdFileDownload } from "react-icons/md";
+import { Text } from "@usace/groundwork";
 import type { Script } from "../scripts-manager/types";
-import { savedCommandPreview, supportsScriptVersion } from "./commandArguments";
+import { savedCommandPreview } from "./commandArguments";
 import { ArgumentValues } from "./CommandSummary";
 import { ScriptSections, ConfigSection } from "./ScriptSections";
 import type { ScriptSection } from "./configurationSections";
@@ -28,8 +27,6 @@ function scriptRuntime(script: Script) {
 
 interface ScriptViewProps {
   script?: Script;
-  onEdit: () => void;
-  onExport?: (scriptId: string) => void;
   section: ScriptSection;
   onSectionChange: (section: ScriptSection) => void;
 }
@@ -50,16 +47,10 @@ const resourceProfiles = {
   large: { label: "Large", cpu: "2 vCPU", memory: "4 GiB" },
 } as const;
 
-export const ScriptView = ({ script, onEdit, onExport, section, onSectionChange }: ScriptViewProps) => {
+export const ScriptView = ({ script, section, onSectionChange }: ScriptViewProps) => {
   if (script) {
     return (
       <div className="flex flex-col gap-y-6">
-        <div className="flex justify-end">
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button onClick={() => onExport?.(script.id)}><MdFileDownload aria-hidden /> Export</Button>
-            <Button disabled={(script.configVersion ?? 1) === 1 || !supportsScriptVersion(script.configVersion ?? 1)} onClick={onEdit}><MdEdit aria-hidden /> Edit</Button>
-          </div>
-        </div>
         <ScriptSections active={section} onSelect={onSectionChange}>
         <div className="flex flex-col gap-2">
           <ConfigSection id="general" active={section}>

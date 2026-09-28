@@ -579,7 +579,7 @@ export const ScriptForm = ({
         </ScriptSections>
 
         </div>
-        <div className="script-form-actions mt-4 flex w-full flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+        <div id="script-form-actions" data-script-form-actions className="script-form-actions mt-4 flex w-full flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
           <div className="flex items-center gap-2">
             <fieldset className="flex flex-wrap gap-3" disabled={isPending}>
               <legend className="mb-1 text-xs text-slate-600">Run mode</legend>

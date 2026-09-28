@@ -11,12 +11,13 @@ import { useUpdateScript } from "./useUpdateScript";
 import { useCreateScript } from "./useCreateScript";
 import { useDeleteScript } from "./useDeleteScript";
 import { useDefaultJobRunner } from "./useDefaultJobRunner";
-import { MdCode } from "react-icons/md";
+import { MdCode, MdEdit, MdFileDownload, MdKeyboardArrowDown } from "react-icons/md";
 import useJobsList from "../jobs-list/useJobsList";
 import { useNavigate } from "@tanstack/react-router";
 import { ConfigurationImport } from "./ConfigurationTransfer";
 import { exportConfiguration } from "./configurationTransferApi";
 import { useAuth } from "@usace-watermanagement/groundwork-water";
+import { supportsScriptVersion } from "./commandArguments";
 
 interface ScriptsWorkspaceProps {
   officeSelector?: ReactNode;
@@ -142,6 +143,7 @@ export const ScriptsWorkspace = ({ officeSelector, office, initialScriptId, init
     setPanelMode("view");
   };
   const onCancelEdit = () => { setInvalidDetails(false); setPanelMode("view"); };
+  const scrollToFormActions = () => document.querySelector<HTMLElement>("[data-script-form-actions]")?.scrollIntoView({ behavior: "smooth", block: "center" });
 
   const isPending =
     createScriptMutation.isPending ||
@@ -202,17 +204,20 @@ export const ScriptsWorkspace = ({ officeSelector, office, initialScriptId, init
       </div>
       {scripts.data.length > 0 && <div className="script-workspace-panel @container/script-panel min-w-0 self-start rounded-xl border border-gray-200 bg-white p-3 [overflow-wrap:anywhere]">
       {selectedScript ? <>
-        <header className="mb-3 border-b border-gray-200 px-1 pb-3">
+        <header className="mb-3 flex flex-wrap items-start justify-between gap-3 border-b border-gray-200 px-1 pb-3">
           <p className="mb-1 text-xs font-medium uppercase tracking-wide text-gray-500">{office.toUpperCase()} · {selectedScript.runtime}</p>
           <H2 className="break-words">{selectedScript.name}</H2>
+          {panelMode === "view" ? <div className="flex shrink-0 flex-wrap justify-end gap-2">
+            <Button type="button" onClick={() => void exportConfiguration(selectedScript.id, auth.token)}><MdFileDownload aria-hidden /> Export</Button>
+            <Button type="button" disabled={(selectedScript.configVersion ?? 1) === 1 || !supportsScriptVersion(selectedScript.configVersion ?? 1)} onClick={onEdit}><MdEdit aria-hidden /> Edit</Button>
+          </div> : <button type="button" onClick={scrollToFormActions} className="inline-flex shrink-0 items-center gap-1 rounded px-2 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50 focus-visible:outline-2"><MdKeyboardArrowDown aria-hidden /> Scroll to Save / Cancel / Delete</button>}
         </header>
         <div data-invalid-details={invalidDetails} className={invalidDetails ? "[&_[role=tab]:first-child]:bg-red-50! [&_[role=tab]:first-child]:text-red-800! [&_[role=tab]:first-child]:border-red-600!" : ""}>
         <Tabs key={`${selectedScript.id}:${panelTab.revision}`} defaultIndex={panelTab.index} fill tabs={[
           { name: "Details", content: <ScriptDetailPanel
             office={office} script={selectedScript} mode={panelMode} isPending={isPending}
-            mutationError={mutationError} onDelete={onDelete} onEdit={onEdit}
+            mutationError={mutationError} onDelete={onDelete}
             onSave={onSave} onCancelEdit={onCancelEdit} onValidationChange={setInvalidDetails}
-            onExport={scriptId => void exportConfiguration(scriptId, auth.token)}
             existingNames={scripts.data.map(script => script.name)} /> },
           { name: "Run job", content: <ScriptRunJob script={selectedScript} onEdit={() => { showTab(0); onEdit(); }} onSubmitted={job => {
             setSelectedScriptId(job.scriptId ?? selectedScript.id);
@@ -235,10 +240,8 @@ export const ScriptsWorkspace = ({ officeSelector, office, initialScriptId, init
         isPending={isPending}
         mutationError={mutationError}
         onDelete={onDelete}
-        onEdit={onEdit}
         onSave={onSave}
         onCancelEdit={onCancelEdit}
-        onExport={scriptId => void exportConfiguration(scriptId, auth.token)}
         existingNames={scripts.data.map(script => script.name)}
       />}
       </div>}
