@@ -24,6 +24,7 @@ const primaryLinks = [
   { id: "jobs", text: "Job History", href: "/jobs" },
   { id: "submit", text: "Submit Job", href: "/submit" },
   { id: "manager", text: "Job Manager", href: "/scripts-manager" },
+  { id: "dependencies", text: "Dependencies", href: "/dependencies" },
 ];
 
 const batchRepository = "https://github.com/USACE-WaterManagement/cwms-batch-events";
@@ -73,6 +74,9 @@ function RootShell({ children }: { children: ReactNode }) {
   const repositoryUrl = repository && /^[\w.-]+\/[\w.-]+$/.test(repository)
     ? `https://github.com/${repository}` : undefined;
   const navLinks = [...primaryLinks];
+  if (!auth.isAuth || offices.length === 0) {
+    navLinks.splice(navLinks.findIndex((link) => link.id === "dependencies"), 1);
+  }
   if (auth.isAuth && systemAdmin.data === true) navLinks.push({ id: "admin", text: "Admin", href: "/admin" });
 
   return (

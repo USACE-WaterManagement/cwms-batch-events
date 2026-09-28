@@ -1,4 +1,5 @@
-"""Optional, read-only catalogs; repository failures never block manual paths."""
+"""Optional, read-only catalogs and dependency files."""
+import base64
 import json
 import re
 from urllib.error import HTTPError, URLError
@@ -20,6 +21,24 @@ router = APIRouter(tags=["repositories"])
 
 def warning(error):
     return {"code": error.code, "message": str(error)}
+
+
+def _repository_config(office: str) -> RepositorySettings:
+    ref = settings.github_repository_ref or {
+        "local": "cwbi-dev", "dev": "cwbi-dev", "test": "cwbi-test", "prod": "cwbi-prod",
+    }.get(settings.deployment_environment, settings.deployment_environment)
+    return settings.office_repositories.get(office) or RepositorySettings(
+        repository=f"USACE-WaterManagement/{office.lower()}-wm-cwbi-jobs", ref=ref,
+    )
+
+
+def _validate_office(office: str, user: User) -> str:
+    office = office.upper()
+    if not re.fullmatch(r"[A-Z0-9-]+", office):
+        raise HTTPException(422, "Invalid office")
+    if office not in user.offices:
+        raise HTTPException(403, "User does not have batch-job access for this office")
+    return office
 
 
 @router.get("/repository-status")
@@ -47,12 +66,7 @@ def repository_files(office: str, user: User = Depends(get_current_user)):
     check_user_office_admin(user, office)
     if not re.fullmatch(r"[A-Z0-9-]+", office):
         raise HTTPException(422, "Invalid office")
-    ref = settings.github_repository_ref or {
-        "local": "cwbi-dev", "dev": "cwbi-dev", "test": "cwbi-test", "prod": "cwbi-prod",
-    }.get(settings.deployment_environment, settings.deployment_environment)
-    config = settings.office_repositories.get(office) or RepositorySettings(
-        repository=f"USACE-WaterManagement/{office.lower()}-wm-cwbi-jobs", ref=ref,
-    )
+    config = _repository_config(office)
     result = {"repository": config.repository, "ref": config.ref, "paths": [], "warnings": [], "mock": mock_enabled()}
     if mock_enabled():
         result["paths"] = ["python/reports/example.py", "bin/example.sh", "java/artifacts.json"]
@@ -74,4 +88,50 @@ def repository_files(office: str, user: User = Depends(get_current_user)):
         if isinstance(error, HTTPError) and error.code in (401, 403):
             message = "GitHub denied repository access or its request limit was reached. Ask an administrator to check App access. Enter the path manually."
         result["warnings"] = [{"code": "repository_unavailable", "message": message}]
+    return result
+
+
+@router.get("/repository-dependencies")
+def repository_dependencies(office: str, user: User = Depends(get_current_user)):
+    office = _validate_office(office, user)
+    config = _repository_config(office)
+    path = "base_requirements.txt"
+    result = {
+        "repository": config.repository,
+        "ref": config.ref,
+        "path": path,
+        "packages": [],
+        "warnings": [],
+        "mock": mock_enabled(),
+    }
+    if mock_enabled():
+        return result
+    try:
+        token = installation_token()
+        url = f"https://api.github.com/repos/{config.repository}/contents/{path}?ref={quote(config.ref, safe='')}"
+        headers = {
+            "Accept": "application/vnd.github+json",
+            "User-Agent": "cwms-batch-events",
+            "Authorization": f"Bearer {token}",
+        }
+        with urlopen(Request(url, headers=headers), timeout=10) as response:
+            content = json.load(response)
+        decoded = base64.b64decode(content["content"]).decode("utf-8")
+        packages = []
+        for line in decoded.splitlines():
+            match = re.match(r"^\s*([A-Za-z0-9_.-]+)\s*(==|~=|>=|<=|>|<)\s*([^\s#]+)", line)
+            if match:
+                packages.append({
+                    "name": match.group(1),
+                    "operator": match.group(2),
+                    "version": match.group(3),
+                })
+        result["packages"] = packages
+    except RepositoryUnavailable as error:
+        result["warnings"] = [warning(error)]
+    except (HTTPError, URLError, TimeoutError, ValueError, KeyError, TypeError, AttributeError) as error:
+        message = "The requirements file is unavailable. Check the office repository and GitHub App access."
+        if isinstance(error, HTTPError) and error.code in (401, 403):
+            message = "GitHub denied access to the office requirements file. Ask an administrator to check App access."
+        result["warnings"] = [{"code": "repository_dependencies_unavailable", "message": message}]
     return result

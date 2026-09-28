@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as DependenciesRouteImport } from './routes/dependencies'
 import { Route as LogSearchRouteImport } from './routes/log-search'
 import { Route as ScriptsManagerRouteImport } from './routes/scripts-manager'
 import { Route as SubmitRouteImport } from './routes/submit'
@@ -39,6 +40,11 @@ const AboutRoute = AboutRouteImport.update({
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DependenciesRoute = DependenciesRouteImport.update({
+  id: '/dependencies',
+  path: '/dependencies',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LogSearchRoute = LogSearchRouteImport.update({
@@ -111,6 +117,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/admin': typeof AdminRoute
+  '/dependencies': typeof DependenciesRoute
   '/log-search': typeof LogSearchRoute
   '/scripts-manager': typeof ScriptsManagerRoute
   '/submit': typeof SubmitRoute
@@ -129,6 +136,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/admin': typeof AdminRoute
+  '/dependencies': typeof DependenciesRoute
   '/log-search': typeof LogSearchRoute
   '/scripts-manager': typeof ScriptsManagerRoute
   '/submit': typeof SubmitRoute
@@ -148,6 +156,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/admin': typeof AdminRoute
+  '/dependencies': typeof DependenciesRoute
   '/log-search': typeof LogSearchRoute
   '/scripts-manager': typeof ScriptsManagerRoute
   '/submit': typeof SubmitRoute
@@ -168,6 +177,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/admin'
+    | '/dependencies'
     | '/log-search'
     | '/scripts-manager'
     | '/submit'
@@ -186,6 +196,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/admin'
+    | '/dependencies'
     | '/log-search'
     | '/scripts-manager'
     | '/submit'
@@ -204,6 +215,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/admin'
+    | '/dependencies'
     | '/log-search'
     | '/scripts-manager'
     | '/submit'
@@ -223,6 +235,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
   AdminRoute: typeof AdminRoute
+  DependenciesRoute: typeof DependenciesRoute
   LogSearchRoute: typeof LogSearchRoute
   ScriptsManagerRoute: typeof ScriptsManagerRoute
   SubmitRoute: typeof SubmitRoute
@@ -259,6 +272,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dependencies': {
+      id: '/dependencies'
+      path: '/dependencies'
+      fullPath: '/dependencies'
+      preLoaderRoute: typeof DependenciesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/log-search': {
@@ -359,6 +379,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   AdminRoute: AdminRoute,
+  DependenciesRoute: DependenciesRoute,
   LogSearchRoute: LogSearchRoute,
   ScriptsManagerRoute: ScriptsManagerRoute,
   SubmitRoute: SubmitRoute,

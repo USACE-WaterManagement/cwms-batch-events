@@ -1,3 +1,4 @@
+import base64
 import io
 import json
 from unittest.mock import patch
@@ -28,6 +29,32 @@ def test_catalog_uses_configured_repository(client, configured_repository):
     assert response.status_code == 200
     assert response.json() == {"repository": "example/district-jobs", "ref": "release/jobs", "paths": ["python/report.py"], "warnings": [], "mock": False}
     assert "release%2Fjobs?recursive=1" in request.call_args.args[0].full_url
+
+
+def test_dependencies_fetches_and_parses_office_requirements(client, user, monkeypatch):
+    office = user.offices[0]
+    monkeypatch.setattr(settings, "office_repositories", {})
+    monkeypatch.setattr("cwms_batch_events.api.routers.repository_files.installation_token", lambda: "test-token")
+    requirements = b"numpy==2.3.3\nPint~=0.25\n# comment\nrequests>=2.32.5\n"
+    payload = {"content": base64.b64encode(requirements).decode(), "encoding": "base64"}
+    with patch("cwms_batch_events.api.routers.repository_files.urlopen", return_value=io.BytesIO(json.dumps(payload).encode())) as request:
+        response = client.get("/repository-dependencies", params={"office": office.lower()})
+    assert response.status_code == 200
+    assert response.json()["packages"] == [
+        {"name": "numpy", "operator": "==", "version": "2.3.3"},
+        {"name": "Pint", "operator": "~=", "version": "0.25"},
+        {"name": "requests", "operator": ">=", "version": "2.32.5"},
+    ]
+    assert request.call_args.args[0].full_url.endswith(
+        f"/repos/USACE-WaterManagement/{office.lower()}-wm-cwbi-jobs/contents/base_requirements.txt?ref=cwbi-dev"
+    )
+
+
+def test_dependencies_requires_batch_job_office_access(client):
+    with patch("cwms_batch_events.api.routers.repository_files.urlopen") as request:
+        response = client.get("/repository-dependencies?office=UNAUTHORIZED")
+    assert response.status_code == 403
+    request.assert_not_called()
 
 
 @pytest.mark.parametrize("environment,branch", [
