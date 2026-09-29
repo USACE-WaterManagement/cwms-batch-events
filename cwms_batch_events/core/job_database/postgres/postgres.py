@@ -25,6 +25,8 @@ from cwms_batch_events.core.models import (
     ExecutionOptions,
 )
 from cwms_batch_events.core.utils import get_runner_id
+from cwms_batch_events.core.dispatch import expire_dispatch
+from cwms_batch_events.core.settings import get_settings
 from cwms_batch_events.core.display_names import readable_name
 
 logger = logging.getLogger(__name__)
@@ -63,12 +65,37 @@ class PostgresJobDatabase:
         job = self._load_job_for_update(job_id)
         if job.scheduled_for is None:
             raise ValueError("Not an internal scheduled occurrence")
-        if job.dispatch_claimed_at is not None or job.external_job_id is not None:
+        if job.job_status != JobStatus.PENDING or job.dispatch_claimed_at is not None or job.external_job_id is not None:
             self.db.commit()
             return False
         job.dispatch_claimed_at = datetime.now(timezone.utc)
         self.db.commit()
         return True
+
+    def claim_dispatch(self, job_id: uuid.UUID) -> dict:
+        job = self._load_job_for_update(job_id)
+        now = datetime.now(timezone.utc)
+        expire_dispatch(job, now, get_settings().dispatch_timeout_minutes)
+        claimed = (job.job_status == JobStatus.PENDING and job.external_job_id is None
+                   and job.dispatch_claimed_at is None)
+        if claimed:
+            job.dispatch_claimed_at = now
+        result = {"claimed": claimed, "status": job.job_status,
+                  "external_job_id": job.external_job_id}
+        self.db.commit()
+        return result
+
+    def fail_dispatch(self, job_id: uuid.UUID, reason: str) -> None:
+        job = self._load_job_for_update(job_id)
+        # A late failure callback must never overwrite a linked/running/finished job.
+        if job.external_job_id or job.job_status not in (JobStatus.PENDING, JobStatus.DISPATCH_UNKNOWN):
+            self.db.commit()
+            return
+        job.job_status = JobStatus.FAILED
+        job.batch_status_reason = reason
+        job.end_time = datetime.now(timezone.utc)
+        self.db.commit()
+        logger.warning("Dispatch rejection recorded", extra={"event": "dispatch_rejected", "job_id": job_id})
 
     def upgrade_script_configuration(self, script_id: uuid.UUID, actor: User) -> ScriptRead:
         with self.db.begin():
@@ -146,6 +173,9 @@ class PostgresJobDatabase:
 
         if job.external_job_id is None:
             job.external_job_id = external_job_id
+            if job.job_status == JobStatus.DISPATCH_UNKNOWN:
+                job.job_status = JobStatus.PENDING
+                job.batch_status_reason = None
             self.db.commit()
             logger.info("External Batch job linked", extra={"event": "job_linked", "job_id": job_id, "external_job_id": external_job_id})
             return

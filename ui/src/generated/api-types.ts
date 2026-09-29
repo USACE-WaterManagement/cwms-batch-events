@@ -622,7 +622,7 @@ export interface components {
          * JobStatus
          * @enum {string}
          */
-        JobStatus: "Failed" | "Pending" | "Running" | "Completed";
+        JobStatus: "Dispatch unknown" | "Failed" | "Pending" | "Running" | "Completed";
         /** EnvironmentVariable */
         EnvironmentVariable: {
             /** Name */

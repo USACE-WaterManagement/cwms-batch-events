@@ -8,10 +8,11 @@ from uuid import uuid4
 
 import boto3
 from botocore.config import Config
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 
+from cwms_batch_events.core.dispatch import expire_dispatch
 from cwms_batch_events.core.execution import execution_for_config
-from cwms_batch_events.core.job_database.postgres.models import JobModel, ScriptModel
+from cwms_batch_events.core.job_database.postgres.models import JobModel, JobRunnerModel, ScriptModel
 from cwms_batch_events.core.job_database.postgres.session import create_session
 from cwms_batch_events.core.models import JobMessage, JobRequestedBy, JobSource, JobStatus, ScriptRunOptions
 from cwms_batch_events.core.schedules import due_minutes, validate_schedule_interval
@@ -23,7 +24,7 @@ logger = logging.getLogger(__name__)
 # These identify workers, not job counts or limits. Keep the values unchanged
 # across deployments so old and new replicas coordinate during rolling updates.
 # Separate IDs let scheduling and queue delivery run independently.
-TASK_LOCKS = {"schedules": 730181, "queue_delivery": 730182}
+TASK_LOCKS = {"schedules": 730181, "queue_delivery": 730182, "dispatch_watchdog": 730183}
 
 
 def _begin(db, task):
@@ -107,6 +108,7 @@ def deliver_pending_jobs(now=None, session_factory=create_session, queue_factory
         now = now or db.scalar(text("SELECT CURRENT_TIMESTAMP"))
         pending = db.execute(text("""SELECT job_id, payload, attempts FROM job_outbox
             WHERE sent_at IS NULL AND next_attempt <= :now
+            AND EXISTS (SELECT 1 FROM jobs WHERE jobs.id=job_outbox.job_id AND jobs.job_status='Pending')
             ORDER BY next_attempt, job_id LIMIT 50 FOR UPDATE SKIP LOCKED"""), {"now": now}).mappings().all()
         if pending:
             client, url = queue_factory()
@@ -126,6 +128,27 @@ def deliver_pending_jobs(now=None, session_factory=create_session, queue_factory
                                {"id": row["job_id"], "retry": now + timedelta(seconds=delay)})
                     logger.exception("Scheduled queue delivery will retry", extra={"event": "scheduled_queue_retry", "job_id": row["job_id"], "attempts": row["attempts"] + 1})
         db.execute(text("UPDATE maintenance_tasks SET last_success=:now WHERE name='queue_delivery'"), {"now": now})
+
+
+def expire_unlinked_dispatches(now=None, session_factory=create_session):
+    with session_factory() as db, db.begin():
+        if not _begin(db, "dispatch_watchdog"):
+            return
+        now = now or db.scalar(text("SELECT CURRENT_TIMESTAMP"))
+        timeout = get_settings().dispatch_timeout_minutes
+        # Only Batch jobs; local runtimes do not bind an AWS ID. The row locks
+        # serialize expiry against claims, failure callbacks, and late binding.
+        jobs = db.scalars(select(JobModel).where(
+            JobModel.job_status == JobStatus.PENDING,
+            JobModel.external_job_id.is_(None),
+            JobModel.job_runner_id.in_(select(JobRunnerModel.id).where(JobRunnerModel.slug == "batch")),
+            func.coalesce(JobModel.dispatch_claimed_at, JobModel.created_time) <= now - timedelta(minutes=timeout),
+        ).order_by(JobModel.created_time, JobModel.id).limit(100).with_for_update(skip_locked=True)).all()
+        for job in jobs:
+            expire_dispatch(job, now, timeout)
+        ids = [str(job.id) for job in jobs]
+    for job_id in ids:
+        logger.warning("Dispatch outcome needs investigation", extra={"event": "dispatch_timed_out", "job_id": job_id})
 
 
 async def supervise(stop, tasks=None, interval=15):
@@ -164,8 +187,13 @@ async def supervise(stop, tasks=None, interval=15):
 async def lifespan(app):
     stop = asyncio.Event()
     worker = None
+    tasks = {}
     if get_settings().scheduler_enabled:
-        worker = asyncio.create_task(supervise(stop))
+        tasks.update(schedules=register_due_jobs, queue_delivery=deliver_pending_jobs)
+    if get_settings().dispatch_watchdog_enabled:
+        tasks["dispatch_watchdog"] = expire_unlinked_dispatches
+    if tasks:
+        worker = asyncio.create_task(supervise(stop, tasks))
     try:
         yield
     finally:

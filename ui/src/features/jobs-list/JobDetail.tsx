@@ -40,7 +40,7 @@ function JobDetail({ job }: JobDetailProps) {
           return (
             <JobDetailField key={field} field={fieldLabels[field] ?? field} className={className}>
               {field === "username" ? submittedBy(job) : field === "runTrigger" ? <RunTriggerBadge job={job} /> : field === "jobStatus" ? (
-                job.jobStatus !== "Completed" && job.jobStatus !== "Failed" ? (
+                job.jobStatus !== "Completed" && job.jobStatus !== "Failed" && job.jobStatus !== "Dispatch unknown" ? (
                   <span className="inline-flex items-center gap-2">
                     <span>{jobStatusLabel(job)}</span>
                     <LoadingSpinner />

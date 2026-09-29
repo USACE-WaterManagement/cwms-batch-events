@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from uuid import UUID
 import logging
+from pydantic import BaseModel, Field
 
 
 from cwms_batch_events.core.auth.service.dependencies import require_internal_auth
@@ -16,6 +17,28 @@ from cwms_batch_events.core.processing import update_batch_job_status
 
 router = APIRouter(prefix="/internal", include_in_schema=False)
 logger = logging.getLogger(__name__)
+
+
+class DispatchFailureRequest(BaseModel):
+    reason: str = Field(min_length=1, max_length=1000)
+
+
+@router.post("/jobs/{job_id}/claim-dispatch")
+def claim_dispatch(job_id: UUID, _=Depends(require_internal_auth),
+                   job_db: JobDatabase = Depends(get_job_database)):
+    try:
+        return job_db.claim_dispatch(job_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.post("/jobs/{job_id}/dispatch-failure", status_code=204)
+def fail_dispatch(job_id: UUID, payload: DispatchFailureRequest,
+                  _=Depends(require_internal_auth), job_db: JobDatabase = Depends(get_job_database)):
+    try:
+        job_db.fail_dispatch(job_id, payload.reason)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.post("/jobs/{job_id}/claim-scheduled-dispatch")
