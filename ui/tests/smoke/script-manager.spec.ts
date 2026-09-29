@@ -24,7 +24,7 @@ test("browse files, field help, responsive footer, and help navigation", async (
   await page.setViewportSize({width:1280,height:900});
   await page.goto("/events/scripts-manager");
   await page.getByRole("button",{name:"Login",exact:true}).first().click();
-  await page.getByRole("combobox").selectOption("SWT");
+  await page.locator('select:has(option[value="SWT"])').selectOption("SWT");
   await expect(page.getByRole("heading",{name:"No jobs yet for SWT"})).toBeVisible();
   await capture("empty-office");
   await page.getByRole("button",{name:"Create first job"}).click();

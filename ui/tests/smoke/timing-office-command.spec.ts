@@ -10,7 +10,7 @@ const script = { id: "report", name: "Office report", office: "SWT", configVersi
 async function open(page: Page) {
   await page.goto("/events/scripts-manager");
   await page.getByRole("button", { name: "Login", exact: true }).first().click();
-  await page.getByRole("combobox").first().selectOption("SWT");
+  await page.locator('select:has(option[value="SWT"])').selectOption("SWT");
   await page.getByText(script.name, { exact: true }).click();
 }
 

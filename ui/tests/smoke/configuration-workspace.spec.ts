@@ -11,7 +11,7 @@ const original = {
 async function open(page: Page) {
   await page.goto("/events/scripts-manager");
   await page.getByRole("button", { name: "Login", exact: true }).first().click();
-  await page.getByRole("combobox").selectOption("SWT");
+  await page.locator('select:has(option[value="SWT"])').selectOption("SWT");
   await page.getByText(original.name, { exact: true }).click();
 }
 
@@ -54,7 +54,7 @@ test("explicit upgrade shows progress, recoverable failure, success, and stays u
   await expect(page.getByRole("button", { name: "Upgrade configuration", exact: true })).toHaveCount(0);
   await page.reload();
   await page.getByRole("button", { name: "Login", exact: true }).first().click();
-  await page.getByRole("combobox").selectOption("SWT");
+  await page.locator('select:has(option[value="SWT"])').selectOption("SWT");
   await page.getByText(original.name, { exact: true }).click();
   await configSection(page, "Upgrade");
   await expect(page.getByRole("note")).toContainText("version 4");

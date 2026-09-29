@@ -3,6 +3,32 @@ import type { Script } from "../scripts-manager/types";
 import type { JobDetails } from "../jobs-list/useJobDetails";
 import { ScriptRunIndicators } from "./ScriptRunIndicators";
 import { LatestScriptRun } from "./LatestScriptRun";
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@usace-watermanagement/groundwork-water";
+import fetchWithAuth from "../../utils/fetchWithAuth";
+import { scheduleDescription } from "./scheduleDescription";
+
+interface ScheduleStatus {
+  nextRunAt: string | null;
+}
+
+const ScheduleSummary = ({ script }: { script: Script }) => {
+  const auth = useAuth();
+  const automatic = script.active && script.scheduleEnabled;
+  const status = useQuery<ScheduleStatus>({
+    queryKey: ["scheduleTiming", script.id, script.updatedTime],
+    enabled: automatic && auth.isAuth,
+    queryFn: async () => (await fetchWithAuth("/api/scripts/" + script.id + "/schedule-status", {}, auth.token)).json(),
+    refetchInterval: query => query.state.status === "error" ? false : 30000,
+  });
+
+  if (!automatic) return null;
+  const nextRun = status.isPending ? "Loading…" : status.isError ? "Unavailable" : status.data?.nextRunAt;
+  return <div className="mt-1 text-sm text-gray-600">
+    <span className="block">Next run: {nextRun ? new Date(nextRun).toLocaleString(undefined, { timeZone: script.scheduleTimezone || "UTC" }) : "No occurrence scheduled"}</span>
+    <span className="block">Interval: {scheduleDescription(script)}</span>
+  </div>;
+};
 
 interface ActiveIconProps {
   isActive: boolean;
@@ -75,6 +101,7 @@ export const ScriptsList = ({
                   <span className="inline-flex items-center gap-1"><ActiveIcon isActive={script.active} />{script.active ? "Active" : "Inactive"}</span>
                 </div>
                 <span title={script.repoPath} className="mt-1 block truncate font-mono text-sm text-gray-600">{script.repoPath}</span>
+                <ScheduleSummary script={script} />
                 <LatestScriptRun
                   jobs={jobs.filter(job => job.scriptId === script.id && job.office === script.office)}
                   now={jobsUpdatedAt} scriptName={script.name} state={runHistoryState}

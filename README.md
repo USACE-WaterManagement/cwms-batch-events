@@ -19,6 +19,17 @@ Signed-in users can open the header checkmark or warning indicator to view API
 server logs, filter loaded entries by level, and expand CloudWatch event details.
 See [server logs](docs/server-logs.md) for endpoint and deployment configuration.
 
+## Environment selector URLs
+
+The header environment selector uses the following GitHub Actions repository variables
+when the UI is built:
+
+| Variable | Purpose |
+| --- | --- |
+| `BATCH_EVENTS_DEV_URL` | Dev Batch Events UI URL |
+| `BATCH_EVENTS_TEST_URL` | Test Batch Events UI URL |
+| `BATCH_EVENTS_PROD_URL` | Production Batch Events UI URL |
+
 ## Contributions
 
 To get your local environment setup and/or make contributions please see the contributions documentation: [CONTRIBUTING.md](https://github.com/USACE-WaterManagement/cwms-batch-events/blob/cwbi-dev/CONTRIBUTING.md)

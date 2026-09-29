@@ -1,4 +1,4 @@
-import { useDeferredValue, useId, useState } from "react";
+import { useDeferredValue, useEffect, useId, useRef, useState } from "react";
 import useJobLogs, { FINAL_LOG_CHECKS } from "./useJobLogs";
 import { jobStatusLabel } from "./jobStatus";
 import type { JobDetails } from "./useJobDetails";
@@ -13,6 +13,7 @@ interface JobLogsProps {
 const JobLogs = ({ jobId, status, batchStatus, endTime }: JobLogsProps) => {
   const [interval, setInterval] = useState(5000);
   const intervalId = useId();
+  const logViewerRef = useRef<HTMLTextAreaElement>(null);
   const { data, error, isLoading, isError, isFetching, refresh, dataUpdatedAt } = useJobLogs(jobId, status, interval, endTime);
   const pending = status === "Pending";
   const running = status === "Running";
@@ -27,6 +28,11 @@ const JobLogs = ({ jobId, status, batchStatus, endTime }: JobLogsProps) => {
     : running ? waiting
     : "No logs available. Refresh to check again.");
   const displayedMessage = useDeferredValue(message);
+
+  useEffect(() => {
+    const logViewer = logViewerRef.current;
+    if (logViewer) logViewer.scrollTop = logViewer.scrollHeight;
+  }, [displayedMessage, dataUpdatedAt]);
 
   return (
     <section aria-label="Job logs" className="min-w-0 overflow-hidden rounded-lg border border-gray-300 bg-white">
@@ -72,7 +78,8 @@ const JobLogs = ({ jobId, status, batchStatus, endTime }: JobLogsProps) => {
       {isError && <p role="alert">{error.message}</p>}
       {data?.hasMore && <p>More output is available. Load more to continue.</p>}
       {data?.truncated && <p>Showing the most recent 2 million characters of loaded output.</p>}
-      <textarea aria-label="Job output" readOnly value={displayedMessage} className="block h-96 min-h-48 w-full resize-y overflow-auto rounded border border-gray-400 bg-white p-3 font-mono text-sm text-gray-900" />
+      <textarea ref={logViewerRef} aria-label="Job output" readOnly value={displayedMessage}
+        className="block h-96 min-h-48 w-full resize-y overflow-auto rounded border border-slate-700 bg-slate-950 p-3 font-mono text-sm leading-6 text-emerald-100 shadow-inner selection:bg-emerald-900 selection:text-emerald-50" />
       </div>
     </section>
   );

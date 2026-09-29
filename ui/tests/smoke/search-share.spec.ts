@@ -19,7 +19,7 @@ test("script search debounces, handles empty results, and retains selection", as
   });
   await page.goto("/events/scripts-manager");
   await page.getByRole("button", { name: "Login", exact: true }).first().click();
-  await page.getByRole("combobox").first().selectOption("SWT");
+  await page.locator('select:has(option[value="SWT"])').selectOption("SWT");
   await page.getByText(script.name, { exact: true }).click();
   await page.clock.pauseAt(new Date("2026-09-24T12:01:00Z"));
   const rows = page.getByRole("table", { name: "Jobs", exact: true }).locator("tbody tr");
@@ -58,7 +58,7 @@ test("run selection is routed, share copies a canonical link, and back restores 
   });
   await page.goto("/events/scripts-manager");
   await page.getByRole("button", { name: "Login", exact: true }).first().click();
-  await page.getByRole("combobox").first().selectOption("SWT");
+  await page.locator('select:has(option[value="SWT"])').selectOption("SWT");
   await page.getByRole("button", { name: "Runs", exact: true }).click();
   await expect(page.getByLabel("Job output")).toHaveCount(0);
   await expect(page.getByRole("list", { name: "Script run history" })).toHaveCSS("overflow-y", "auto");

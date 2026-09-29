@@ -15,7 +15,7 @@ import { useRepositoryFiles, useRepositoryStatus } from "../features/scripts-man
 import { WarningIndicator } from "../components/WarningIndicator";
 import useAdminOffices from "../features/scripts-manager/useAdminOffices";
 import { AboutMenu } from "../components/AboutMenu";
-import { EnvironmentBadge } from "../components/EnvironmentBadge";
+import { EnvironmentSelector } from "../components/EnvironmentSelector";
 import { useSystemAdmin } from "../features/auth/useSystemAdmin";
 import { ConnectivityBanner } from "../shared/components/ConnectivityStatus";
 import { useConnectivityStatus } from "../shared/components/useConnectivityStatus";
@@ -82,7 +82,7 @@ function RootShell({ children }: { children: ReactNode }) {
   return (
     <SiteWrapper links={navLinks}
       title={<span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1 py-1">
-        <span>CWMS Batch Events</span><EnvironmentBadge />
+        <span>CWMS Batch Events</span><EnvironmentSelector />
       </span>}
       missionText="Support USACE water management teams with shared tools to run district jobs and track their results."
       aboutText="CWMS Batch Events lets authorized district users submit jobs, review job history and logs, and manage registered jobs. For access or job support, contact your district Batch Events administrator."

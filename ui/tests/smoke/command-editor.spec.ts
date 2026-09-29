@@ -31,7 +31,7 @@ test("UI adapts to legacy and unknown versions without a version selector", asyn
   });
   await page.goto("/events/submit");
   await page.getByRole("button", { name: "Login", exact: true }).first().click();
-  await page.getByRole("combobox").first().selectOption("SWT");
+  await page.locator('select:has(option[value="SWT"])').selectOption("SWT");
   await page.getByRole("combobox").last().selectOption("version-1");
   await expect(page.getByRole("note")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Custom run", exact: true })).toBeDisabled();
@@ -74,7 +74,7 @@ test("v2 runs repeatedly without an upgrade prompt or configuration write", asyn
   await page.setViewportSize({ width: 1360, height: 1050 });
   await page.goto("/events/submit");
   await page.getByRole("button", { name: "Login", exact: true }).first().click();
-  await page.getByRole("combobox").first().selectOption("SWT");
+  await page.locator('select:has(option[value="SWT"])').selectOption("SWT");
   await page.getByRole("combobox").last().selectOption(script.id);
   await page.getByRole("button", { name: "Submit job", exact: true }).click();
   await expect.poll(() => posts.length).toBe(1);
@@ -82,7 +82,7 @@ test("v2 runs repeatedly without an upgrade prompt or configuration write", asyn
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page).toHaveURL(/\/jobs\/v3-job$/);
   await page.getByRole("link", { name: "Submit Job", exact: true }).click();
-  await page.getByRole("combobox").first().selectOption("SWT");
+  await page.locator('select:has(option[value="SWT"])').selectOption("SWT");
   await page.getByRole("combobox").last().selectOption(script.id);
   await page.getByRole("button", { name: "Custom run", exact: true }).click();
   await page.getByLabel("Command mode", { exact: true }).selectOption("shell");

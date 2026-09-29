@@ -32,6 +32,7 @@ jobs:
   Build-Push-to-Env:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Git clone the repository
         uses: actions/checkout@v4
@@ -97,6 +98,7 @@ jobs:
   Scheduled-Rebuild-Dev-Test:
     if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       matrix:
         env:

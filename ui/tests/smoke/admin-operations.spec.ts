@@ -48,13 +48,15 @@ test("HQ dashboard reports usage, queue issues, failures and clearly labeled cos
     await mkdir(process.env.PR_SCREENSHOT_DIR, { recursive: true });
     await page.screenshot({ path: join(process.env.PR_SCREENSHOT_DIR, "admin-overview-fixture.png"), fullPage: true });
   }
-  await page.getByRole("button", { name: "Operations", exact: true }).click();
+  await page.getByRole("link", { name: "Operations", exact: true }).click();
+  await expect(page).toHaveURL(/\/events\/admin\/operations$/);
   await expect(page.getByText("Queued forecast", { exact: true })).toBeVisible();
   await expect(page.getByText("Process exited with code 1", { exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Open job", exact: true }).first()).toHaveAttribute("href", "/events/jobs/queued-job");
   await page.getByLabel("Queue age", { exact: true }).selectOption("30");
   await expect.poll(() => queries.at(-1)?.get("queueMinutes")).toBe("30");
-  await page.getByRole("button", { name: "Usage", exact: true }).click();
+  await page.getByRole("link", { name: "Usage", exact: true }).click();
+  await expect(page).toHaveURL(/\/events\/admin\/usage$/);
   await page.getByRole("button", { name: "Cost", exact: true }).click();
   await page.getByLabel("Planning rate (USD per job runtime hour)").fill("2");
   await expect(page.getByText("Scenario estimate: $60.00", { exact: true })).toBeVisible();
@@ -69,7 +71,8 @@ test("HQ dashboard reports usage, queue issues, failures and clearly labeled cos
   await page.getByLabel("Office", { exact: true }).selectOption("SWF");
   await expect.poll(() => queries.at(-1)?.get("office")).toBe("SWF");
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole("button", { name: "Overview", exact: true }).click();
+  await page.getByRole("link", { name: "Overview", exact: true }).click();
+  await expect(page).toHaveURL(/\/events\/admin$/);
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   if (process.env.PR_SCREENSHOT_DIR) await page.screenshot({ path: join(process.env.PR_SCREENSHOT_DIR, "admin-mobile-fixture.png"), fullPage: true });
   expect(errors).toEqual([]);
@@ -85,8 +88,9 @@ test("rate limit help explains credential counters and process refresh", async (
   });
   await page.goto("/events/admin");
   await page.getByRole("button", { name: "Login", exact: true }).first().click();
-  await page.getByRole("button", { name: "Rate limits", exact: true }).click();
-  await expect(page.getByText("SWT", { exact: true })).toBeVisible();
+  await page.getByRole("link", { name: "Rate limits", exact: true }).click();
+  await expect(page).toHaveURL(/\/events\/admin\/rate-limits$/);
+  await expect(page.locator("summary").getByText("SWT", { exact: true })).toBeVisible();
   await expect(page.getByText("Default", { exact: true }).first()).toBeVisible();
   await page.locator("summary").click();
   await expect(page.getByRole("heading", { name: "Change history" })).toBeVisible();
@@ -123,4 +127,15 @@ test("pagination reserves row space while new history is loading", async ({ page
   release();
   await expect(results.getByRole("link").first()).toContainText("Job 10");
   expect((await results.boundingBox())?.height).toBe(before?.height);
+});
+
+test("admin section routes load their selected section directly", async ({ page }) => {
+  await page.route("**/api/**", route => {
+    const url = new URL(route.request().url());
+    if (url.pathname.endsWith("/system-admin")) return route.fulfill({ json: true });
+    return route.fulfill({ json: summary });
+  });
+  await page.goto("/events/admin/operations");
+  await page.getByRole("button", { name: "Login", exact: true }).first().click();
+  await expect(page.getByRole("heading", { name: "Jobs needing attention" })).toBeVisible();
 });
