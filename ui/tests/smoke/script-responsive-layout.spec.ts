@@ -46,7 +46,7 @@ for (const { width, largeText } of [
     await page.goto("/events/scripts-manager");
     if (largeText) await page.addStyleTag({ content: "html { font-size: 200%; }" });
     await page.getByRole("button", { name: "Login", exact: true }).first().click();
-    await page.getByRole("combobox").selectOption("SWT");
+    await page.locator('select:has(option[value="SWT"])').selectOption("SWT");
     const list = page.getByRole("region", { name: "SWT jobs list" });
     await expect(list.locator("tbody tr")).toHaveCount(scripts.length);
     await fits(list.locator(".scripts-list-scroll, table, tbody, tbody tr, td"));

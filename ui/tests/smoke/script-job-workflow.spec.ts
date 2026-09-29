@@ -61,7 +61,7 @@ test("run from a script row, inspect its runs, and switch Groundwork tabs", asyn
   await page.setViewportSize({ width: 1600, height: 1000 });
   await page.goto("/events/scripts-manager");
   await page.getByRole("button", { name: "Login", exact: true }).first().click();
-  await page.getByRole("combobox").selectOption("SWT");
+  await page.locator('select:has(option[value="SWT"])').selectOption("SWT");
   const row = page.locator("tr").filter({ hasText: script.name });
   await row.click();
   await expect(page.getByRole("tab", { name: "Details", exact: true })).toHaveAttribute("aria-selected", "true");

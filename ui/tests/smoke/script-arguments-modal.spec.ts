@@ -25,7 +25,7 @@ test("Job Manager argument modal applies drafts, cancels edits, without upgradin
   await page.setViewportSize({ width: 1600, height: 1100 });
   await page.goto("/events/scripts-manager");
   await page.getByRole("button", { name: "Login", exact: true }).first().click();
-  await page.getByRole("combobox").selectOption("SWT");
+  await page.locator('select:has(option[value="SWT"])').selectOption("SWT");
   const row = page.locator("tr").filter({ hasText: script.name });
   await row.getByRole("button", { name: `Edit ${script.name}`, exact: true }).click();
   await configSection(page, "Command");

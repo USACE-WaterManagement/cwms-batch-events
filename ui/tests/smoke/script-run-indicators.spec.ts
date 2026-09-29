@@ -21,7 +21,7 @@ async function openManager(page: Page) {
   await page.setViewportSize({ width: 1600, height: 1000 });
   await page.goto("/events/scripts-manager");
   await page.getByRole("button", { name: "Login", exact: true }).first().click();
-  await page.getByRole("combobox").selectOption("SWT");
+  await page.locator('select:has(option[value="SWT"])').selectOption("SWT");
 }
 
 test("modern script actions keep submission explicit and open the latest run", async ({ page }) => {

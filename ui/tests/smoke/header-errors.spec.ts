@@ -13,7 +13,7 @@ test("header controls and links fit desktop, tablet and phone widths", async ({ 
   });
   await page.goto("/events/scripts-manager");
   await page.getByRole("button", { name: "Login", exact: true }).first().click();
-  await page.getByRole("combobox").selectOption("SWT");
+  await page.locator('select:has(option[value="SWT"])').selectOption("SWT");
   await expect(page.getByRole("button", { name: "View warnings and errors (1)", exact: true })).toBeVisible();
   // Leave room for the different font metrics on Windows and Linux runners.
   const layouts = ["normal", "0.25px", "1px"].flatMap(letterSpacing =>
@@ -65,7 +65,7 @@ for (const failure of ["server", "network", "client", "invalid-json"] as const) 
     });
     await page.goto("/events/scripts-manager");
     await page.getByRole("button", { name: "Login", exact: true }).first().click();
-    await page.getByRole("combobox").selectOption("SWT");
+    await page.locator('select:has(option[value="SWT"])').selectOption("SWT");
     await page.getByRole("button", { name: "View warnings and errors (1)", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "Warnings and errors" });
     await expect(dialog.getByRole("listitem")).toHaveCount(1);

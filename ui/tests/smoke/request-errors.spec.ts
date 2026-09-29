@@ -17,7 +17,7 @@ test("server errors retry once, show one toast, and recover on explicit retry", 
   });
   await page.goto("/events/scripts-manager");
   await page.getByRole("button", { name: "Login", exact: true }).first().click();
-  await page.getByRole("combobox").selectOption("SWT");
+  await page.locator('select:has(option[value="SWT"])').selectOption("SWT");
   const notifications = page.getByRole("region", { name: "Notifications" });
   await expect(notifications.getByRole("alert")).toHaveCount(1);
   await expect(notifications).toContainText("The server could not complete the request");
@@ -46,7 +46,7 @@ test("client errors show the API detail without retrying and can be dismissed", 
   });
   await page.goto("/events/scripts-manager");
   await page.getByRole("button", { name: "Login", exact: true }).first().click();
-  await page.getByRole("combobox").selectOption("SWT");
+  await page.locator('select:has(option[value="SWT"])').selectOption("SWT");
   const notifications = page.getByRole("region", { name: "Notifications" });
   await expect(notifications).toContainText("No job repository configured for this office");
   expect(requests).toBe(1);
@@ -70,7 +70,7 @@ test("failed saves show a toast, retain the form, and are not automatically repe
   });
   await page.goto("/events/scripts-manager");
   await page.getByRole("button", { name: "Login", exact: true }).first().click();
-  await page.getByRole("combobox").selectOption("SWT");
+  await page.locator('select:has(option[value="SWT"])').selectOption("SWT");
   await page.getByRole("button", { name: "Create first job" }).click();
   await configSection(page, "General");
   await page.getByLabel("Name", { exact: true }).fill("SWT report");
