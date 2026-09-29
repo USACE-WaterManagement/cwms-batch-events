@@ -12,7 +12,11 @@ export interface RepositoryDependencies {
   repository: string;
   ref: string;
   path: string;
-  packages: DependencyPackage[];
+  base_repository: string;
+  base_ref: string;
+  base_path: string;
+  base_packages: DependencyPackage[];
+  office_packages: DependencyPackage[];
   warnings: { code: string; message: string }[];
 }
 

@@ -32,6 +32,13 @@ def _repository_config(office: str) -> RepositorySettings:
     )
 
 
+def _base_image_config() -> RepositorySettings:
+    return RepositorySettings(
+        repository=settings.base_image_repository,
+        ref=settings.base_image_ref,
+    )
+
+
 def _validate_office(office: str, user: User) -> str:
     office = office.upper()
     if not re.fullmatch(r"[A-Z0-9-]+", office):
@@ -94,13 +101,19 @@ def repository_files(office: str, user: User = Depends(get_current_user)):
 @router.get("/repository-dependencies")
 def repository_dependencies(office: str, user: User = Depends(get_current_user)):
     office = _validate_office(office, user)
-    config = _repository_config(office)
-    path = "base_requirements.txt"
+    office_config = _repository_config(office)
+    base_config = _base_image_config()
+    office_path = "python/requirements.txt"
+    base_path = "requirements/base_requirements.txt"
     result = {
-        "repository": config.repository,
-        "ref": config.ref,
-        "path": path,
-        "packages": [],
+        "repository": office_config.repository,
+        "ref": office_config.ref,
+        "path": office_path,
+        "base_repository": base_config.repository,
+        "base_ref": base_config.ref,
+        "base_path": base_path,
+        "base_packages": [],
+        "office_packages": [],
         "warnings": [],
         "mock": mock_enabled(),
     }
@@ -108,25 +121,31 @@ def repository_dependencies(office: str, user: User = Depends(get_current_user))
         return result
     try:
         token = installation_token()
-        url = f"https://api.github.com/repos/{config.repository}/contents/{path}?ref={quote(config.ref, safe='')}"
         headers = {
             "Accept": "application/vnd.github+json",
             "User-Agent": "cwms-batch-events",
             "Authorization": f"Bearer {token}",
         }
-        with urlopen(Request(url, headers=headers), timeout=10) as response:
-            content = json.load(response)
-        decoded = base64.b64decode(content["content"]).decode("utf-8")
-        packages = []
-        for line in decoded.splitlines():
-            match = re.match(r"^\s*([A-Za-z0-9_.-]+)\s*(==|~=|>=|<=|>|<)\s*([^\s#]+)", line)
-            if match:
-                packages.append({
-                    "name": match.group(1),
-                    "operator": match.group(2),
-                    "version": match.group(3),
-                })
-        result["packages"] = packages
+        def read_requirements(config: RepositorySettings, path: str):
+            url = f"https://api.github.com/repos/{config.repository}/contents/{path}?ref={quote(config.ref, safe='')}"
+            with urlopen(Request(url, headers=headers), timeout=10) as response:
+                content = json.load(response)
+            return base64.b64decode(content["content"]).decode("utf-8")
+
+        def parse_requirements(content: str):
+            packages = []
+            for line in content.splitlines():
+                match = re.match(r"^\s*([A-Za-z0-9_.-]+)\s*(==|~=|>=|<=|>|<)\s*([^\s#]+)", line)
+                if match:
+                    packages.append({
+                        "name": match.group(1),
+                        "operator": match.group(2),
+                        "version": match.group(3),
+                    })
+            return packages
+
+        result["base_packages"] = parse_requirements(read_requirements(base_config, base_path))
+        result["office_packages"] = parse_requirements(read_requirements(office_config, office_path))
     except RepositoryUnavailable as error:
         result["warnings"] = [warning(error)]
     except (HTTPError, URLError, TimeoutError, ValueError, KeyError, TypeError, AttributeError) as error:
