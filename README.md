@@ -30,17 +30,6 @@ when the UI is built:
 | `BATCH_EVENTS_TEST_URL` | Test Batch Events UI URL |
 | `BATCH_EVENTS_PROD_URL` | Production Batch Events UI URL |
 
-These variables are intentionally Actions variables rather than secrets because the
-URLs are public application destinations and are embedded in the browser UI at build
-time. They are set in the repository's **Settings → Secrets and variables → Actions →
-Variables** page and passed to Vite by `.github/workflows/cwbi-build-push-ui.yml`.
-
-The values come from the Water Management internal site directory:
-
-- Dev: `https://cwms-batch.dev.cwbi.us/events`
-- Test: `https://cwms-batch-test.cwbi.us/events`
-- Production: `https://cwms-batch.cwbi.mil/events`
-
 ## Contributions
 
 To get your local environment setup and/or make contributions please see the contributions documentation: [CONTRIBUTING.md](https://github.com/USACE-WaterManagement/cwms-batch-events/blob/cwbi-dev/CONTRIBUTING.md)
