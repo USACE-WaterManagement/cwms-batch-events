@@ -25,7 +25,7 @@ for (const warning of [
   await page.goto("/events/scripts-manager");
   await expect(page.getByRole("button", { name: /View warnings and errors/ })).toHaveCount(0);
   await page.getByRole("button", { name: "Login", exact: true }).first().click();
-  await page.getByRole("combobox").selectOption("SWT");
+  await page.locator('select:has(option[value="SWT"])').selectOption("SWT");
   await page.getByRole("button", { name: /View warnings and errors/ }).click();
   await expect(page.getByText(warning.message, { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Close", exact: true }).click();

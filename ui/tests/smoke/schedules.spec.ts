@@ -36,7 +36,7 @@ test("saves timezone schedules and disables scheduling when switched to manual",
     .getByRole("button", { name: "Login", exact: true })
     .first()
     .click();
-  await page.getByRole("combobox").selectOption("SWT");
+  await page.locator('select:has(option[value="SWT"])').selectOption("SWT");
   await expect(page.getByText("Scheduler is running", { exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Create first job", exact: true }).click();
   await configSection(page, "General");

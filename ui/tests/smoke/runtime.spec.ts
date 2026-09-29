@@ -32,7 +32,7 @@ test("registers and edits an installed Java command with separate arguments", as
     .getByRole("button", { name: "Login", exact: true })
     .first()
     .click();
-  await page.getByRole("combobox").selectOption("SWT");
+  await page.locator('select:has(option[value="SWT"])').selectOption("SWT");
   await page.getByRole("button", { name: "Create first job", exact: true }).click();
   await configSection(page, "General");
   await page.getByLabel("Name", { exact: true }).fill("Synthetic Java");
@@ -110,7 +110,7 @@ test("legacy registration upgrades only through the dedicated action", async ({ 
   });
   await page.goto("/events/scripts-manager");
   await page.getByRole("button", { name: "Login", exact: true }).first().click();
-  await page.getByRole("combobox").selectOption("SWT");
+  await page.locator('select:has(option[value="SWT"])').selectOption("SWT");
   await page.getByText("Legacy Python", { exact: true }).click();
   await expect(page.getByRole("button", { name: "Edit", exact: true })).toBeDisabled();
   expect(writes).toBe(0);

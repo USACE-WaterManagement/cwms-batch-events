@@ -21,7 +21,7 @@ test("review controls retain sections, update runtime and run mode, and route gu
   await page.setViewportSize({ width: 1600, height: 1000 });
   await page.goto("/events/scripts-manager");
   await page.getByRole("button", { name: "Login", exact: true }).first().click();
-  await page.getByRole("combobox").first().selectOption("SWT");
+  await page.locator('select:has(option[value="SWT"])').selectOption("SWT");
   await page.getByText(script.name, { exact: true }).click();
   await expect(page.getByRole("link", { name: "Script version guide" })).toHaveCount(0);
   await configSection(page, "Command");
@@ -78,7 +78,7 @@ test("script history uses bounded pages instead of infinite scroll", async ({ pa
   });
   await page.goto("/events/scripts-manager");
   await page.getByRole("button", { name: "Login", exact: true }).first().click();
-  await page.getByRole("combobox").selectOption("SWT");
+  await page.locator('select:has(option[value="SWT"])').selectOption("SWT");
   await page.getByRole("button", { name: "Runs", exact: true }).click();
   const list = page.getByRole("list", { name: "Script run history" });
   await expect(list.getByRole("button")).toHaveCount(10);
