@@ -30,6 +30,18 @@ const isOlderVersion = (office: DependencyPackage, base: DependencyPackage) => {
   return false;
 };
 
+const dependencyRowClass = (older: boolean, overridden: boolean) => {
+  if (older) return "bg-amber-50";
+  if (overridden) return "bg-blue-50";
+  return undefined;
+};
+
+const dependencyCellClass = (older: boolean, overridden: boolean) => {
+  if (older) return "font-semibold text-amber-900";
+  if (overridden) return "font-semibold text-blue-900";
+  return "text-slate-700";
+};
+
 const chooseOffice = (searchOffice: string | undefined, office: string | undefined, offices: string[]) => {
   if (searchOffice && offices.includes(searchOffice)) return searchOffice;
   if (office && offices.includes(office)) return office;
@@ -81,7 +93,7 @@ export default function DependenciesPage() {
   const repositoryUrl = `https://github.com/${repository}`;
   const requirementsUrl = `${repositoryUrl}/blob/${ref}/${path}`;
   const issuesUrl = `${repositoryUrl}/issues`;
-  const baseRequirementsUrl = dependencies.data ? `https://github.com/${dependencies.data.base_repository}/blob/${dependencies.data.base_ref}/${dependencies.data.base_path}` : "https://github.com/USACE-WaterManagement/pythonCWMS";
+  const baseRequirementsUrl = dependencies.data ? `https://github.com/${dependencies.data.base_repository}/blob/${dependencies.data.base_ref}/${dependencies.data.base_path}` : "https://github.com/USACE/cwbi-wm-images";
 
   return <main className="mx-auto max-w-6xl py-6 sm:py-10">
     <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between"><div className="max-w-3xl">
@@ -96,9 +108,10 @@ export default function DependenciesPage() {
         {dependencies.isPending && <tr><td colSpan={3} className="px-6 py-6">Loading the base image and office requirements from GitHub...</td></tr>}
         {dependencies.isError && <tr><td colSpan={3} className="px-6 py-6">Unable to load the dependency files.</td></tr>}
         {dependencies.data?.warnings.map((warning) => <tr key={warning.code}><td colSpan={3} className="px-6 py-4 text-amber-900"><FiAlertTriangle className="mr-2 inline" aria-hidden="true" />{warning.message}</td></tr>)}
-        {rows.map((baseOrOffice) => { const base = basePackages.find((item) => packageKey(item) === packageKey(baseOrOffice)); const officePackage = officeByName.get(packageKey(baseOrOffice)); const older = base && officePackage && isOlderVersion(officePackage, base); return <tr key={packageKey(baseOrOffice)} className={older ? "bg-amber-50" : undefined}><th scope="row" className="px-6 py-3 font-mono font-semibold text-slate-900">{baseOrOffice.name}</th><td className="px-6 py-3 font-mono text-slate-700">{base ? `${base.operator}${base.version}` : "Not in base image"}</td><td className={`px-6 py-3 font-mono ${older ? "font-semibold text-amber-900" : "text-slate-700"}`}>{officePackage ? `${officePackage.operator}${officePackage.version}` : <span className="text-slate-500">None <span className="font-sans">(uses base image)</span></span>}{older && <span className="ml-2 inline-flex items-center gap-1 font-sans text-xs font-semibold"><FiAlertTriangle aria-hidden="true" />Older than base</span>}</td></tr>; })}
+        {rows.map((baseOrOffice) => { const base = basePackages.find((item) => packageKey(item) === packageKey(baseOrOffice)); const officePackage = officeByName.get(packageKey(baseOrOffice)); const overridden = Boolean(base && officePackage && (base.operator !== officePackage.operator || base.version !== officePackage.version)); const older = Boolean(base && officePackage && isOlderVersion(officePackage, base)); return <tr key={packageKey(baseOrOffice)} className={dependencyRowClass(older, overridden)}><th scope="row" className="px-6 py-3 font-mono font-semibold text-slate-900">{baseOrOffice.name}</th><td className="px-6 py-3 font-mono text-slate-700">{base ? `${base.operator}${base.version}` : "Not in base image"}</td><td className={`px-6 py-3 font-mono ${dependencyCellClass(older, overridden)}`}>{officePackage ? `${officePackage.operator}${officePackage.version}` : <span className="text-slate-500">None <span className="font-sans">(uses base image)</span></span>}{overridden && <span className="ml-2 inline-flex items-center gap-1 font-sans text-xs font-semibold">{older && <FiAlertTriangle aria-hidden="true" />}District override{older && " · older than base"}</span>}</td></tr>; })}
       </tbody></table></div>
     </Card>
+    <p className="mt-3 text-sm text-slate-600"><span className="mr-2 inline-block rounded bg-blue-50 px-2 py-1 font-semibold text-blue-900">District override</span> The district requirement differs from the shared base image. Amber rows identify overrides that are older than the base image.</p>
     <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm"><ExternalLink href={baseRequirementsUrl}>View base image requirements</ExternalLink><ExternalLink href={requirementsUrl}>View {selectedOffice} requirements</ExternalLink><ExternalLink href={issuesUrl}>Open {selectedOffice} issues</ExternalLink></div>
     <Card className="mt-6 border-amber-200 bg-amber-50 p-5 sm:p-6"><H2 className="text-lg">Need a package or version bump?</H2><Text className="mt-2 text-amber-950">Request additions or upgrades for the enterprise base image through the <ExternalLink href={issuesUrl}>{selectedOffice} repository issues</ExternalLink>.</Text></Card>
   </main>;

@@ -77,8 +77,8 @@ class Settings(LoggingSettings, StorageSettings, ExecutorSettings, RunnerSetting
     """API options. Required dependencies are checked by ApiSettings at startup."""
 
     office_repositories: dict[str, RepositorySettings] = {}
-    base_image_repository: str = "USACE-WaterManagement/pythonCWMS"
-    base_image_ref: str = "main"
+    base_image_repository: str = "USACE/cwbi-wm-images"
+    base_image_ref: str = "cwbi-dev"
     github_token: SecretStr = SecretStr("")
     github_app_secret_id: str = ""
     github_app_id: str = ""

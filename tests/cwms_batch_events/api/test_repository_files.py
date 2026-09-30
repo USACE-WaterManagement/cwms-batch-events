@@ -50,7 +50,7 @@ def test_dependencies_fetches_and_parses_office_requirements(client, user, monke
         {"name": "requests", "operator": ">=", "version": "2.32.5"},
     ]
     assert request.call_count == 2
-    assert request.call_args_list[0].args[0].full_url.endswith("/repos/USACE-WaterManagement/pythonCWMS/contents/requirements/base_requirements.txt?ref=main")
+    assert request.call_args_list[0].args[0].full_url.endswith("/repos/USACE/cwbi-wm-images/contents/job_runners/python_java/requirements.txt?ref=cwbi-dev")
     assert request.call_args_list[1].args[0].full_url.endswith(f"/repos/USACE-WaterManagement/{office.lower()}-wm-cwbi-jobs/contents/python/requirements.txt?ref=cwbi-dev")
 
 

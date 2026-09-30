@@ -104,7 +104,7 @@ def repository_dependencies(office: str, user: User = Depends(get_current_user))
     office_config = _repository_config(office)
     base_config = _base_image_config()
     office_path = "python/requirements.txt"
-    base_path = "requirements/base_requirements.txt"
+    base_path = "job_runners/python_java/requirements.txt"
     result = {
         "repository": office_config.repository,
         "ref": office_config.ref,
