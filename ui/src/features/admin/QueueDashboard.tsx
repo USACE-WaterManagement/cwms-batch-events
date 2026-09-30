@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { useAuth } from "@usace-watermanagement/groundwork-water";
+import { useAuth } from "@usace-watermanagement/groundwork-water/auth/useAuth";
 import { Button, Modal, UsaceBox } from "@usace/groundwork";
 import fetchWithAuth from "../../utils/fetchWithAuth";
 import { LoadingRows } from "../../shared/components/LoadingRows";

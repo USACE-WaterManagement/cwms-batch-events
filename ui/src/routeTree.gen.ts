@@ -46,7 +46,7 @@ const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() => import('./routes/admin.lazy').then((d) => d.Route))
 const DependenciesRoute = DependenciesRouteImport.update({
   id: '/dependencies',
   path: '/dependencies',
@@ -96,27 +96,33 @@ const AdminOperationsRoute = AdminOperationsRouteImport.update({
   id: '/admin_/operations',
   path: '/admin/operations',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() =>
+  import('./routes/admin_.operations.lazy').then((d) => d.Route),
+)
 const AdminQueuesRoute = AdminQueuesRouteImport.update({
   id: '/admin_/queues',
   path: '/admin/queues',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() => import('./routes/admin_.queues.lazy').then((d) => d.Route))
 const AdminRateLimitsRoute = AdminRateLimitsRouteImport.update({
   id: '/admin_/rate-limits',
   path: '/admin/rate-limits',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() =>
+  import('./routes/admin_.rate-limits.lazy').then((d) => d.Route),
+)
 const AdminSchedulerRoute = AdminSchedulerRouteImport.update({
   id: '/admin_/scheduler',
   path: '/admin/scheduler',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() =>
+  import('./routes/admin_.scheduler.lazy').then((d) => d.Route),
+)
 const AdminUsageRoute = AdminUsageRouteImport.update({
   id: '/admin_/usage',
   path: '/admin/usage',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() => import('./routes/admin_.usage.lazy').then((d) => d.Route))
 const HelpOnboardingRoute = HelpOnboardingRouteImport.update({
   id: '/help_/onboarding',
   path: '/help/onboarding',

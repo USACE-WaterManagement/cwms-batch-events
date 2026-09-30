@@ -1,7 +1,7 @@
 import { notifySuccess } from "../../utils/actionNotifications";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import fetchWithAuth from "../../utils/fetchWithAuth";
-import { useAuth } from "@usace-watermanagement/groundwork-water";
+import { useAuth } from "@usace-watermanagement/groundwork-water/auth/useAuth";
 import { JobDetails } from "../jobs-list/useJobDetails";
 import { useNavigate } from "@tanstack/react-router";
 import { components } from "../../generated/api-types";

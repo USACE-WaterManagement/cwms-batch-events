@@ -8,7 +8,7 @@ import {
   type ErrorComponentProps,
 } from "@tanstack/react-router";
 import { Button, Container, Modal, SiteWrapper } from "@usace/groundwork";
-import { useAuth } from "@usace-watermanagement/groundwork-water";
+import { useAuth } from "@usace-watermanagement/groundwork-water/auth/useAuth";
 import AuthButton from "../features/auth/AuthButton";
 import { useRememberedOffice } from "../shared/hooks/useRememberedOffice";
 import { useRepositoryFiles, useRepositoryStatus } from "../features/scripts-manager/useRepositoryFiles";

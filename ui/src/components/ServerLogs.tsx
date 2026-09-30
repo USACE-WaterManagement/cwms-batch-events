@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useAuth } from "@usace-watermanagement/groundwork-water";
+import { useAuth } from "@usace-watermanagement/groundwork-water/auth/useAuth";
 import { Button } from "@usace/groundwork";
 import fetchWithAuth from "../utils/fetchWithAuth";
 

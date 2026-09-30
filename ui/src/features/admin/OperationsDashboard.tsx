@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
-import { useAuth } from "@usace-watermanagement/groundwork-water";
+import { useAuth } from "@usace-watermanagement/groundwork-water/auth/useAuth";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Button, Modal, UsaceBox } from "@usace/groundwork";
 import { MdDashboard, MdWarningAmber, MdPieChart, MdSchedule, MdSpeed, MdRefresh, MdOpenInNew, MdHelpOutline, MdQueue } from "react-icons/md";

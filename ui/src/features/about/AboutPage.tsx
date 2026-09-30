@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
-import { useAuth } from "@usace-watermanagement/groundwork-water";
+import { useAuth } from "@usace-watermanagement/groundwork-water/auth/useAuth";
 import { Link } from "@tanstack/react-router";
 import {
   Card, H1, H2, H3, Table, TableBody, TableCell, TableHead, TableHeader,
