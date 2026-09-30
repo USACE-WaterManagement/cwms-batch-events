@@ -46,6 +46,12 @@ test("grouped Help navigation works with keyboard, touch, and client-side routin
   await menu.getByRole("link", { name: "Getting started" }).click();
   await expect(page).toHaveURL(/\/help\/onboarding$/);
   await expect(menu).toHaveCount(0);
+  await expect(page.getByRole("tab", { name: "Python", exact: true })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Bash", exact: true })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Java", exact: true })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Bash without repo dependencies", exact: true })).toBeVisible();
+  await page.getByRole("tab", { name: "Bash without repo dependencies", exact: true }).click();
+  await expect(page.getByText("no district checkout or Python dependency install", { exact: false })).toBeVisible();
   // Mock authentication lives in memory and would be lost after a full reload.
   await expect(header.getByRole("button", { name: "Logout", exact: true })).toBeVisible();
   await about.click();

@@ -15,7 +15,8 @@ test("review controls retain sections, update runtime and run mode, and route gu
     if (path.endsWith("/system-admin")) return route.fulfill({ json: false });
     if (path.endsWith("/job-runners/default")) return route.fulfill({ json: { id: "runner" } });
     if (route.request().method() === "PUT") { script = { ...script, ...route.request().postDataJSON() }; return route.fulfill({ json: script }); }
-    if (path.endsWith("/scripts") || path.endsWith("/catalog")) return route.fulfill({ json: [script] });
+    if (path.includes("/scripts/catalog")) return route.fulfill({ json: [script] });
+    if (path.endsWith("/scripts")) return route.fulfill({ json: [script] });
     return route.fulfill({ json: [] });
   });
   await page.setViewportSize({ width: 1600, height: 1000 });
@@ -51,7 +52,7 @@ test("review controls retain sections, update runtime and run mode, and route gu
   expect(await page.evaluate(() => document.documentElement.dataset.routeMarker)).toBe("retained");
   await page.setViewportSize({ width: 1600, height: 1000 });
   await page.getByRole("link", { name: "Submit Job", exact: true }).click();
-  await page.getByRole("combobox").last().selectOption(script.id);
+  await page.locator("select").filter({ has: page.locator(`option[value="${script.id}"]`) }).selectOption(script.id);
   await page.getByRole("button", { name: "Edit job", exact: true }).click();
   await expect(page.getByLabel("Name", { exact: true })).toHaveValue(script.name);
 });
