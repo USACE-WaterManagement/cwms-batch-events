@@ -340,6 +340,52 @@ const OnboardingSubstep = ({
   </li>
 );
 
+const runtimeExamples = [
+  {
+    name: "Python",
+    content: <>
+      <p>Choose <strong>District GitHub repository</strong>, leave <strong>Runtime</strong> as <strong>Python</strong>, and select a Python file such as <code>python/my_job.py</code>.</p>
+      <p>Use <strong>Arguments</strong> for values passed to the script. The runner checks out the office repository and installs its Python requirements before the job starts.</p>
+      <div className="rounded border border-slate-200 bg-white p-3"><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Example command</p><code className="mt-1 block break-all font-mono text-sm">python /jobs/python/my_job.py --office SWT</code></div>
+    </>,
+  },
+  {
+    name: "Bash",
+    content: <>
+      <p>Choose <strong>District GitHub repository</strong>, set <strong>Runtime</strong> to <strong>Bash</strong>, and select a shell script such as <code>bin/my_job.sh</code>.</p>
+      <p>Use <strong>Arguments</strong> for values passed to the script. The office repository is available under <code>/jobs</code> when the job runs.</p>
+      <div className="rounded border border-slate-200 bg-white p-3"><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Example command</p><code className="mt-1 block break-all font-mono text-sm">bash /jobs/bin/my_job.sh --office SWT</code></div>
+    </>,
+  },
+  {
+    name: "Java",
+    content: <>
+      <p>Choose <strong>District GitHub repository</strong>, set <strong>Runtime</strong> to <strong>Java JAR</strong>, and select a JAR such as <code>lib/report.jar</code>.</p>
+      <p>Use <strong>Arguments</strong> for values passed to the Java program. For a released office JAR, use <strong>Browse release JARs</strong> so the pinned artifact and checksum are recorded with the job.</p>
+      <div className="rounded border border-slate-200 bg-white p-3"><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Example command</p><code className="mt-1 block break-all font-mono text-sm">java -jar /jobs/lib/report.jar --office SWT</code></div>
+    </>,
+  },
+  {
+    name: "Bash without repo dependencies",
+    content: <>
+      <div className="rounded border-2 border-amber-400 bg-amber-50 p-3 text-amber-950"><p className="font-bold">Highlighted option: no district checkout or Python dependency install</p><p className="mt-1">Use this for a command already available in the runner image. Choose <strong>Installed command</strong>, select <strong>Bash command</strong>, and enter the complete command. The office repository is not checked out, so its Python requirements are not installed.</p></div>
+      <p>Use this for runner utilities or simple diagnostics. Do not use it when the command needs files from the district repository.</p>
+      <div className="rounded border border-slate-200 bg-white p-3"><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Example command</p><code className="mt-1 block break-all font-mono text-sm">printf 'TZ=%s\\n' "$TZ"</code></div>
+    </>,
+  },
+];
+
+const RuntimeTabs = () => (
+  <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4 sm:p-5">
+    <p className="font-semibold text-slate-900">Choose the process type</p>
+    <Tabs
+      tabs={runtimeExamples}
+      defaultIndex={0}
+      className="mt-3 [&_[role=tab]]:text-base! [&_[role=tab]]:font-extrabold! [&_[role=tab]]:leading-tight!"
+    />
+  </div>
+);
+
 const OnboardingPane = ({ user }: { user?: ApplicationInfo["user"] }) => {
   const office = user?.adminOffices.includes("SWT")
     ? "SWT"
@@ -388,8 +434,8 @@ const OnboardingPane = ({ user }: { user?: ApplicationInfo["user"] }) => {
           <OnboardingSubstep number="3.2" title="Complete the job definition">
             <p>Enter a name and description. <strong>GitHub Repo Path</strong> is the path to the
               script inside the office repository, such as <code>python/my_job.py</code>—not a GitHub URL.</p>
-            <p>For a command already in the runner, choose <strong>Installed command</strong> and
-              enter its executable and arguments. The example below uses Bash to print the runner time zone.</p>
+            <p>Choose the process type that matches the files or executable your job needs.</p>
+            <RuntimeTabs />
             <p>Roles are optional. Leave them empty when the job needs no additional CDA execution role,
               or select roles to restrict who can run it. Keep the script active and save.</p>
             <OnboardingScreenshot
