@@ -97,3 +97,17 @@ def test_batch_state_logs_only_changes_and_only_after_commit(caplog):
     assert len(records) == 1
     assert records[0].batch_status == "RUNNING"
     assert records[0].stream_available is True
+
+
+def test_failed_and_unknown_unlinked_jobs_show_reason_instead_of_waiting():
+    for status in ('Failed', 'Dispatch unknown'):
+        db, job = database()
+        job.external_job_id = None
+        job.job_status = status
+        job.batch_status_reason = 'Dispatch needs investigation'
+        with patch('cwms_batch_events.core.job_logger.cloudwatch.boto3.client') as client:
+            page = CloudWatchJobLogger(db).get_log_page(job.id)
+        assert page.message == job.batch_status_reason
+        assert not page.supports_live
+        assert not page.available
+        client.return_value.describe_jobs.assert_not_called()

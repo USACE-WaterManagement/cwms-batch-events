@@ -251,7 +251,8 @@ USAGE_COLUMNS = """count(*) AS runs,
 WINDOW = "created_time >= :since AND created_time <= :now AND (CAST(:office AS text) IS NULL OR office=:office)"
 SCOPE = "(CAST(:office AS text) IS NULL OR office=:office)"
 ATTENTION = """((job_status='Pending' AND created_time < :queue_cutoff)
-    OR (job_status='Running' AND coalesce(run_time,created_time) < :run_cutoff))"""
+    OR (job_status='Running' AND coalesce(run_time,created_time) < :run_cutoff)
+    OR job_status='Dispatch unknown')"""
 
 
 @router.get("/operations", response_model=OperationsSummary)
@@ -273,7 +274,7 @@ def operations(
     def rows(sql):
         return list(db.execute(text(sql), params).mappings())
     offices = list(db.scalars(text("""SELECT office FROM scripts UNION SELECT office FROM jobs
-        WHERE (created_time >= :since AND created_time <= :now) OR job_status IN ('Pending','Running') ORDER BY office"""), params))
+        WHERE (created_time >= :since AND created_time <= :now) OR job_status IN ('Pending','Running','Dispatch unknown') ORDER BY office"""), params))
     usage = rows(f"SELECT office, {USAGE_COLUMNS} FROM jobs WHERE {WINDOW} GROUP BY office ORDER BY runtime_minutes DESC, office")
     task_sort_value = task_sort if isinstance(task_sort, str) else "minutes"
     task_direction_value = (
@@ -287,13 +288,13 @@ def operations(
     daily = rows(f"SELECT to_char(created_time AT TIME ZONE 'UTC','YYYY-MM-DD') AS day, count(*) AS runs, count(*) FILTER (WHERE job_status='Failed') AS failed FROM jobs WHERE {WINDOW} GROUP BY day ORDER BY day")
     attention = rows(f"""SELECT id,office,script_name AS name,job_status AS status,
         extract(epoch FROM (:now - coalesce(run_time,created_time)))/60.0 AS age_minutes,
-        batch_checked_at FROM jobs WHERE {SCOPE} AND {ATTENTION}
+        batch_checked_at,batch_status_reason AS reason FROM jobs WHERE {SCOPE} AND {ATTENTION}
         ORDER BY coalesce(run_time,created_time),id LIMIT 50""")
     failures = rows(f"""SELECT id,office,script_name AS name,job_status AS status,
         extract(epoch FROM (:now-created_time))/60.0 AS age_minutes,
         batch_checked_at,batch_status_reason AS reason FROM jobs WHERE {WINDOW}
         AND job_status='Failed' ORDER BY created_time DESC,id LIMIT 50""")
-    counts = rows(f"SELECT count(*) FILTER (WHERE job_status='Pending') AS queued, count(*) FILTER (WHERE job_status='Running') AS running, count(*) FILTER (WHERE {ATTENTION}) AS attention_total FROM jobs WHERE {SCOPE} AND job_status IN ('Pending','Running')")[0]
+    counts = rows(f"SELECT count(*) FILTER (WHERE job_status='Pending') AS queued, count(*) FILTER (WHERE job_status='Running') AS running, count(*) FILTER (WHERE {ATTENTION}) AS attention_total FROM jobs WHERE {SCOPE} AND job_status IN ('Pending','Running','Dispatch unknown')")[0]
     registrations = rows(f"SELECT count(*) AS registered, count(*) FILTER (WHERE active AND schedule_enabled AND config_version=4) AS automatic FROM scripts WHERE {SCOPE}")[0]
     return OperationsSummary(as_of=now, since=since, offices=offices, usage=usage,
         top_jobs=top, daily=daily, attention=attention, failures=failures, **counts, **registrations)

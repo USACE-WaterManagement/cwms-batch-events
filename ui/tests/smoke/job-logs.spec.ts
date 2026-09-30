@@ -276,3 +276,15 @@ test("recently completed jobs catch up even when their first page has partial ou
   await expect(page.getByLabel("Job output")).toHaveValue("line 1\nline 2");
   expect(state.requests).toEqual([null, "cursor-1"]);
 });
+
+test("unresolved dispatch shows its investigation reason without live log polling", async ({ page }) => {
+  const state = await viewer(page, "Dispatch unknown", false, false);
+  state.message = "Dispatch timed out without a linked AWS Batch job. Check AWS before rerunning.";
+  await page.getByRole("button", { name: /Refresh/ }).first().click();
+  await expect(page.getByLabel("Job output")).toHaveValue(state.message);
+  await expect(page.getByText("Dispatch unknown", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Update interval")).toBeDisabled();
+  const requests = state.requests.length;
+  await page.clock.runFor(15000);
+  expect(state.requests).toHaveLength(requests);
+});

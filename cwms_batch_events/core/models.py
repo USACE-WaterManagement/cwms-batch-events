@@ -142,6 +142,7 @@ class ExecutionOptions(ExecutionRecord):
 
 
 class JobStatus(str, Enum):
+    DISPATCH_UNKNOWN = "Dispatch unknown"
     FAILED = "Failed"
     PENDING = "Pending"
     RUNNING = "Running"

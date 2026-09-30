@@ -71,6 +71,7 @@ def test_get_internal_token_requires_secret_string():
 def test_lambda_handler_processes_messages_and_binds_external_job_id():
     message = make_job_message()
     response = mock.Mock(status_code=204, text="")
+    response.json.return_value = {"claimed": True}
 
     with mock.patch(
         "cwms_batch_events.lambdas.dispatch_job.dispatcher.get_internal_token",
@@ -87,13 +88,14 @@ def test_lambda_handler_processes_messages_and_binds_external_job_id():
     ):
         lambda_handler({"Records": [{"body": message.model_dump_json()}]}, make_lambda_context())
 
-    requests_post.assert_called_once()
+    assert requests_post.call_count == 2
     assert requests_post.call_args.kwargs["json"] == {"external_job_id": "ext-123"}
 
 
 def test_lambda_handler_raises_when_api_rejects_message(caplog):
     message = make_job_message()
     response = mock.Mock(status_code=500, text="private-response-body")
+    response.json.return_value = {"claimed": True}
 
     with mock.patch(
         "cwms_batch_events.lambdas.dispatch_job.dispatcher.get_internal_token",
@@ -128,6 +130,7 @@ def test_lambda_handler_reraises_batch_submit_error():
     ), mock.patch(
         "cwms_batch_events.lambdas.dispatch_job.dispatcher.dispatch_job",
         side_effect=ClientError({"Error": {"Code": "Oops", "Message": "bad"}}, "Submit"),
-    ):
+    ), mock.patch("cwms_batch_events.lambdas.dispatch_job.dispatcher.requests.post") as post:
+        post.return_value.json.return_value = {"claimed": True}
         with pytest.raises(ClientError):
             lambda_handler({"Records": [{"body": message.model_dump_json()}]}, make_lambda_context())

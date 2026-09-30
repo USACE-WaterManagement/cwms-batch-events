@@ -139,3 +139,19 @@ test("admin section routes load their selected section directly", async ({ page 
   await page.getByRole("button", { name: "Login", exact: true }).first().click();
   await expect(page.getByRole("heading", { name: "Jobs needing attention" })).toBeVisible();
 });
+
+test("admin attention preserves unresolved dispatches with their reason", async ({ page }) => {
+  const reason = "Dispatch timed out without a linked AWS Batch job. Check AWS before rerunning.";
+  await page.route("**/api/**", route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/system-admin")) return route.fulfill({ json: true });
+    if (path.endsWith("/admin/operations")) return route.fulfill({ json: { ...summary,
+      queued: 0, running: 0, attentionTotal: 1, attention: [{ id: "unknown", office: "NWDP", name: "Unresolved run",
+        status: "Dispatch unknown", ageMinutes: 100000, batchCheckedAt: null, reason }] } });
+    return route.fulfill({ json: [] });
+  });
+  await page.goto("/events/admin/operations");
+  await page.getByRole("button", { name: "Login", exact: true }).first().click();
+  await expect(page.getByText(reason, { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Open job", exact: true }).first()).toHaveAttribute("href", "/events/jobs/unknown");
+});

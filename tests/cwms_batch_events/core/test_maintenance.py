@@ -65,7 +65,7 @@ def test_watchdog_recovers_exception_and_keeps_other_task_running():
 def test_duplicate_scheduled_message_never_submits_to_batch():
     message = SimpleNamespace(job_id=uuid4(), requested_by=SimpleNamespace(source="scheduler"))
     response = Mock()
-    response.json.return_value = {"claimed": False}
+    response.json.return_value = {"claimed": False, "external_job_id": "batch-id", "status": "Pending"}
     with patch("cwms_batch_events.lambdas.dispatch_job.dispatcher.requests.post", return_value=response), patch("cwms_batch_events.lambdas.dispatch_job.dispatcher.dispatch_job") as dispatch:
         _dispatch_and_bind(message, {})
     dispatch.assert_not_called()

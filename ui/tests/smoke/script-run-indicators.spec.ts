@@ -249,3 +249,24 @@ test("latest indicators refresh and stop polling on read failure", async ({ page
   await page.getByRole("button", { name: "Retry run status", exact: true }).click();
   await expect(active).toContainText("Running");
 });
+
+test("unresolved latest run remains visible as an investigation warning", async ({ page }) => {
+  const latest = { ...job, id: "unresolved", jobStatus: "Dispatch unknown", runTime: null,
+    batchStatusReason: "Dispatch timed out. Check AWS before rerunning." };
+  await page.route("**/api/**", route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/admin-offices")) return route.fulfill({ json: ["SWT"] });
+    if (path.endsWith("/job-runners/default")) return route.fulfill({ json: { id: "runner", slug: "batch" } });
+    if (path.endsWith("/scripts")) return route.fulfill({ json: [script] });
+    if (path.endsWith("/jobs")) return route.fulfill({ json: [latest] });
+    if (path.endsWith("/jobs/unresolved")) return route.fulfill({ json: latest });
+    if (path.endsWith("/logs/page")) return route.fulfill({ json: { logs: "", available: false, supportsLive: false, message: latest.batchStatusReason } });
+    return route.fulfill({ json: [] });
+  });
+  await openManager(page);
+  const warning = page.getByRole("button", { name: `View latest unresolved run for ${script.name}` });
+  await expect(warning).toHaveText("Dispatch unknown");
+  await expect(page.getByRole("button", { name: /View active run/ })).toHaveCount(0);
+  await warning.click();
+  await expect(page.getByLabel("Job output")).toHaveValue(latest.batchStatusReason);
+});
