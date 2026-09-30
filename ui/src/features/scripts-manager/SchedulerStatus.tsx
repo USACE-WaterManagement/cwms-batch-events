@@ -3,6 +3,13 @@ import { useAuth } from "@usace-watermanagement/groundwork-water";
 import fetchWithAuth from "../../utils/fetchWithAuth";
 import type { components } from "../../generated/api-types";
 
+function taskLabel(name: string) {
+  if (name === "schedules") return "Schedule check";
+  if (name === "queue_delivery") return "Queue delivery";
+  if (name === "dispatch_watchdog") return "Dispatch watchdog";
+  return name;
+}
+
 export function SchedulerStatus({ office }: { office?: string }) {
   const auth = useAuth();
   const status = useQuery({
@@ -24,7 +31,7 @@ export function SchedulerStatus({ office }: { office?: string }) {
     Scheduler status is unavailable. <button type="button" className="underline" onClick={() => void status.refetch()}>Refresh scheduler status</button>
   </div>;
   const data = status.data;
-  const healthy = data.enabled && data.tasks.length === 2 && data.tasks.every(task => task.healthy);
+  const healthy = data.enabled && data.tasks.length > 0 && data.tasks.every(task => task.healthy);
   let title = "Scheduler needs attention";
   if (!data.enabled) title = "Scheduler is disabled";
   else if (healthy) title = "Scheduler is running";
@@ -33,7 +40,7 @@ export function SchedulerStatus({ office }: { office?: string }) {
     <p>Schedules use each script’s timezone. After downtime, up to five minutes are recovered. Older runs are skipped.</p>
     <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1">
       {data.tasks.map(task => <span key={task.name}>
-        {task.name === "schedules" ? "Schedule check" : "Queue delivery"}: {task.lastSuccess ? new Date(task.lastSuccess).toLocaleTimeString() : "Not yet checked"}
+        {taskLabel(task.name)}: {task.lastSuccess ? `last ${new Date(task.lastSuccess).toLocaleTimeString()}, next around ${task.nextExpectedAt ? new Date(task.nextExpectedAt).toLocaleTimeString() : "unknown"}` : "Not yet checked"}
       </span>)}
       <span>Waiting for queue delivery: {data.pendingDelivery}</span>
     </div>

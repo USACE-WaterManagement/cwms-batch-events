@@ -1,7 +1,8 @@
 from datetime import datetime, timezone
+import json
 import re
 import logging
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 import uuid
@@ -97,6 +98,77 @@ class PostgresJobDatabase:
         self.db.commit()
         logger.warning("Dispatch rejection recorded", extra={"event": "dispatch_rejected", "job_id": job_id})
 
+    def _record_control_audit(self, job, actor: User, action: str, result: str, reason: str, response: dict | None = None) -> None:
+        self.db.execute(text("""INSERT INTO job_control_audit
+            (job_id, office, requested_by, action, previous_status, resulting_status, reason, response)
+            VALUES (:job_id, :office, :requested_by, :action, :previous_status, :resulting_status, :reason, CAST(:response AS jsonb))"""), {
+            "job_id": job.id, "office": job.office, "requested_by": actor.username,
+            "action": action, "previous_status": getattr(job, "_control_previous_status", job.job_status),
+            "resulting_status": result, "reason": reason,
+            "response": json.dumps(response or {}),
+        })
+
+    def request_job_cancellation(self, job_id: uuid.UUID, actor: User, reason: str) -> dict:
+        job = self._load_job_for_update(job_id)
+        status_before = job.job_status
+        if status_before in (JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED):
+            self.db.commit()
+            return {"action": "already_finished", "status": status_before, "message": "The job has already finished."}
+        if status_before == JobStatus.CANCELLING:
+            self.db.commit()
+            return {"action": "already_requested", "status": status_before, "message": "Cancellation has already been requested."}
+        if status_before == JobStatus.PENDING and job.external_job_id is None and job.dispatch_claimed_at is not None:
+            self.db.commit()
+            raise ValueError("Dispatch is already in progress and its outcome is uncertain. Wait for reconciliation before cancelling.")
+
+        if status_before == JobStatus.PENDING and job.external_job_id is None:
+            job._control_previous_status = status_before
+            job.job_status = JobStatus.CANCELLED
+            job.end_time = datetime.now(timezone.utc)
+            job.batch_status_reason = reason
+            self._record_control_audit(job, actor, "cancel", JobStatus.CANCELLED, reason)
+            self.db.commit()
+            return {"action": "cancelled", "status": JobStatus.CANCELLED, "message": "The queued job was removed before dispatch."}
+
+        action = "cancel" if status_before == JobStatus.PENDING else "terminate"
+        job._control_previous_status = status_before
+        job.job_status = JobStatus.CANCELLING
+        job.batch_status_reason = reason
+        self._record_control_audit(job, actor, action, JobStatus.CANCELLING, reason)
+        self.db.commit()
+        return {"action": action, "status": JobStatus.CANCELLING, "external_job_id": job.external_job_id,
+                "runner": getattr(getattr(job, "job_runner", None), "slug", "batch"),
+                "message": "Cancellation requested. The job will remain visible until the runner confirms the result."}
+
+    def complete_local_cancellation(self, job_id: uuid.UUID, actor: User, reason: str) -> dict:
+        job = self._load_job_for_update(job_id)
+        if job.job_status == JobStatus.CANCELLED:
+            self.db.commit()
+            return {"action": "already_finished", "status": JobStatus.CANCELLED, "message": "The job is already cancelled."}
+        if job.job_status != JobStatus.CANCELLING:
+            self.db.commit()
+            return {"action": "already_finished", "status": job.job_status, "message": "The job changed state before it could be stopped."}
+        job.job_status = JobStatus.CANCELLED
+        job.end_time = datetime.now(timezone.utc)
+        job.batch_status_reason = reason
+        self._record_control_audit(job, actor, "terminate", JobStatus.CANCELLED, reason)
+        self.db.commit()
+        return {"action": "cancelled", "status": JobStatus.CANCELLED, "message": "The running local job was stopped."}
+
+    def record_cancellation_failure(self, job_id: uuid.UUID, actor: User, reason: str) -> None:
+        job = self._load_job_for_update(job_id)
+        if job.job_status == JobStatus.CANCELLING:
+            previous = getattr(job, "_control_previous_status", JobStatus.RUNNING)
+            job.job_status = previous
+            job.batch_status_reason = reason
+            self._record_control_audit(job, actor, "cancel", previous, reason, {"error": reason})
+        self.db.commit()
+
+    def record_cancellation_response(self, job_id: uuid.UUID, actor: User, action: str, response: dict) -> None:
+        job = self._load_job_for_update(job_id)
+        self._record_control_audit(job, actor, f"{action}_accepted", job.job_status, job.batch_status_reason or "Cancellation accepted by runner.", response)
+        self.db.commit()
+
     def upgrade_script_configuration(self, script_id: uuid.UUID, actor: User) -> ScriptRead:
         with self.db.begin():
             script = self.db.scalars(select(ScriptModel).where(ScriptModel.id == script_id).with_for_update()).one()
@@ -138,15 +210,19 @@ class PostgresJobDatabase:
             return
         incoming = STATUS_MAP.get(detail.get("status"))
         # A late RUNNING event must not reopen a finished execution.
-        if job.job_status in (JobStatus.COMPLETED, JobStatus.FAILED) and incoming not in (job.job_status, None):
+        if job.job_status in (JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED) and incoming not in (job.job_status, None):
             self.db.commit()
             logger.debug("Ignoring Batch observation for terminal job", extra={"event": "batch_observation_ignored", "job_id": job_id})
             return
         job.batch_details_time = observed_at
         if incoming:
-            job.job_status = incoming
+            if job.job_status == JobStatus.CANCELLING and incoming == JobStatus.FAILED:
+                job.job_status = JobStatus.CANCELLED
+                job.batch_status_reason = "Cancellation confirmed by AWS Batch."
+            else:
+                job.job_status = incoming
+                job.batch_status_reason = detail.get("statusReason")
             job.batch_status = detail["status"]
-            job.batch_status_reason = detail.get("statusReason")
         if stream := log_stream(detail):
             job.log_stream = stream
             job.log_group = f"ecs/cwms-batch/{job.office.lower()}-jobs"
@@ -422,6 +498,13 @@ class PostgresJobDatabase:
     def update_job_status(self, job_id: uuid.UUID, status: JobStatus) -> None:
         job = self._load_job_for_update(job_id)
         previous_status = job.job_status
+
+        if previous_status == JobStatus.CANCELLED:
+            self.db.commit()
+            return
+        if previous_status == JobStatus.CANCELLING and status == JobStatus.FAILED:
+            status = JobStatus.CANCELLED
+            job.batch_status_reason = "Cancellation confirmed by the job runner."
 
         now = datetime.now(timezone.utc)
 

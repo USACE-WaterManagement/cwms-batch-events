@@ -34,6 +34,10 @@ class LocalExecutor:
         container = None
 
         try:
+            current = self.db.get_job_by_id(message.job_id)
+            if current is not None and isinstance(getattr(current, "job_status", None), JobStatus) and current.job_status != JobStatus.PENDING:
+                logger.info("Local job was cancelled before execution", extra={"event": "local_job_not_started", "job_id": message.job_id})
+                return
             command = command_for_payload(message.payload, runner="local")
             if message.payload.release_jar:
                 command = jar_command(message, os.environ.get("ARTIFACT_API_URL"), os.environ.get("APP_KEY"))
@@ -41,6 +45,7 @@ class LocalExecutor:
                 image=f"{message.payload.office}-jobs",
                 command=command,
                 detach=True,
+                labels={"cwms-batch-events.job-id": str(message.job_id)},
                 stderr=True,
                 nano_cpus=int(float(RESOURCE_PROFILES[message.payload.resource_size]["vcpus"]) * 1_000_000_000),
                 mem_limit=int(RESOURCE_PROFILES[message.payload.resource_size]["memory"]) * 1024 * 1024,
@@ -56,6 +61,11 @@ class LocalExecutor:
                 ],
             )
 
+            current = self.db.get_job_by_id(message.job_id)
+            if current is not None and getattr(current, "job_status", None) == JobStatus.CANCELLED:
+                container.stop(timeout=10)
+                logger.info("Local job was cancelled during startup", extra={"event": "local_job_stopped_before_start", "job_id": message.job_id})
+                return
             self.db.update_job_status(message.job_id, JobStatus.RUNNING)
             logger.info("Local job started", extra={"event": "local_job_started", "job_id": message.job_id})
 

@@ -622,7 +622,7 @@ export interface components {
          * JobStatus
          * @enum {string}
          */
-        JobStatus: "Dispatch unknown" | "Failed" | "Pending" | "Running" | "Completed";
+        JobStatus: "Cancelled" | "Cancelling" | "Dispatch unknown" | "Failed" | "Pending" | "Running" | "Completed";
         /** EnvironmentVariable */
         EnvironmentVariable: {
             /** Name */
@@ -1047,6 +1047,8 @@ export interface components {
             name: string;
             /** Lastsuccess */
             lastSuccess: string | null;
+            /** Nextexpectedat */
+            nextExpectedAt?: string | null;
             /** Healthy */
             healthy: boolean;
         };

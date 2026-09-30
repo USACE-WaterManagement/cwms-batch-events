@@ -20,7 +20,7 @@ const useJobDetails = (jobId: string) => {
       const data = query.state.data;
       if (
         data &&
-        (data.jobStatus === "Completed" || data.jobStatus === "Failed")
+        (data.jobStatus === "Completed" || data.jobStatus === "Failed" || data.jobStatus === "Cancelled")
       )
         return false;
       return 5000;

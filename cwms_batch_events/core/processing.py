@@ -10,8 +10,10 @@ logger = logging.getLogger(__name__)
 STATUS_PRIORITY = {
     JobStatus.PENDING: 1,
     JobStatus.RUNNING: 2,
+    JobStatus.CANCELLING: 2,
     JobStatus.FAILED: 3,
     JobStatus.COMPLETED: 4,
+    JobStatus.CANCELLED: 4,
 }
 
 

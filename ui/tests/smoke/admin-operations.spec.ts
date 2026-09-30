@@ -36,7 +36,7 @@ test("HQ dashboard reports usage, queue issues, failures and clearly labeled cos
     const url = new URL(route.request().url());
     if (url.pathname.endsWith("/system-admin")) return route.fulfill({ json: true });
     if (url.pathname.endsWith("/admin/operations")) { queries.push(url.searchParams); return route.fulfill({ json: summary }); }
-    if (url.pathname.endsWith("/scheduler/status")) return route.fulfill({ json: { enabled: true, tasks: [{ name: "schedules", healthy: true }, { name: "queue_delivery", healthy: true }], pendingDelivery: 0, needsAttention: 0, invalidSchedules: 0 } });
+    if (url.pathname.endsWith("/scheduler/status")) return route.fulfill({ json: { enabled: true, tasks: [{ name: "schedules", healthy: true }, { name: "queue_delivery", healthy: true }, { name: "dispatch_watchdog", healthy: true }], pendingDelivery: 0, needsAttention: 0, invalidSchedules: 0 } });
     return route.fulfill({ json: [] });
   });
   await page.setViewportSize({ width: 1440, height: 1000 });
@@ -154,4 +154,23 @@ test("admin attention preserves unresolved dispatches with their reason", async 
   await page.getByRole("button", { name: "Login", exact: true }).first().click();
   await expect(page.getByText(reason, { exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Open job", exact: true }).first()).toHaveAttribute("href", "/events/jobs/unknown");
+});
+
+test("scheduler dashboard identifies the dispatch watchdog and next check", async ({ page }) => {
+  await page.route("**/api/**", route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/system-admin")) return route.fulfill({ json: true });
+    if (path.endsWith("/scheduler/status")) return route.fulfill({ json: {
+      enabled: true,
+      tasks: [{ name: "schedules", healthy: true, lastSuccess: "2026-09-30T12:00:00Z", nextExpectedAt: "2026-09-30T12:00:15Z" },
+        { name: "queue_delivery", healthy: true, lastSuccess: "2026-09-30T12:00:00Z", nextExpectedAt: "2026-09-30T12:00:15Z" },
+        { name: "dispatch_watchdog", healthy: true, lastSuccess: "2026-09-30T12:00:00Z", nextExpectedAt: "2026-09-30T12:00:15Z" }],
+      pendingDelivery: 0, needsAttention: 0, invalidSchedules: 0,
+    } });
+    return route.fulfill({ json: summary });
+  });
+  await page.goto("/events/admin/scheduler");
+  await page.getByRole("button", { name: "Login", exact: true }).first().click();
+  await expect(page.getByText(/Dispatch watchdog:/)).toBeVisible();
+  await expect(page.getByText(/next around/).first()).toBeVisible();
 });

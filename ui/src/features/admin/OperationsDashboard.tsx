@@ -3,12 +3,13 @@ import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-quer
 import { useAuth } from "@usace-watermanagement/groundwork-water";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Button, Modal, UsaceBox } from "@usace/groundwork";
-import { MdDashboard, MdWarningAmber, MdPieChart, MdSchedule, MdSpeed, MdRefresh, MdOpenInNew, MdHelpOutline } from "react-icons/md";
+import { MdDashboard, MdWarningAmber, MdPieChart, MdSchedule, MdSpeed, MdRefresh, MdOpenInNew, MdHelpOutline, MdQueue } from "react-icons/md";
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line } from "recharts";
 import fetchWithAuth from "../../utils/fetchWithAuth";
 import { LoadingRows } from "../../shared/components/LoadingRows";
 import { SchedulerStatus } from "../scripts-manager/SchedulerStatus";
 import type { components } from "../../generated/api-types";
+import QueueDashboard from "./QueueDashboard";
 
 type Summary = components["schemas"]["OperationsSummary"];
 type Usage = components["schemas"]["Usage"];
@@ -34,12 +35,13 @@ type RateLimitHistoryRow = {
 };
 const colors = ["#1d4ed8", "#0f766e", "#9333ea", "#c2410c", "#be123c", "#0369a1", "#4d7c0f", "#475569"];
 const number = (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 1 });
-export type AdminTab = "overview" | "operations" | "usage" | "scheduler" | "rate-limits";
+export type AdminTab = "overview" | "operations" | "usage" | "scheduler" | "queues" | "rate-limits";
 const tabs = [
   { id: "overview", label: "Overview", icon: MdDashboard, to: "/admin" },
   { id: "operations", label: "Operations", icon: MdWarningAmber, to: "/admin/operations" },
   { id: "usage", label: "Usage", icon: MdPieChart, to: "/admin/usage" },
   { id: "scheduler", label: "Scheduler", icon: MdSchedule, to: "/admin/scheduler" },
+  { id: "queues", label: "Queues", icon: MdQueue, to: "/admin/queues" },
   { id: "rate-limits", label: "Rate limits", icon: MdSpeed, to: "/admin/rate-limits" },
 ] as const;
 
@@ -154,6 +156,7 @@ export function OperationsDashboard({ initialTab = "overview" }: { initialTab?: 
   const [rate, setRate] = useState("");
   const query = useQuery<Summary>({
     queryKey: ["adminOperations", days, office, queueMinutes, runMinutes, taskSort, taskDirection], placeholderData: keepPreviousData,
+    enabled: tab !== "queues" && tab !== "scheduler" && tab !== "rate-limits",
     queryFn: async () => {
       const params = new URLSearchParams({ days: String(days), queueMinutes: String(queueMinutes), runMinutes: String(runMinutes), taskSort, taskDirection });
       if (office) params.set("office", office);
@@ -194,7 +197,7 @@ export function OperationsDashboard({ initialTab = "overview" }: { initialTab?: 
     <nav aria-label="Admin sections" className="flex flex-wrap gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2">
       {tabs.map(item => <Link key={item.id} to={item.to} aria-current={tab === item.id ? "page" : undefined} className={`inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold ${tab === item.id ? "bg-blue-700 text-white" : "text-slate-600 hover:bg-white"}`}><item.icon aria-hidden />{item.label}</Link>)}
     </nav>
-    {tab === "scheduler" ? <UsaceBox title="Scheduler health"><SchedulerStatus office={office || undefined} /></UsaceBox> : <>
+    {tab === "scheduler" ? <UsaceBox title="Scheduler health"><SchedulerStatus office={office || undefined} /></UsaceBox> : tab === "queues" ? <QueueDashboard /> : <>
       {tab === "rate-limits" ? <RateLimitsPanel authToken={auth.token} /> : <>
       <div className="flex flex-wrap items-end gap-3 rounded-lg border border-slate-200 bg-white p-4">
         <label className="text-sm font-semibold">Period<select aria-label="Period" className="mt-1 block rounded border py-2 pl-3 pr-10" value={days} onChange={event => setDays(Number(event.target.value))}><option value={7}>Last 7 days</option><option value={30}>Last 30 days</option><option value={90}>Last 90 days</option></select></label>
