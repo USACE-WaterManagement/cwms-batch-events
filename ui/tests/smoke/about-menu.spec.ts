@@ -18,6 +18,11 @@ test("grouped Help navigation works with keyboard, touch, and client-side routin
   await expect(menu).toBeVisible();
   await expect(menu.getByRole("link", { name: "Version and environment" })).toHaveCount(0);
   await expect(header.getByRole("link", { name: /^(Help|Dev)/ })).toHaveCount(0);
+  await expect(menu.getByRole("link", { name: "API rate limits", exact: true })).toHaveAttribute("href", "/events/about/rate-limits");
+  for (const name of [
+    "Dispatch outcomes", "District repository browsing", "Job cancellation", "Job logs",
+    "Office history rollout", "Registered commands", "Registered schedules", "Scripts Manager", "Server logs",
+  ]) await expect(menu.getByRole("link", { name, exact: true })).toHaveAttribute("href", /\/blob\/cwbi-dev\/docs\/[^/]+\.md$/);
   await page.keyboard.press("Tab");
   await expect(menu.getByRole("link", { name: "About Batch Events", exact: true })).toBeFocused();
   await page.keyboard.press("Escape");
