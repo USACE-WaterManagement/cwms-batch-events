@@ -55,6 +55,17 @@ def test_mock_api_does_not_require_external_auth_or_github():
     assert settings.auth_environment is None
 
 
+@pytest.mark.parametrize("deployment_environment", ["dev", "staging", "prod"])
+def test_mock_api_is_rejected_outside_local_and_test(deployment_environment):
+    with pytest.raises(ValidationError, match="MOCK_USER"):
+        ApiSettings(
+            **DATABASE,
+            app_key="test",
+            mock_user=True,
+            deployment_environment=deployment_environment,
+        )
+
+
 def test_authentication_configuration():
     with pytest.raises(ValidationError, match="AUTH_ENVIRONMENT"):
         ApiSettings(**{**API, "auth_environment": "TYPO"})

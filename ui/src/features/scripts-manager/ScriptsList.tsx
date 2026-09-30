@@ -4,7 +4,7 @@ import type { JobDetails } from "../jobs-list/useJobDetails";
 import { ScriptRunIndicators } from "./ScriptRunIndicators";
 import { LatestScriptRun } from "./LatestScriptRun";
 import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@usace-watermanagement/groundwork-water";
+import { useAuth } from "@usace-watermanagement/groundwork-water/auth/useAuth";
 import fetchWithAuth from "../../utils/fetchWithAuth";
 import { scheduleDescription } from "./scheduleDescription";
 

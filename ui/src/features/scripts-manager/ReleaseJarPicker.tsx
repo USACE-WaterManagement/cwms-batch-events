@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@usace-watermanagement/groundwork-water";
+import { useAuth } from "@usace-watermanagement/groundwork-water/auth/useAuth";
 import { Button } from "@usace/groundwork";
 import fetchWithAuth from "../../utils/fetchWithAuth";
 import type { ScriptFormData } from "./types";

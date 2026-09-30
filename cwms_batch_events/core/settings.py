@@ -118,6 +118,8 @@ class ApiSettings(Settings, DatabaseSettings):
     @model_validator(mode="after")
     def validate_api(self):
         self.require("app_key")
+        if self.mock_user and self.deployment_environment not in {"local", "test"}:
+            raise ValueError("MOCK_USER is only permitted for local or test deployments")
         if not self.mock_user:
             self.require("auth_environment", "cda_api_root")
             if self.auth_environment not in {"LOCAL", "TEST", "PROD"}:

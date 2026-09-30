@@ -2,7 +2,7 @@ import { Button, Modal } from "@usace/groundwork";
 import { useCallback, useMemo, useRef, useState } from "react";
 import type { Script } from "./types";
 import fetchWithAuth from "../../utils/fetchWithAuth";
-import { useAuth } from "@usace-watermanagement/groundwork-water";
+import { useAuth } from "@usace-watermanagement/groundwork-water/auth/useAuth";
 import type { TransferPackage } from "./configurationTransferApi";
 import { notifySuccess } from "../../utils/actionNotifications";
 import { currentEnvironmentLabel } from "../../utils/environment";

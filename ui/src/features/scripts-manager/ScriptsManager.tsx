@@ -1,4 +1,4 @@
-import { useAuth } from "@usace-watermanagement/groundwork-water";
+import { useAuth } from "@usace-watermanagement/groundwork-water/auth/useAuth";
 import useAdminOffices from "./useAdminOffices";
 import { OfficeSelector } from "../../shared/components/OfficeSelector";
 import { ScriptsWorkspace } from "./ScriptsWorkspace";

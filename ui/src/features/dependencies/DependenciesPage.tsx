@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Card, H1, H2, Text, Button } from "@usace/groundwork";
 import { FiAlertTriangle, FiExternalLink, FiLink, FiPackage } from "react-icons/fi";
-import { useAuth } from "@usace-watermanagement/groundwork-water";
+import { useAuth } from "@usace-watermanagement/groundwork-water/auth/useAuth";
 import { useNavigate, useRouter, useSearch } from "@tanstack/react-router";
 import LoginPrompt from "../auth/LoginPrompt";
 import { useApplicationInfo } from "../about/useAboutInfo";
