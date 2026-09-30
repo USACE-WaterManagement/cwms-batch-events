@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@usace-watermanagement/groundwork-water";
+import { useAuth } from "@usace-watermanagement/groundwork-water/auth/useAuth";
 import fetchWithAuth from "../../utils/fetchWithAuth";
 
 export interface ApplicationInfo {

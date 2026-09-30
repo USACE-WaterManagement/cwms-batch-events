@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button, Modal } from "@usace/groundwork";
-import { useAuth } from "@usace-watermanagement/groundwork-water";
+import { useAuth } from "@usace-watermanagement/groundwork-water/auth/useAuth";
 import { useNavigate } from "@tanstack/react-router";
 import fetchWithAuth from "../../utils/fetchWithAuth";
 import { notifySuccess } from "../../utils/actionNotifications";

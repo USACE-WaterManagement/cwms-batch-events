@@ -7,7 +7,7 @@ import useJobDetails from "./useJobDetails";
 import { Link } from "@tanstack/react-router";
 import { ShareJob } from "./ShareJob";
 import useAdminOffices from "../scripts-manager/useAdminOffices";
-import { useAuth } from "@usace-watermanagement/groundwork-water";
+import { useAuth } from "@usace-watermanagement/groundwork-water/auth/useAuth";
 import LoginPrompt from "../auth/LoginPrompt";
 import CancelJobButton from "./CancelJobButton";
 

@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useAuth } from "@usace-watermanagement/groundwork-water";
+import { useAuth } from "@usace-watermanagement/groundwork-water/auth/useAuth";
 import { Button, Card, H1, H2, Text } from "@usace/groundwork";
 import { FiArrowRight, FiBookOpen, FiInfo, FiLogIn } from "react-icons/fi";
 import JobsList from "../features/jobs-list/JobsList";

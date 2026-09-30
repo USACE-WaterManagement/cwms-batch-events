@@ -16,7 +16,7 @@ import useJobsList from "../jobs-list/useJobsList";
 import { useNavigate } from "@tanstack/react-router";
 import { ConfigurationImport } from "./ConfigurationTransfer";
 import { exportConfiguration } from "./configurationTransferApi";
-import { useAuth } from "@usace-watermanagement/groundwork-water";
+import { useAuth } from "@usace-watermanagement/groundwork-water/auth/useAuth";
 import { supportsScriptVersion } from "./commandArguments";
 
 interface ScriptsWorkspaceProps {
