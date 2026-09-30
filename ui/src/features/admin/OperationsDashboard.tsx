@@ -9,6 +9,8 @@ import fetchWithAuth from "../../utils/fetchWithAuth";
 import { LoadingRows } from "../../shared/components/LoadingRows";
 import { SchedulerStatus } from "../scripts-manager/SchedulerStatus";
 import type { components } from "../../generated/api-types";
+import { notifySuccess } from "../../utils/actionNotifications";
+import { notifyError } from "../../utils/errorNotifications";
 import QueueDashboard from "./QueueDashboard";
 
 type Summary = components["schemas"]["OperationsSummary"];
@@ -78,6 +80,7 @@ function RateLimitsPanel({ authToken }: { authToken?: string }) {
   const [drafts, setDrafts] = useState<Record<string, { requestsPerMinute: string; jobSubmissionsPerMinute: string }>>({});
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [helpOpen, setHelpOpen] = useState(false);
+  const [pendingActions, setPendingActions] = useState<Record<string, "save" | "reset">>({});
   const query = useQuery<RateLimitRow[]>({
     queryKey: ["adminRateLimits"],
     queryFn: async () => (await fetchWithAuth("/api/admin/rate-limits", {}, authToken)).json(),
@@ -87,18 +90,36 @@ function RateLimitsPanel({ authToken }: { authToken?: string }) {
     jobSubmissionsPerMinute: String(row.jobSubmissionsPerMinute),
   };
   const save = async (row: RateLimitRow) => {
-    const value = valueFor(row);
-    await fetchWithAuth(`/api/admin/rate-limits/${encodeURIComponent(row.office)}`, {
-      method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ requestsPerMinute: Number(value.requestsPerMinute), jobSubmissionsPerMinute: Number(value.jobSubmissionsPerMinute) }),
-    }, authToken);
-    setDrafts(previous => { const next = { ...previous }; delete next[row.office]; return next; });
-    await queryClient.invalidateQueries({ queryKey: ["adminRateLimits"] });
+    setPendingActions(previous => ({ ...previous, [row.office]: "save" }));
+    try {
+      const value = valueFor(row);
+      const response = await fetchWithAuth(`/api/admin/rate-limits/${encodeURIComponent(row.office)}`, {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ requestsPerMinute: Number(value.requestsPerMinute), jobSubmissionsPerMinute: Number(value.jobSubmissionsPerMinute) }),
+      }, authToken);
+      const saved = await response.json() as RateLimitRow;
+      queryClient.setQueryData<RateLimitRow[]>(["adminRateLimits"], previous => previous?.map(item => item.office === saved.office ? saved : item));
+      setDrafts(previous => { const next = { ...previous }; delete next[row.office]; return next; });
+      await queryClient.invalidateQueries({ queryKey: ["adminRateLimits"] });
+      notifySuccess(`${row.office} rate limit saved`);
+    } catch (error) {
+      notifyError({ id: `save-rate-limit-${row.office}`, message: error instanceof Error ? error.message : "The rate limit could not be saved." });
+    } finally {
+      setPendingActions(previous => { const next = { ...previous }; delete next[row.office]; return next; });
+    }
   };
   const reset = async (row: RateLimitRow) => {
-    await fetchWithAuth(`/api/admin/rate-limits/${encodeURIComponent(row.office)}`, { method: "DELETE" }, authToken);
-    setDrafts(previous => { const next = { ...previous }; delete next[row.office]; return next; });
-    await queryClient.invalidateQueries({ queryKey: ["adminRateLimits"] });
+    setPendingActions(previous => ({ ...previous, [row.office]: "reset" }));
+    try {
+      await fetchWithAuth(`/api/admin/rate-limits/${encodeURIComponent(row.office)}`, { method: "DELETE" }, authToken);
+      setDrafts(previous => { const next = { ...previous }; delete next[row.office]; return next; });
+      await queryClient.invalidateQueries({ queryKey: ["adminRateLimits"] });
+      notifySuccess(`${row.office} rate limit reset to defaults`);
+    } catch (error) {
+      notifyError({ id: `reset-rate-limit-${row.office}`, message: error instanceof Error ? error.message : "The rate limit could not be reset." });
+    } finally {
+      setPendingActions(previous => { const next = { ...previous }; delete next[row.office]; return next; });
+    }
   };
   if (query.isPending) return <LoadingRows label="Loading office rate limits" />;
   if (query.isError) return <p role="alert">Office rate limits could not be loaded. Refresh the page to retry.</p>;
@@ -111,7 +132,7 @@ function RateLimitsPanel({ authToken }: { authToken?: string }) {
         <span className="font-semibold">{row.office}</span><span><span className="text-slate-500 sm:hidden">Requests/min: </span>{row.requestsPerMinute}</span><span><span className="text-slate-500 sm:hidden">Jobs/min: </span>{row.jobSubmissionsPerMinute}</span><span>{row.changedBy || "Default"}</span><span>{row.changedAt ? new Date(row.changedAt).toLocaleString() : "Default"}</span>
       </summary>
       <div className="border-t border-slate-200 bg-slate-50 p-3">
-        <div className="flex flex-wrap items-end gap-4"><label className="text-sm font-semibold">Requests/min<input id={`requests-${row.office}`} type="number" min="1" max="10000" className="mt-1 block w-28 rounded border p-2 font-normal" value={value.requestsPerMinute} onChange={event => setDrafts(previous => ({ ...previous, [row.office]: { ...value, requestsPerMinute: event.target.value } }))} /></label><label className="text-sm font-semibold">Jobs/min<input id={`jobs-${row.office}`} type="number" min="1" max="1000" className="mt-1 block w-28 rounded border p-2 font-normal" value={value.jobSubmissionsPerMinute} onChange={event => setDrafts(previous => ({ ...previous, [row.office]: { ...value, jobSubmissionsPerMinute: event.target.value } }))} /></label><div className="flex gap-2"><button type="button" className="action-link" onClick={() => void save(row)}>Save</button>{(row.requestOverride || row.jobSubmissionOverride) && <button type="button" className="action-link" onClick={() => void reset(row)}>Use defaults</button>}</div></div>
+        <div className="flex flex-wrap items-end gap-4"><label className="text-sm font-semibold">Requests/min<input id={`requests-${row.office}`} type="number" min="1" max="10000" className="mt-1 block w-28 rounded border p-2 font-normal" value={value.requestsPerMinute} onChange={event => setDrafts(previous => ({ ...previous, [row.office]: { ...value, requestsPerMinute: event.target.value } }))} /></label><label className="text-sm font-semibold">Jobs/min<input id={`jobs-${row.office}`} type="number" min="1" max="1000" className="mt-1 block w-28 rounded border p-2 font-normal" value={value.jobSubmissionsPerMinute} onChange={event => setDrafts(previous => ({ ...previous, [row.office]: { ...value, jobSubmissionsPerMinute: event.target.value } }))} /></label><div className="flex gap-2"><button type="button" className="action-link" disabled={Boolean(pendingActions[row.office])} onClick={() => void save(row)}>{pendingActions[row.office] === "save" ? "Saving…" : "Save"}</button>{(row.requestOverride || row.jobSubmissionOverride) && <button type="button" className="action-link" disabled={Boolean(pendingActions[row.office])} onClick={() => void reset(row)}>{pendingActions[row.office] === "reset" ? "Resetting…" : "Use defaults"}</button>}</div></div>
         <RateLimitHistory office={row.office} authToken={authToken} open={isOpen} />
       </div>
     </details>; })}{!query.data?.length && <p className="p-4 text-slate-500">No offices have been registered yet.</p>}</div>

@@ -79,10 +79,20 @@ test("HQ dashboard reports usage, queue issues, failures and clearly labeled cos
 });
 
 test("rate limit help explains credential counters and process refresh", async ({ page }) => {
+  let rateLimit = { office: "SWT", requestsPerMinute: 120, jobSubmissionsPerMinute: 10, requestOverride: false, jobSubmissionOverride: false, changedBy: null, changedAt: null };
   await page.route("**/api/**", route => {
     const url = new URL(route.request().url());
     if (url.pathname.endsWith("/system-admin")) return route.fulfill({ json: true });
-    if (url.pathname.endsWith("/admin/rate-limits")) return route.fulfill({ json: [{ office: "SWT", requestsPerMinute: 120, jobSubmissionsPerMinute: 10, requestOverride: false, jobSubmissionOverride: false, changedBy: null, changedAt: null }] });
+    if (url.pathname.endsWith("/admin/rate-limits") && route.request().method() === "GET") return route.fulfill({ json: [rateLimit] });
+    if (url.pathname.endsWith("/admin/rate-limits/SWT") && route.request().method() === "PUT") {
+      const payload = route.request().postDataJSON();
+      rateLimit = { ...rateLimit, ...payload, requestOverride: true, jobSubmissionOverride: true, changedBy: "test-user", changedAt: "2026-09-30T20:00:00Z" };
+      return route.fulfill({ json: rateLimit });
+    }
+    if (url.pathname.endsWith("/admin/rate-limits/SWT") && route.request().method() === "DELETE") {
+      rateLimit = { ...rateLimit, requestsPerMinute: 120, jobSubmissionsPerMinute: 10, requestOverride: false, jobSubmissionOverride: false };
+      return route.fulfill({ status: 204, body: "" });
+    }
     if (url.pathname.endsWith("/admin/rate-limits/SWT/history")) return route.fulfill({ json: [{ id: 1, office: "SWT", action: "created", previousRequestsPerMinute: null, previousJobSubmissionsPerMinute: null, newRequestsPerMinute: 120, newJobSubmissionsPerMinute: 10, changedBy: "test-user", changedAt: "2026-09-27T20:00:00Z" }] });
     return route.fulfill({ json: summary });
   });
@@ -101,6 +111,16 @@ test("rate limit help explains credential counters and process refresh", async (
   await expect(page.getByRole("dialog")).toContainText("about once per minute");
   await page.getByRole("button", { name: "Close", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByLabel("Requests/min", { exact: true }).fill("240");
+  await page.getByLabel("Jobs/min", { exact: true }).fill("40");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: "SWT rate limit saved" })).toBeVisible();
+  await expect(page.locator("summary")).toContainText("240");
+  await expect(page.locator("summary")).toContainText("40");
+  await page.getByRole("button", { name: "Use defaults", exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: "SWT rate limit reset to defaults" })).toBeVisible();
+  await expect(page.locator("summary")).toContainText("120");
+  await expect(page.locator("summary")).toContainText("10");
 });
 
 test("pagination reserves row space while new history is loading", async ({ page }) => {
