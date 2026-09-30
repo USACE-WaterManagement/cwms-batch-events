@@ -11,7 +11,7 @@ export function AdminPage({ tab }: { tab: AdminTab }) {
   const auth = useAuth();
   const access = useSystemAdmin();
   const location = useLocation();
-  const routeTab = location.pathname.match(/^\/admin\/(operations|usage|scheduler|rate-limits)$/)?.[1] as AdminTab | undefined;
+  const routeTab = location.pathname.match(/^\/admin\/(operations|usage|scheduler|queues|rate-limits)$/)?.[1] as AdminTab | undefined;
   if (!auth.isAuth) return <LoginPrompt title="Sign in to view administration" description="The HQ Data Acquisition Mgr role is required." />;
   if (access.isPending) return <p>Checking admin access…</p>;
   if (access.isError) return <RequestErrorPage error={access.error} onRetry={() => void access.refetch()} />;

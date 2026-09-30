@@ -8,7 +8,7 @@ from sqlalchemy.dialects import postgresql
 
 from cwms_batch_events.core.dispatch import expire_dispatch
 from cwms_batch_events.core.job_database.postgres.postgres import PostgresJobDatabase
-from cwms_batch_events.core.maintenance import expire_unlinked_dispatches
+from cwms_batch_events.core.maintenance import expire_unlinked_dispatches, reconcile_cancellations
 from cwms_batch_events.core.models import JobStatus
 
 NOW = datetime.now(timezone.utc)
@@ -17,7 +17,7 @@ NOW = datetime.now(timezone.utc)
 def database(**changes):
     job = SimpleNamespace(**(dict(id=uuid4(), job_status=JobStatus.PENDING, external_job_id=None,
         created_time=NOW - timedelta(hours=2), dispatch_claimed_at=None,
-        batch_status_reason=None, end_time=None) | changes))
+        batch_status_reason=None, cancellation_requested_at=None, end_time=None) | changes))
     db = PostgresJobDatabase(Mock())
     db._load_job_for_update = Mock(return_value=job)
     return db, job
@@ -113,7 +113,7 @@ def test_watchdog_runs_when_scheduler_is_disabled():
             seen.update(tasks)
             started.set()
             await stop.wait()
-        settings = SimpleNamespace(scheduler_enabled=False, dispatch_watchdog_enabled=True)
+        settings = SimpleNamespace(scheduler_enabled=False, dispatch_watchdog_enabled=True, cancellation_watchdog_enabled=False)
         with patch('cwms_batch_events.core.maintenance.get_settings', return_value=settings), patch('cwms_batch_events.core.maintenance.supervise', side_effect=worker):
             async with lifespan(None):
                 await asyncio.wait_for(started.wait(), 1)
@@ -127,3 +127,17 @@ def test_expired_unclaimed_message_cannot_dispatch_before_watchdog_tick():
     assert not result['claimed']
     assert result['status'] == JobStatus.DISPATCH_UNKNOWN
     assert job.dispatch_claimed_at is None
+
+
+def test_cancellation_reconciliation_marks_stale_request_for_investigation():
+    requested = NOW - timedelta(minutes=30)
+    _, job = database(job_status=JobStatus.CANCELLING, cancellation_requested_at=requested, office="SWT")
+    session = MagicMock()
+    session.scalars.return_value.all.return_value = [job]
+    factory = MagicMock()
+    factory.return_value.__enter__.return_value = session
+    settings = SimpleNamespace(cancellation_timeout_minutes=15)
+    with patch('cwms_batch_events.core.maintenance._begin', return_value=True), \
+            patch('cwms_batch_events.core.maintenance.get_settings', return_value=settings):
+        reconcile_cancellations(NOW, factory)
+    assert "has not received runner confirmation" in job.batch_status_reason

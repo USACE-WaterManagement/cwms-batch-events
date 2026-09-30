@@ -79,8 +79,12 @@ class JobModel(Base):
     batch_status_reason: Mapped[str | None]
     batch_details_time: Mapped[datetime.datetime | None]
     batch_checked_at: Mapped[datetime.datetime | None]
+    cancellation_requested_at: Mapped[datetime.datetime | None]
 
     script: Mapped["ScriptModel | None"] = relationship("ScriptModel", lazy="selectin")
+    # Keep row-locking queries free of an implicit outer join. Callers can
+    # still access the runner through SQLAlchemy's separate select-in load.
+    job_runner: Mapped["JobRunnerModel"] = relationship("JobRunnerModel", lazy="selectin")
 
 
 class JobRunnerModel(Base):

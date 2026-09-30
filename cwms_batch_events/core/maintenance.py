@@ -24,7 +24,8 @@ logger = logging.getLogger(__name__)
 # These identify workers, not job counts or limits. Keep the values unchanged
 # across deployments so old and new replicas coordinate during rolling updates.
 # Separate IDs let scheduling and queue delivery run independently.
-TASK_LOCKS = {"schedules": 730181, "queue_delivery": 730182, "dispatch_watchdog": 730183}
+TASK_LOCKS = {"schedules": 730181, "queue_delivery": 730182, "dispatch_watchdog": 730183,
+              "cancellation_reconciliation": 730184}
 
 
 def _begin(db, task):
@@ -151,6 +152,28 @@ def expire_unlinked_dispatches(now=None, session_factory=create_session):
         logger.warning("Dispatch outcome needs investigation", extra={"event": "dispatch_timed_out", "job_id": job_id})
 
 
+def reconcile_cancellations(now=None, session_factory=create_session):
+    """Flag cancellation requests that have not received runner confirmation."""
+    with session_factory() as db, db.begin():
+        if not _begin(db, "cancellation_reconciliation"):
+            return
+        now = now or db.scalar(text("SELECT CURRENT_TIMESTAMP"))
+        timeout = get_settings().cancellation_timeout_minutes
+        jobs = db.scalars(select(JobModel).where(
+            JobModel.job_status == JobStatus.CANCELLING,
+            JobModel.cancellation_requested_at.is_not(None),
+            JobModel.cancellation_requested_at <= now - timedelta(minutes=timeout),
+        ).order_by(JobModel.cancellation_requested_at, JobModel.id).limit(100).with_for_update(skip_locked=True)).all()
+        reason = "Cancellation request has not received runner confirmation. Verify the runner and retry or investigate before rerunning."
+        for job in jobs:
+            if job.batch_status_reason != reason:
+                job.batch_status_reason = reason
+                logger.warning("Cancellation request needs investigation", extra={
+                    "event": "cancellation_timed_out", "job_id": str(job.id), "office": getattr(job, "office", None),
+                })
+        db.execute(text("UPDATE maintenance_tasks SET last_success=:now WHERE name='cancellation_reconciliation'"), {"now": now})
+
+
 async def supervise(stop, tasks=None, interval=15):
     """One bounded worker per task. Never spawn replacements for a hung thread."""
     tasks = tasks or {"schedules": register_due_jobs, "queue_delivery": deliver_pending_jobs}
@@ -192,6 +215,8 @@ async def lifespan(app):
         tasks.update(schedules=register_due_jobs, queue_delivery=deliver_pending_jobs)
     if get_settings().dispatch_watchdog_enabled:
         tasks["dispatch_watchdog"] = expire_unlinked_dispatches
+    if getattr(get_settings(), "cancellation_watchdog_enabled", True):
+        tasks["cancellation_reconciliation"] = reconcile_cancellations
     if tasks:
         worker = asyncio.create_task(supervise(stop, tasks))
     try:

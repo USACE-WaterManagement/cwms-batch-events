@@ -47,6 +47,7 @@ class TaskHealth(CamelModel):
     name: str
     last_success: datetime | None
     healthy: bool
+    next_expected_at: datetime | None = None
 
 
 class SchedulerStatus(CamelModel):
@@ -66,6 +67,7 @@ def scheduler_status(office: str | None = None, user: User = Depends(get_current
     with create_session() as db:
         now = db.scalar(text("SELECT CURRENT_TIMESTAMP"))
         tasks = [TaskHealth(name=row.name, last_success=row.last_success,
+            next_expected_at=row.last_success + timedelta(seconds=15) if row.last_success else None,
             healthy=bool(row.last_success and now - row.last_success < timedelta(minutes=2)))
             for row in db.execute(text("SELECT name, last_success FROM maintenance_tasks ORDER BY name"))]
         pending = db.scalar(text("""SELECT count(*) FROM job_outbox o JOIN jobs j ON j.id=o.job_id

@@ -142,6 +142,8 @@ class ExecutionOptions(ExecutionRecord):
 
 
 class JobStatus(str, Enum):
+    CANCELLED = "Cancelled"
+    CANCELLING = "Cancelling"
     DISPATCH_UNKNOWN = "Dispatch unknown"
     FAILED = "Failed"
     PENDING = "Pending"
@@ -184,6 +186,7 @@ class JobRecord(ExecutionRecord):
     schedule_timezone: str | None = None
     schedule_author: str | None = None
     dispatch_claimed_at: datetime | None = None
+    cancellation_requested_at: datetime | None = None
 
     @field_serializer("username")
     def public_username(self, value: str) -> str:
@@ -204,6 +207,12 @@ class JobRecord(ExecutionRecord):
     log_stream: str | None = None
     batch_status: str | None = None
     batch_status_reason: str | None = None
+
+
+class JobCancellationResponse(CamelModel):
+    action: Literal["cancelled", "cancel", "terminate", "already_finished", "already_requested"]
+    status: JobStatus
+    message: str
 
 
 class JobRunner(CamelModel):
