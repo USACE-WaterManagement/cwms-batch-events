@@ -27,6 +27,7 @@ test("run from a script row, inspect its runs, and switch Groundwork tabs", asyn
   let nearLimit = false;
   let failSubmission = false;
   let failHistory = false;
+  let emptyCatalog = true;
   let finishSubmission!: () => void;
   const submissionReady = new Promise<void>(resolve => { finishSubmission = resolve; });
   const capture = async (name: string) => {
@@ -39,7 +40,7 @@ test("run from a script row, inspect its runs, and switch Groundwork tabs", asyn
     if (path.endsWith("/admin-offices")) return route.fulfill({ json: ["SWT"] });
     if (path.endsWith("/job-runners/default")) return route.fulfill({ json: { id: "runner-1", slug: "batch" } });
     if (path.endsWith("/repository-files")) return route.fulfill({ json: {repository:"USACE-WaterManagement/swt-wm-cwbi-jobs",ref:"cwbi-dev",paths:["bin/report.sh"]} });
-    if (path.endsWith("/scripts")) return route.fulfill({ json: [script, second, inactive] });
+    if (path.endsWith("/scripts")) return route.fulfill({ json: emptyCatalog ? [] : [script, second, inactive] });
     if (path.endsWith("/jobs/rate-limit-status")) return route.fulfill({ json: { office: "SWT", limit: 10, used: nearLimit ? 9 : 0, remaining: nearLimit ? 1 : 10, resetAfterSeconds: nearLimit ? 18 : 0 } });
     if (path.endsWith("/jobs") && route.request().method() === "POST") {
       posts++;
@@ -60,6 +61,12 @@ test("run from a script row, inspect its runs, and switch Groundwork tabs", asyn
   });
   await page.setViewportSize({ width: 1600, height: 1000 });
   await page.goto("/events/scripts-manager");
+  await page.getByRole("button", { name: "Login", exact: true }).first().click();
+  await page.locator('select:has(option[value="SWT"])').selectOption("SWT");
+  await expect(page.getByRole("heading", { name: "No jobs yet for SWT" })).toBeVisible();
+  await capture("onboarding-scripts-manager-empty");
+  emptyCatalog = false;
+  await page.reload();
   await page.getByRole("button", { name: "Login", exact: true }).first().click();
   await page.locator('select:has(option[value="SWT"])').selectOption("SWT");
   const row = page.locator("tr").filter({ hasText: script.name });
@@ -127,6 +134,10 @@ test("run from a script row, inspect its runs, and switch Groundwork tabs", asyn
   await expect(page.getByLabel("Name", { exact: true })).toHaveValue(script.name);
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   await page.getByRole("button", { name: "New +", exact: true }).click();
+  for (const section of ["Name", "Command", "Environment", "Resources", "Access", "Schedule", "Upgrade"]) {
+    await configSection(page, section);
+    await capture(`onboarding-script-form-${section.toLowerCase() === "command" ? "command" : section.toLowerCase()}`);
+  }
   await configSection(page, "General");
   await page.getByLabel("Name", { exact: true }).fill(script.name);
   await configSection(page, "General");

@@ -6,6 +6,8 @@ import {
   TableRow, Tabs, Text,
 } from "@usace/groundwork";
 import { type ApplicationInfo, useApplicationInfo, useSchemaInfo } from "./useAboutInfo";
+import { cdaUserRolesUrl } from "../../utils/environment";
+import { useRememberedOffice } from "../../shared/hooks/useRememberedOffice";
 
 const uiVersion = import.meta.env.VITE_UI_VERSION || "local";
 const uiBuildTime = import.meta.env.VITE_UI_BUILD_TIME;
@@ -178,18 +180,19 @@ const ControlsPane = ({ user }: { user?: ApplicationInfo["user"] }) => {
       </div>
     </Card>
     {user ? <Card className="p-6"><H3>Your current controls</H3>
-      <Text className="mt-2">These values come from your current CDA profile.</Text>
-      <div className="mt-4 max-h-80 overflow-auto rounded-lg border border-slate-200"><Table>
-        <TableHead className="sticky top-0 z-10 bg-white"><TableRow><TableHeader>Office</TableHeader>
-          <TableHeader>Assigned roles</TableHeader><TableHeader>Execute</TableHeader>
-          <TableHeader>Define</TableHeader></TableRow></TableHead>
-        <TableBody>{offices.map((office) => <TableRow key={office}>
-          <TableCell className="font-medium">{office}</TableCell>
-          <TableCell>{user.roles[office]?.join(", ") || "None reported"}</TableCell>
-          <TableCell>{user.offices.includes(office) ? "Eligible scripts" : "No"}</TableCell>
-          <TableCell>{user.adminOffices.includes(office) ? "Yes" : "No"}</TableCell>
-        </TableRow>)}</TableBody>
-      </Table></div>
+      <Text className="mt-2">These permissions come from your current CDA profile. Select an office to review its roles in the CDA user profile.</Text>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">{offices.map((office) => <div key={office} className="rounded-lg border border-slate-200 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h4 className="font-semibold text-slate-900">{office}</h4>
+          <ExternalLink href={cdaUserRolesUrl(office)}>Open {office} roles</ExternalLink>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {user.offices.includes(office) && <span className="rounded-full border border-green-300 bg-green-50 px-3 py-1 text-xs font-semibold text-green-900">Execute</span>}
+          {user.adminOffices.includes(office) && <span className="rounded-full border border-blue-300 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-900">Create</span>}
+          {!user.offices.includes(office) && !user.adminOffices.includes(office) && <span className="rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">No actions</span>}
+        </div>
+        <p className="mt-3 text-xs text-slate-500">Assigned roles: {user.roles[office]?.join(", ") || "None reported"}</p>
+      </div>)}</div>
     </Card> : <Card className="p-5"><Text>Sign in to compare these controls with your office roles.</Text></Card>}
   </section>;
 };
@@ -361,7 +364,7 @@ const runtimeExamples = [
     name: "Java",
     content: <>
       <p>Choose <strong>District GitHub repository</strong>, set <strong>Runtime</strong> to <strong>Java JAR</strong>, and select a JAR such as <code>lib/report.jar</code>.</p>
-      <p>Use <strong>Arguments</strong> for values passed to the Java program. For a released office JAR, use <strong>Browse release JARs</strong> so the pinned artifact and checksum are recorded with the job.</p>
+      <p>Use <strong>Arguments</strong> for values passed to the Java program. A JAR can live in the repository, but it is highly recommended that you place the compiled JAR in a release artifact and select <strong>Browse release JARs</strong> to use it from there instead of committing it to source. The pinned artifact and checksum are recorded with the job.</p>
       <div className="rounded border border-slate-200 bg-white p-3"><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Example command</p><code className="mt-1 block break-all font-mono text-sm">java -jar /jobs/lib/report.jar --office SWT</code></div>
     </>,
   },
@@ -387,9 +390,9 @@ const RuntimeTabs = () => (
 );
 
 const OnboardingPane = ({ user }: { user?: ApplicationInfo["user"] }) => {
-  const office = user?.adminOffices.includes("SWT")
-    ? "SWT"
-    : user?.adminOffices[0] ?? user?.offices[0];
+  const availableOffices = user ? [...new Set([...user.offices, ...user.adminOffices])] : [];
+  const [rememberedOffice] = useRememberedOffice(availableOffices);
+  const office = rememberedOffice ?? user?.adminOffices[0] ?? user?.offices[0];
   const canDefine = office ? user?.adminOffices.includes(office) : false;
   const officeLabel = office ?? "OFFICE";
   const officeRepoSearch = "https://github.com/orgs/USACE-WaterManagement/repositories?q=" +
@@ -405,22 +408,19 @@ const OnboardingPane = ({ user }: { user?: ApplicationInfo["user"] }) => {
     </Card>
     <ol className="space-y-6">
       <OnboardingStep number={1} title="Confirm your office access">
-        <p>Open <strong>About → Controls</strong>. To define a job for {officeLabel}, your CDA
-          profile needs <strong>Data Acquisition Mgr</strong> or <strong>Data Exchange Mgr</strong> for
-          that office. To run it, you need access to the office and a matching execution role only
-          when the script specifies roles.</p>
+        <p>Open <Link to="/about/controls" className="font-medium text-blue-700 underline">Controls and access</Link> from the new <strong>Help</strong> menu, near the bottom of the menu, and confirm the <strong>{officeLabel}</strong> office has the permissions you need.</p>
+        <p>To create a job, your CDA profile needs <strong>Data Acquisition Mgr</strong> or <strong>Data Exchange Mgr</strong> for that office. The <strong>Batch Administrator</strong> role in the Batch Events UI and <strong>cwms CLI</strong> can be used to set the role that allows job creation so you can continue this quick start.</p>
+        <p>To run a job, you need access to the office and a matching execution role only when the script specifies roles. {office && <>Review the selected office in the <ExternalLink href={cdaUserRolesUrl(office)}>CDA user-roles page</ExternalLink>.</>}</p>
         <p>If a role is missing, contact the person who manages CDA user roles for your office.</p>
       </OnboardingStep>
       <OnboardingStep number={2} title="Prepare the job in your office repository">
         <p>Commit the executable script to the {officeLabel} office job repository. The convention is
           an office repository such as <code>lrh-wm-cwbi-jobs</code> or <code>swt-wm-cwbi-jobs</code>.</p>
-        <p>Find a repository with this <ExternalLink href={officeRepoSearch}>{officeLabel} repository search</ExternalLink>,
-          or review the <ExternalLink href={github.lrhJobs}>LRH</ExternalLink> and{" "}
-          <ExternalLink href={github.swtJobs}>SWT</ExternalLink> examples. Setup conventions are in the{" "}
+        <p>Search for other district batch repositories in this <ExternalLink href={officeRepoSearch}>GitHub repository search</ExternalLink>. You must be logged into GitHub to see repositories you are authorized to access. Setup conventions are in the{" "}
           <ExternalLink href={github.application + "#readme"}>Batch Events README</ExternalLink>.</p>
       </OnboardingStep>
       <OnboardingStep number={3} title="Define the job">
-        <p>Use Job Manager to add the office script in two parts.</p>
+        <p>Use the <strong>Batch Events Job Manager</strong> to add the office script in two parts. Click the <strong>Job Manager</strong> tab in the top navigation header.</p>
         <ol className="mt-4 space-y-5">
           <OnboardingSubstep number="3.1" title="Choose the office and start a definition">
             <p>Open <strong>Job Manager</strong>, choose {officeLabel}, then select <strong>New +</strong>.</p>
@@ -430,12 +430,29 @@ const OnboardingPane = ({ user }: { user?: ApplicationInfo["user"] }) => {
               frameClassName="aspect-[16/10]"
               callouts={[]}
             />
+            <OnboardingScreenshot
+              src="/events/about/onboarding-scripts-manager-empty.png"
+              alt="Job Manager showing that no jobs are defined for the selected office."
+              frameClassName="aspect-[16/10]"
+              callouts={[]}
+            />
           </OnboardingSubstep>
           <OnboardingSubstep number="3.2" title="Complete the job definition">
-            <p>Enter a name and description. <strong>GitHub Repo Path</strong> is the path to the
+            <p>With the new script window open, enter the values for the job. The side tabs group the settings you can complete before saving. <strong>GitHub Repo Path</strong> is the path to the
               script inside the office repository, such as <code>python/my_job.py</code>—not a GitHub URL.</p>
             <p>Choose the process type that matches the files or executable your job needs.</p>
             <RuntimeTabs />
+            <div className="space-y-4">
+              {[
+                ["Name", "Enter the job name and description. Keep the name short enough to identify in the job list."],
+                ["Command", "Choose the source and runtime. Add arguments when the script needs them."],
+                ["Environment", "Add non-secret values passed to every run. Never enter passwords, tokens, keys, or other secrets."],
+                ["Resources", "Choose the fixed task size for the job. Larger profiles provide more CPU and memory to the run."],
+                ["Access", "Leave roles empty when office access is enough. Add execution roles when only users with those CDA roles should run the job. Select the ? beside Access for more details."],
+                ["Schedule", "Leave the job Manual for this quick start, or choose an automatic schedule and its timezone when the job should run without a person submitting it."],
+                ["Upgrade", "Review the saved configuration version and follow the upgrade guidance when an existing job needs newer settings."],
+              ].map(([label, content]) => <div key={label} className="rounded border border-slate-200 bg-white p-3"><p className="font-semibold text-slate-900">{label} tab</p><p className="mt-1">{content}</p></div>)}
+            </div>
             <p>Roles are optional. Leave them empty when the job needs no additional CDA execution role,
               or select roles to restrict who can run it. Keep the script active and save.</p>
             <OnboardingScreenshot
@@ -444,6 +461,10 @@ const OnboardingPane = ({ user }: { user?: ApplicationInfo["user"] }) => {
               frameClassName="aspect-[16/9]"
               callouts={[]}
             />
+            <div className="grid gap-4 lg:grid-cols-2">
+              {["name", "command", "environment", "resources", "access", "schedule", "upgrade"].map(section => <OnboardingScreenshot key={section}
+                src={`/events/about/onboarding-script-form-${section}.png`} alt={`New job modal with the ${section} tab selected.`} frameClassName="aspect-[16/9]" callouts={[]} />)}
+            </div>
           </OnboardingSubstep>
         </ol>
       </OnboardingStep>
