@@ -35,19 +35,23 @@ def test_dependencies_fetches_and_parses_office_requirements(client, user, monke
     office = user.offices[0]
     monkeypatch.setattr(settings, "office_repositories", {})
     monkeypatch.setattr("cwms_batch_events.api.routers.repository_files.installation_token", lambda: "test-token")
-    requirements = b"numpy==2.3.3\nPint~=0.25\n# comment\nrequests>=2.32.5\n"
-    payload = {"content": base64.b64encode(requirements).decode(), "encoding": "base64"}
-    with patch("cwms_batch_events.api.routers.repository_files.urlopen", return_value=io.BytesIO(json.dumps(payload).encode())) as request:
+    base_requirements = b"numpy==2.3.3\nPint~=0.25\n"
+    office_requirements = b"requests>=2.32.5\n"
+    base_payload = {"content": base64.b64encode(base_requirements).decode(), "encoding": "base64"}
+    office_payload = {"content": base64.b64encode(office_requirements).decode(), "encoding": "base64"}
+    with patch("cwms_batch_events.api.routers.repository_files.urlopen", side_effect=[io.BytesIO(json.dumps(base_payload).encode()), io.BytesIO(json.dumps(office_payload).encode())]) as request:
         response = client.get("/repository-dependencies", params={"office": office.lower()})
     assert response.status_code == 200
-    assert response.json()["packages"] == [
+    assert response.json()["base_packages"] == [
         {"name": "numpy", "operator": "==", "version": "2.3.3"},
         {"name": "Pint", "operator": "~=", "version": "0.25"},
+    ]
+    assert response.json()["office_packages"] == [
         {"name": "requests", "operator": ">=", "version": "2.32.5"},
     ]
-    assert request.call_args.args[0].full_url.endswith(
-        f"/repos/USACE-WaterManagement/{office.lower()}-wm-cwbi-jobs/contents/base_requirements.txt?ref=cwbi-dev"
-    )
+    assert request.call_count == 2
+    assert request.call_args_list[0].args[0].full_url.endswith("/repos/USACE/cwbi-wm-images/contents/job_runners/python_java/requirements.txt?ref=cwbi-dev")
+    assert request.call_args_list[1].args[0].full_url.endswith(f"/repos/USACE-WaterManagement/{office.lower()}-wm-cwbi-jobs/contents/python/requirements.txt?ref=cwbi-dev")
 
 
 def test_dependencies_requires_batch_job_office_access(client):
