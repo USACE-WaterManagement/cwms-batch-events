@@ -20,4 +20,5 @@ test("queue admin view shows office pressure and cancellation confirmation", asy
   await page.getByRole("button", { name: "Cancel run", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Cancel this job run" })).toBeVisible();
   await expect(page.getByText(/A running job will receive a stop request/)).toBeVisible();
+  await page.getByRole("button", { name: "Keep running", exact: true }).click();
 });

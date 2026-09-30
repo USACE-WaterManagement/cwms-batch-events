@@ -186,6 +186,7 @@ class JobRecord(ExecutionRecord):
     schedule_timezone: str | None = None
     schedule_author: str | None = None
     dispatch_claimed_at: datetime | None = None
+    cancellation_requested_at: datetime | None = None
 
     @field_serializer("username")
     def public_username(self, value: str) -> str:

@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useAuth } from "@usace-watermanagement/groundwork-water";
 import { UsaceBox } from "@usace/groundwork";
@@ -18,6 +19,7 @@ type QueueJob = {
   externalJobId?: string | null;
   batchStatus?: string | null;
   batchStatusReason?: string | null;
+  cancellationRequestedAt?: string | null;
 };
 type QueueOffice = {
   office: string;
@@ -39,11 +41,48 @@ type QueueSummary = {
   offices: QueueOffice[];
 };
 
+type AuditRow = {
+  id: number;
+  requestedBy: string;
+  action: string;
+  previousStatus: string;
+  resultingStatus: string;
+  reason: string;
+  createdTime: string;
+};
+
+function ControlAudit({ jobId, token }: { jobId: string; token?: string }) {
+  const [open, setOpen] = useState(false);
+  const audit = useQuery<AuditRow[]>({
+    queryKey: ["jobControlAudit", jobId],
+    enabled: open,
+    queryFn: async () => (await fetchWithAuth(`/api/admin/queues/${jobId}/audit`, {}, token)).json(),
+  });
+  return <details onToggle={event => setOpen(event.currentTarget.open)}>
+    <summary className="cursor-pointer text-sm text-slate-700">View control audit</summary>
+    {audit.isPending && <p className="mt-2 text-xs text-slate-500">Loading audit…</p>}
+    {audit.isError && <p className="mt-2 text-xs text-red-700">Audit history could not be loaded.</p>}
+    {audit.data && <ul className="mt-2 space-y-1 text-xs text-slate-600">{audit.data.map(row => <li key={row.id}>{new Date(row.createdTime).toLocaleString()} · {row.action} by {row.requestedBy} · {row.previousStatus} → {row.resultingStatus}<br />{row.reason}</li>)}{!audit.data.length && <li>No control actions recorded.</li>}</ul>}
+  </details>;
+}
+
 export default function QueueDashboard() {
   const auth = useAuth();
+  const [office, setOffice] = useState("");
+  const [script, setScript] = useState("");
+  const [state, setState] = useState("");
+  const [minutes, setMinutes] = useState("1440");
   const query = useQuery<QueueSummary>({
-    queryKey: ["adminQueues"],
-    queryFn: async () => (await fetchWithAuth("/api/admin/queues", {}, auth.token)).json(),
+    queryKey: ["adminQueues", office, script, state, minutes],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (office) params.set("office", office);
+      if (script) params.set("script", script);
+      if (state) params.set("state", state);
+      params.set("minutes", minutes);
+      const suffix = params.toString();
+      return (await fetchWithAuth(`/api/admin/queues?${suffix}`, {}, auth.token)).json();
+    },
     refetchInterval: 30000,
   });
   if (query.isPending) return <LoadingRows label="Loading queue status" />;
@@ -57,12 +96,21 @@ export default function QueueDashboard() {
     </div>
     {!data.queueAvailable && <p role="status" className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">{data.queueWarning}</p>}
     <div className="grid gap-3 sm:grid-cols-2"><div className="rounded-lg border border-slate-200 bg-white p-4"><p className="text-sm text-slate-500">SQS messages available</p><p className="mt-1 text-2xl font-bold">{data.approximateMessagesAvailable ?? "—"}</p></div><div className="rounded-lg border border-slate-200 bg-white p-4"><p className="text-sm text-slate-500">SQS messages in flight</p><p className="mt-1 text-2xl font-bold">{data.approximateMessagesInFlight ?? "—"}</p></div></div>
+    <UsaceBox title="Filter active jobs">
+      <div className="grid gap-3 md:grid-cols-4">
+        <label className="text-sm">Office<input value={office} onChange={event => setOffice(event.target.value.toUpperCase())} className="mt-1 w-full rounded border p-2" placeholder="All offices" /></label>
+        <label className="text-sm">Script<input value={script} onChange={event => setScript(event.target.value)} className="mt-1 w-full rounded border p-2" placeholder="Name contains…" /></label>
+        <label className="text-sm">State<select value={state} onChange={event => setState(event.target.value)} className="mt-1 w-full rounded border p-2"><option value="">All active states</option><option value="Pending">Pending</option><option value="Running">Running</option><option value="Cancelling">Cancelling</option><option value="Dispatch unknown">Dispatch unknown</option></select></label>
+        <label className="text-sm">Created within<select value={minutes} onChange={event => setMinutes(event.target.value)} className="mt-1 w-full rounded border p-2"><option value="60">Last hour</option><option value="1440">Last 24 hours</option><option value="10080">Last 7 days</option></select></label>
+      </div>
+      <p className="mt-3 text-xs text-slate-600">Filters apply to the active-job list. Office totals remain visible for cross-office pressure monitoring.</p>
+    </UsaceBox>
     <UsaceBox title="Office queue status">
       <p className="mb-4 text-sm text-slate-600">Submission counts are stored application records from the last minute. They show activity against the configured submissions-per-minute policy, not a shared AWS concurrency limit.</p>
       <div className="overflow-x-auto"><table className="w-full min-w-[52rem] text-left text-sm"><caption className="sr-only">Queue and submission status by office</caption><thead className="border-b bg-slate-50 text-slate-600"><tr>{["Office", "Queued", "Running", "Stopping", "Unknown", "Submissions/min", "Oldest queued"].map(label => <th key={label} className="p-3">{label}</th>)}</tr></thead><tbody>{data.offices.map(office => <tr key={office.office} className="border-b border-slate-100"><th className="p-3 text-left">{office.office}</th><td className="p-3">{office.queued}</td><td className="p-3">{office.running}</td><td className="p-3">{office.cancelling}</td><td className="p-3">{office.dispatchUnknown}</td><td className="p-3">{office.submissionsLastMinute} / {office.submissionLimitPerMinute}</td><td className="p-3">{office.oldestQueuedAt ? new Date(office.oldestQueuedAt).toLocaleString() : "—"}</td></tr>)}</tbody></table>{!data.offices.length && <p className="p-4 text-slate-500">No office queue records are available.</p>}</div>
     </UsaceBox>
     <UsaceBox title="Active jobs">
-      <div className="space-y-3">{jobs.map(job => <div key={job.id} className="flex flex-wrap items-center justify-between gap-3 rounded border border-slate-200 p-3"><div className="min-w-0"><p className="font-semibold">{job.office} · {job.scriptName}</p><p className="text-sm text-slate-600">{job.jobStatus} · submitted by {job.username} · {new Date(job.createdTime).toLocaleString()}</p>{job.batchStatusReason && <p className="text-xs text-slate-600">{job.batchStatusReason}</p>}</div><div className="flex flex-wrap items-center gap-2"><CancelJobButton job={job} /><Link to="/jobs/$jobId" params={{ jobId: job.id }} className="action-link">Open job</Link></div></div>)}{!jobs.length && <p className="text-slate-500">No queued or running jobs.</p>}</div>
+      <div className="space-y-3">{jobs.map(job => <div key={job.id} className="flex flex-wrap items-center justify-between gap-3 rounded border border-slate-200 p-3"><div className="min-w-0"><p className="font-semibold">{job.office} · {job.scriptName}</p><p className="text-sm text-slate-600">{job.jobStatus} · submitted by {job.username} · {new Date(job.createdTime).toLocaleString()}</p>{job.batchStatusReason && <p className="text-xs text-slate-600">{job.batchStatusReason}</p>}<ControlAudit jobId={job.id} token={auth.token} /></div><div className="flex flex-wrap items-center gap-2"><CancelJobButton job={job} /><Link to="/jobs/$jobId" params={{ jobId: job.id }} className="action-link">Open job</Link></div></div>)}{!jobs.length && <p className="text-slate-500">No queued or running jobs.</p>}</div>
     </UsaceBox>
   </div>;
 }

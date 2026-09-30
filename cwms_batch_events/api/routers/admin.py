@@ -246,6 +246,7 @@ class QueueJob(CamelModel):
     external_job_id: str | None = None
     batch_status: str | None = None
     batch_status_reason: str | None = None
+    cancellation_requested_at: datetime | None = None
 
 
 class QueueOffice(CamelModel):
@@ -267,6 +268,19 @@ class QueueSummary(CamelModel):
     approximate_messages_available: int | None = None
     approximate_messages_in_flight: int | None = None
     offices: list[QueueOffice]
+
+
+class ControlAuditRow(CamelModel):
+    id: int
+    job_id: UUID
+    office: str
+    requested_by: str
+    action: str
+    previous_status: str
+    resulting_status: str
+    reason: str
+    response: dict
+    created_time: datetime
 
 
 TASK_SORT_COLUMNS = {
@@ -357,6 +371,10 @@ def queue_attributes() -> tuple[bool, str | None, int | None, int | None]:
 @router.get("/queues", response_model=QueueSummary)
 def queues(
     request: Request,
+    office: str | None = Query(None, min_length=2, max_length=10),
+    script: str | None = Query(None, min_length=1, max_length=200),
+    state: str | None = Query(None, pattern="^(Pending|Running|Cancelling|Dispatch unknown)$"),
+    minutes: int = Query(1440, ge=1, le=10080),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db_session),
 ) -> QueueSummary:
@@ -379,13 +397,25 @@ def queues(
         FROM known_offices LEFT JOIN jobs USING (office)
         GROUP BY office ORDER BY office
     """), {"minute_ago": now - timedelta(minutes=1)}).mappings().all()
-    active_rows = db.execute(text("""
+    job_filters = ["job_status IN ('Pending', 'Running', 'Cancelling', 'Dispatch unknown')",
+                   "created_time >= :jobs_since"]
+    job_params: dict[str, object] = {"jobs_since": now - timedelta(minutes=minutes)}
+    if office:
+        job_filters.append("office = :jobs_office")
+        job_params["jobs_office"] = office.upper()
+    if script:
+        job_filters.append("script_name ILIKE :jobs_script")
+        job_params["jobs_script"] = f"%{script}%"
+    if state:
+        job_filters.append("job_status = :jobs_state")
+        job_params["jobs_state"] = state
+    active_rows = db.execute(text(f"""
         SELECT id, office, script_name, username, job_status, created_time, run_time,
-            external_job_id, batch_status, batch_status_reason
+            external_job_id, batch_status, batch_status_reason, cancellation_requested_at
         FROM jobs
-        WHERE job_status IN ('Pending', 'Running', 'Cancelling', 'Dispatch unknown')
+        WHERE {' AND '.join(job_filters)}
         ORDER BY created_time, id LIMIT 500
-    """)).mappings().all()
+    """), job_params).mappings().all()
     by_office: dict[str, list[QueueJob]] = {}
     for row in active_rows:
         by_office.setdefault(row["office"], []).append(QueueJob(**row))
@@ -403,3 +433,21 @@ def queues(
     return QueueSummary(as_of=now, queue_available=available, queue_warning=warning,
                         approximate_messages_available=messages,
                         approximate_messages_in_flight=in_flight, offices=offices)
+
+
+@router.get("/queues/{job_id}/audit", response_model=list[ControlAuditRow])
+def queue_job_audit(
+    job_id: UUID,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> list[ControlAuditRow]:
+    require_hq_rate_limit_admin(user)
+    rows = db.execute(text("""
+        SELECT id, job_id, office, requested_by, action, previous_status,
+            resulting_status, reason, response, created_time
+        FROM job_control_audit
+        WHERE job_id=:job_id
+        ORDER BY created_time DESC, id DESC
+        LIMIT 100
+    """), {"job_id": job_id}).mappings().all()
+    return [ControlAuditRow(**row) for row in rows]

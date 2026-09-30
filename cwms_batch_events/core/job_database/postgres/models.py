@@ -79,6 +79,7 @@ class JobModel(Base):
     batch_status_reason: Mapped[str | None]
     batch_details_time: Mapped[datetime.datetime | None]
     batch_checked_at: Mapped[datetime.datetime | None]
+    cancellation_requested_at: Mapped[datetime.datetime | None]
 
     script: Mapped["ScriptModel | None"] = relationship("ScriptModel", lazy="selectin")
     job_runner: Mapped["JobRunnerModel"] = relationship("JobRunnerModel", lazy="joined")

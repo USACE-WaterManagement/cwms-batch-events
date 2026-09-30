@@ -7,6 +7,7 @@ function taskLabel(name: string) {
   if (name === "schedules") return "Schedule check";
   if (name === "queue_delivery") return "Queue delivery";
   if (name === "dispatch_watchdog") return "Dispatch watchdog";
+  if (name === "cancellation_reconciliation") return "Cancellation reconciliation";
   return name;
 }
 

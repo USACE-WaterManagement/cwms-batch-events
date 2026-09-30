@@ -11,6 +11,7 @@ def database(job_status=JobStatus.PENDING, external_job_id=None, dispatch_claime
     job = SimpleNamespace(
         id="job-id", office="SWT", job_status=job_status, external_job_id=external_job_id,
         dispatch_claimed_at=dispatch_claimed_at, end_time=None, batch_status_reason=None,
+        cancellation_requested_at=None,
         job_runner=SimpleNamespace(slug=runner),
     )
     db = PostgresJobDatabase(Mock())

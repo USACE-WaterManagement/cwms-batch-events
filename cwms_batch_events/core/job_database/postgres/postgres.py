@@ -133,6 +133,7 @@ class PostgresJobDatabase:
         action = "cancel" if status_before == JobStatus.PENDING else "terminate"
         job._control_previous_status = status_before
         job.job_status = JobStatus.CANCELLING
+        job.cancellation_requested_at = datetime.now(timezone.utc)
         job.batch_status_reason = reason
         self._record_control_audit(job, actor, action, JobStatus.CANCELLING, reason)
         self.db.commit()
@@ -149,6 +150,7 @@ class PostgresJobDatabase:
             self.db.commit()
             return {"action": "already_finished", "status": job.job_status, "message": "The job changed state before it could be stopped."}
         job.job_status = JobStatus.CANCELLED
+        job.cancellation_requested_at = None
         job.end_time = datetime.now(timezone.utc)
         job.batch_status_reason = reason
         self._record_control_audit(job, actor, "terminate", JobStatus.CANCELLED, reason)
@@ -160,6 +162,7 @@ class PostgresJobDatabase:
         if job.job_status == JobStatus.CANCELLING:
             previous = getattr(job, "_control_previous_status", JobStatus.RUNNING)
             job.job_status = previous
+            job.cancellation_requested_at = None
             job.batch_status_reason = reason
             self._record_control_audit(job, actor, "cancel", previous, reason, {"error": reason})
         self.db.commit()
@@ -218,6 +221,7 @@ class PostgresJobDatabase:
         if incoming:
             if job.job_status == JobStatus.CANCELLING and incoming == JobStatus.FAILED:
                 job.job_status = JobStatus.CANCELLED
+                job.cancellation_requested_at = None
                 job.batch_status_reason = "Cancellation confirmed by AWS Batch."
             else:
                 job.job_status = incoming
@@ -504,6 +508,7 @@ class PostgresJobDatabase:
             return
         if previous_status == JobStatus.CANCELLING and status == JobStatus.FAILED:
             status = JobStatus.CANCELLED
+            job.cancellation_requested_at = None
             job.batch_status_reason = "Cancellation confirmed by the job runner."
 
         now = datetime.now(timezone.utc)
