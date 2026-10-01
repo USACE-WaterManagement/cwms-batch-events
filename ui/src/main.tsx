@@ -1,7 +1,8 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "./utils/queryClient";
 import { LinkProvider } from "@usace/groundwork";
 import {
   AuthProvider,
@@ -10,7 +11,8 @@ import {
 import createMockAuthMethod from "./features/auth/mockAuthMethod.ts";
 import { Link, RouterProvider, createRouter } from "@tanstack/react-router";
 import { AppErrorBoundary } from "./shared/components/AppErrorBoundary.tsx";
-import { Toaster } from "react-hot-toast";
+import ErrorToasts from "./components/ErrorToasts";
+import ConnectivityStatus from "./shared/components/ConnectivityStatus";
 
 // TanStack Router setup
 import { routeTree } from "./routeTree.gen";
@@ -78,7 +80,11 @@ const authMethod = (() => {
   }
 })();
 
-const queryClient = new QueryClient();
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`);
+  });
+}
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -87,10 +93,11 @@ createRoot(document.getElementById("root")!).render(
         <AuthProvider method={authMethod}>
           <LinkProvider component={Link} hrefMap="to">
             <RouterProvider router={router} />
+            <ErrorToasts />
+            <ConnectivityStatus showBanner={false} />
           </LinkProvider>
         </AuthProvider>
       </QueryClientProvider>
     </AppErrorBoundary>
-    <Toaster position="top-right" />
   </StrictMode>,
 );
