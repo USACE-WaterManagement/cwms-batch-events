@@ -15,7 +15,9 @@ from cwms_batch_events.core.job_logger.cloudwatch import CloudWatchJobLogger
 from cwms_batch_events.core.job_logger.s3 import S3JobLogger
 from cwms_batch_events.core.notification_queue import NotificationQueue
 from cwms_batch_events.core.queue import JobQueue
-from cwms_batch_events.core.settings import settings
+from cwms_batch_events.core.settings import get_settings
+
+settings = get_settings()
 
 logger = logging.getLogger(__name__)
 

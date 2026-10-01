@@ -21,6 +21,8 @@ class LocalJobDispatcher:
         self.notification_queue = notification_queue
 
     def dispatch_job(self, message: JobMessage):
+        if message.requested_by.source == "scheduler" and not self.db.claim_scheduled_dispatch(message.job_id):
+            return
         if message.runner_type == "docker-local":
             runner = LocalExecutor(self.db, self.logger, self.notification_queue)
         else:

@@ -36,6 +36,8 @@ class NotificationQueue:
             "sqs",
             endpoint_url=settings.sqs_endpoint_url,
             region_name=settings.aws_default_region,
+            aws_access_key_id=settings.aws_access_key_id,
+            aws_secret_access_key=settings.aws_secret_access_key,
         )
         self.queue = self.sqs.get_queue_by_name(
             QueueName=settings.notification_queue_name

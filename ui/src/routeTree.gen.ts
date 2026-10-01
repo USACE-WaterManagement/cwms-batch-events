@@ -9,30 +9,33 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SubmitRouteImport } from './routes/submit'
-import { Route as SetupRouteImport } from './routes/setup'
-import { Route as ScriptsManagerRouteImport } from './routes/scripts-manager'
-import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AboutRouteImport } from './routes/about'
+import { Route as AdminRouteImport } from './routes/admin'
+import { Route as DependenciesRouteImport } from './routes/dependencies'
+import { Route as LogSearchRouteImport } from './routes/log-search'
+import { Route as ScriptsManagerRouteImport } from './routes/scripts-manager'
+import { Route as SetupRouteImport } from './routes/setup'
+import { Route as SubmitRouteImport } from './routes/submit'
+import { Route as AboutControlsRouteImport } from './routes/about_.controls'
+import { Route as AboutOnboardingRouteImport } from './routes/about_.onboarding'
+import { Route as AboutRateLimitsRouteImport } from './routes/about_.rate-limits'
+import { Route as AboutScriptFilesRouteImport } from './routes/about_.script-files'
+import { Route as AboutVersionRouteImport } from './routes/about_.version'
+import { Route as AdminOperationsRouteImport } from './routes/admin_.operations'
+import { Route as AdminQueuesRouteImport } from './routes/admin_.queues'
+import { Route as AdminRateLimitsRouteImport } from './routes/admin_.rate-limits'
+import { Route as AdminSchedulerRouteImport } from './routes/admin_.scheduler'
+import { Route as AdminUsageRouteImport } from './routes/admin_.usage'
+import { Route as HelpOnboardingRouteImport } from './routes/help_.onboarding'
+import { Route as HelpScriptFilesRouteImport } from './routes/help_.script-files'
+import { Route as HelpScriptVersionsRouteImport } from './routes/help_.script-versions'
 import { Route as JobsIndexRouteImport } from './routes/jobs/index'
 import { Route as JobsJobIdRouteImport } from './routes/jobs/$jobId'
-import { Route as AboutVersionRouteImport } from './routes/about_.version'
-import { Route as AboutOnboardingRouteImport } from './routes/about_.onboarding'
-import { Route as AboutControlsRouteImport } from './routes/about_.controls'
 
-const SubmitRoute = SubmitRouteImport.update({
-  id: '/submit',
-  path: '/submit',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SetupRoute = SetupRouteImport.update({
-  id: '/setup',
-  path: '/setup',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ScriptsManagerRoute = ScriptsManagerRouteImport.update({
-  id: '/scripts-manager',
-  path: '/scripts-manager',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AboutRoute = AboutRouteImport.update({
@@ -40,9 +43,105 @@ const AboutRoute = AboutRouteImport.update({
   path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/admin.lazy').then((d) => d.Route))
+const DependenciesRoute = DependenciesRouteImport.update({
+  id: '/dependencies',
+  path: '/dependencies',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LogSearchRoute = LogSearchRouteImport.update({
+  id: '/log-search',
+  path: '/log-search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ScriptsManagerRoute = ScriptsManagerRouteImport.update({
+  id: '/scripts-manager',
+  path: '/scripts-manager',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SetupRoute = SetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SubmitRoute = SubmitRouteImport.update({
+  id: '/submit',
+  path: '/submit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutControlsRoute = AboutControlsRouteImport.update({
+  id: '/about_/controls',
+  path: '/about/controls',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutOnboardingRoute = AboutOnboardingRouteImport.update({
+  id: '/about_/onboarding',
+  path: '/about/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutRateLimitsRoute = AboutRateLimitsRouteImport.update({
+  id: '/about_/rate-limits',
+  path: '/about/rate-limits',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutScriptFilesRoute = AboutScriptFilesRouteImport.update({
+  id: '/about_/script-files',
+  path: '/about/script-files',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutVersionRoute = AboutVersionRouteImport.update({
+  id: '/about_/version',
+  path: '/about/version',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminOperationsRoute = AdminOperationsRouteImport.update({
+  id: '/admin_/operations',
+  path: '/admin/operations',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() =>
+  import('./routes/admin_.operations.lazy').then((d) => d.Route),
+)
+const AdminQueuesRoute = AdminQueuesRouteImport.update({
+  id: '/admin_/queues',
+  path: '/admin/queues',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/admin_.queues.lazy').then((d) => d.Route))
+const AdminRateLimitsRoute = AdminRateLimitsRouteImport.update({
+  id: '/admin_/rate-limits',
+  path: '/admin/rate-limits',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() =>
+  import('./routes/admin_.rate-limits.lazy').then((d) => d.Route),
+)
+const AdminSchedulerRoute = AdminSchedulerRouteImport.update({
+  id: '/admin_/scheduler',
+  path: '/admin/scheduler',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() =>
+  import('./routes/admin_.scheduler.lazy').then((d) => d.Route),
+)
+const AdminUsageRoute = AdminUsageRouteImport.update({
+  id: '/admin_/usage',
+  path: '/admin/usage',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/admin_.usage.lazy').then((d) => d.Route))
+const HelpOnboardingRoute = HelpOnboardingRouteImport.update({
+  id: '/help_/onboarding',
+  path: '/help/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HelpScriptFilesRoute = HelpScriptFilesRouteImport.update({
+  id: '/help_/script-files',
+  path: '/help/script-files',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HelpScriptVersionsRoute = HelpScriptVersionsRouteImport.update({
+  id: '/help_/script-versions',
+  path: '/help/script-versions',
   getParentRoute: () => rootRouteImport,
 } as any)
 const JobsIndexRoute = JobsIndexRouteImport.update({
@@ -55,43 +154,54 @@ const JobsJobIdRoute = JobsJobIdRouteImport.update({
   path: '/jobs/$jobId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AboutVersionRoute = AboutVersionRouteImport.update({
-  id: '/about_/version',
-  path: '/about/version',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AboutOnboardingRoute = AboutOnboardingRouteImport.update({
-  id: '/about_/onboarding',
-  path: '/about/onboarding',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AboutControlsRoute = AboutControlsRouteImport.update({
-  id: '/about_/controls',
-  path: '/about/controls',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/admin': typeof AdminRoute
+  '/dependencies': typeof DependenciesRoute
+  '/log-search': typeof LogSearchRoute
   '/scripts-manager': typeof ScriptsManagerRoute
   '/setup': typeof SetupRoute
   '/submit': typeof SubmitRoute
   '/about/controls': typeof AboutControlsRoute
   '/about/onboarding': typeof AboutOnboardingRoute
+  '/about/rate-limits': typeof AboutRateLimitsRoute
+  '/about/script-files': typeof AboutScriptFilesRoute
   '/about/version': typeof AboutVersionRoute
+  '/admin/operations': typeof AdminOperationsRoute
+  '/admin/queues': typeof AdminQueuesRoute
+  '/admin/rate-limits': typeof AdminRateLimitsRoute
+  '/admin/scheduler': typeof AdminSchedulerRoute
+  '/admin/usage': typeof AdminUsageRoute
+  '/help/onboarding': typeof HelpOnboardingRoute
+  '/help/script-files': typeof HelpScriptFilesRoute
+  '/help/script-versions': typeof HelpScriptVersionsRoute
   '/jobs/$jobId': typeof JobsJobIdRoute
   '/jobs/': typeof JobsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/admin': typeof AdminRoute
+  '/dependencies': typeof DependenciesRoute
+  '/log-search': typeof LogSearchRoute
   '/scripts-manager': typeof ScriptsManagerRoute
   '/setup': typeof SetupRoute
   '/submit': typeof SubmitRoute
   '/about/controls': typeof AboutControlsRoute
   '/about/onboarding': typeof AboutOnboardingRoute
+  '/about/rate-limits': typeof AboutRateLimitsRoute
+  '/about/script-files': typeof AboutScriptFilesRoute
   '/about/version': typeof AboutVersionRoute
+  '/admin/operations': typeof AdminOperationsRoute
+  '/admin/queues': typeof AdminQueuesRoute
+  '/admin/rate-limits': typeof AdminRateLimitsRoute
+  '/admin/scheduler': typeof AdminSchedulerRoute
+  '/admin/usage': typeof AdminUsageRoute
+  '/help/onboarding': typeof HelpOnboardingRoute
+  '/help/script-files': typeof HelpScriptFilesRoute
+  '/help/script-versions': typeof HelpScriptVersionsRoute
   '/jobs/$jobId': typeof JobsJobIdRoute
   '/jobs': typeof JobsIndexRoute
 }
@@ -99,12 +209,25 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/admin': typeof AdminRoute
+  '/dependencies': typeof DependenciesRoute
+  '/log-search': typeof LogSearchRoute
   '/scripts-manager': typeof ScriptsManagerRoute
   '/setup': typeof SetupRoute
   '/submit': typeof SubmitRoute
   '/about_/controls': typeof AboutControlsRoute
   '/about_/onboarding': typeof AboutOnboardingRoute
+  '/about_/rate-limits': typeof AboutRateLimitsRoute
+  '/about_/script-files': typeof AboutScriptFilesRoute
   '/about_/version': typeof AboutVersionRoute
+  '/admin_/operations': typeof AdminOperationsRoute
+  '/admin_/queues': typeof AdminQueuesRoute
+  '/admin_/rate-limits': typeof AdminRateLimitsRoute
+  '/admin_/scheduler': typeof AdminSchedulerRoute
+  '/admin_/usage': typeof AdminUsageRoute
+  '/help_/onboarding': typeof HelpOnboardingRoute
+  '/help_/script-files': typeof HelpScriptFilesRoute
+  '/help_/script-versions': typeof HelpScriptVersionsRoute
   '/jobs/$jobId': typeof JobsJobIdRoute
   '/jobs/': typeof JobsIndexRoute
 }
@@ -113,36 +236,75 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
+    | '/admin'
+    | '/dependencies'
+    | '/log-search'
     | '/scripts-manager'
     | '/setup'
     | '/submit'
     | '/about/controls'
     | '/about/onboarding'
+    | '/about/rate-limits'
+    | '/about/script-files'
     | '/about/version'
+    | '/admin/operations'
+    | '/admin/queues'
+    | '/admin/rate-limits'
+    | '/admin/scheduler'
+    | '/admin/usage'
+    | '/help/onboarding'
+    | '/help/script-files'
+    | '/help/script-versions'
     | '/jobs/$jobId'
     | '/jobs/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/about'
+    | '/admin'
+    | '/dependencies'
+    | '/log-search'
     | '/scripts-manager'
     | '/setup'
     | '/submit'
     | '/about/controls'
     | '/about/onboarding'
+    | '/about/rate-limits'
+    | '/about/script-files'
     | '/about/version'
+    | '/admin/operations'
+    | '/admin/queues'
+    | '/admin/rate-limits'
+    | '/admin/scheduler'
+    | '/admin/usage'
+    | '/help/onboarding'
+    | '/help/script-files'
+    | '/help/script-versions'
     | '/jobs/$jobId'
     | '/jobs'
   id:
     | '__root__'
     | '/'
     | '/about'
+    | '/admin'
+    | '/dependencies'
+    | '/log-search'
     | '/scripts-manager'
     | '/setup'
     | '/submit'
     | '/about_/controls'
     | '/about_/onboarding'
+    | '/about_/rate-limits'
+    | '/about_/script-files'
     | '/about_/version'
+    | '/admin_/operations'
+    | '/admin_/queues'
+    | '/admin_/rate-limits'
+    | '/admin_/scheduler'
+    | '/admin_/usage'
+    | '/help_/onboarding'
+    | '/help_/script-files'
+    | '/help_/script-versions'
     | '/jobs/$jobId'
     | '/jobs/'
   fileRoutesById: FileRoutesById
@@ -150,37 +312,36 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  AdminRoute: typeof AdminRoute
+  DependenciesRoute: typeof DependenciesRoute
+  LogSearchRoute: typeof LogSearchRoute
   ScriptsManagerRoute: typeof ScriptsManagerRoute
   SetupRoute: typeof SetupRoute
   SubmitRoute: typeof SubmitRoute
   AboutControlsRoute: typeof AboutControlsRoute
   AboutOnboardingRoute: typeof AboutOnboardingRoute
+  AboutRateLimitsRoute: typeof AboutRateLimitsRoute
+  AboutScriptFilesRoute: typeof AboutScriptFilesRoute
   AboutVersionRoute: typeof AboutVersionRoute
+  AdminOperationsRoute: typeof AdminOperationsRoute
+  AdminQueuesRoute: typeof AdminQueuesRoute
+  AdminRateLimitsRoute: typeof AdminRateLimitsRoute
+  AdminSchedulerRoute: typeof AdminSchedulerRoute
+  AdminUsageRoute: typeof AdminUsageRoute
+  HelpOnboardingRoute: typeof HelpOnboardingRoute
+  HelpScriptFilesRoute: typeof HelpScriptFilesRoute
+  HelpScriptVersionsRoute: typeof HelpScriptVersionsRoute
   JobsJobIdRoute: typeof JobsJobIdRoute
   JobsIndexRoute: typeof JobsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/submit': {
-      id: '/submit'
-      path: '/submit'
-      fullPath: '/submit'
-      preLoaderRoute: typeof SubmitRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/setup': {
-      id: '/setup'
-      path: '/setup'
-      fullPath: '/setup'
-      preLoaderRoute: typeof SetupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/scripts-manager': {
-      id: '/scripts-manager'
-      path: '/scripts-manager'
-      fullPath: '/scripts-manager'
-      preLoaderRoute: typeof ScriptsManagerRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/about': {
@@ -190,11 +351,137 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dependencies': {
+      id: '/dependencies'
+      path: '/dependencies'
+      fullPath: '/dependencies'
+      preLoaderRoute: typeof DependenciesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/log-search': {
+      id: '/log-search'
+      path: '/log-search'
+      fullPath: '/log-search'
+      preLoaderRoute: typeof LogSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/scripts-manager': {
+      id: '/scripts-manager'
+      path: '/scripts-manager'
+      fullPath: '/scripts-manager'
+      preLoaderRoute: typeof ScriptsManagerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/setup': {
+      id: '/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof SetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/submit': {
+      id: '/submit'
+      path: '/submit'
+      fullPath: '/submit'
+      preLoaderRoute: typeof SubmitRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about_/controls': {
+      id: '/about_/controls'
+      path: '/about/controls'
+      fullPath: '/about/controls'
+      preLoaderRoute: typeof AboutControlsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about_/onboarding': {
+      id: '/about_/onboarding'
+      path: '/about/onboarding'
+      fullPath: '/about/onboarding'
+      preLoaderRoute: typeof AboutOnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about_/rate-limits': {
+      id: '/about_/rate-limits'
+      path: '/about/rate-limits'
+      fullPath: '/about/rate-limits'
+      preLoaderRoute: typeof AboutRateLimitsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about_/script-files': {
+      id: '/about_/script-files'
+      path: '/about/script-files'
+      fullPath: '/about/script-files'
+      preLoaderRoute: typeof AboutScriptFilesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about_/version': {
+      id: '/about_/version'
+      path: '/about/version'
+      fullPath: '/about/version'
+      preLoaderRoute: typeof AboutVersionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin_/operations': {
+      id: '/admin_/operations'
+      path: '/admin/operations'
+      fullPath: '/admin/operations'
+      preLoaderRoute: typeof AdminOperationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin_/queues': {
+      id: '/admin_/queues'
+      path: '/admin/queues'
+      fullPath: '/admin/queues'
+      preLoaderRoute: typeof AdminQueuesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin_/rate-limits': {
+      id: '/admin_/rate-limits'
+      path: '/admin/rate-limits'
+      fullPath: '/admin/rate-limits'
+      preLoaderRoute: typeof AdminRateLimitsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin_/scheduler': {
+      id: '/admin_/scheduler'
+      path: '/admin/scheduler'
+      fullPath: '/admin/scheduler'
+      preLoaderRoute: typeof AdminSchedulerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin_/usage': {
+      id: '/admin_/usage'
+      path: '/admin/usage'
+      fullPath: '/admin/usage'
+      preLoaderRoute: typeof AdminUsageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/help_/onboarding': {
+      id: '/help_/onboarding'
+      path: '/help/onboarding'
+      fullPath: '/help/onboarding'
+      preLoaderRoute: typeof HelpOnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/help_/script-files': {
+      id: '/help_/script-files'
+      path: '/help/script-files'
+      fullPath: '/help/script-files'
+      preLoaderRoute: typeof HelpScriptFilesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/help_/script-versions': {
+      id: '/help_/script-versions'
+      path: '/help/script-versions'
+      fullPath: '/help/script-versions'
+      preLoaderRoute: typeof HelpScriptVersionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/jobs/': {
@@ -211,39 +498,30 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof JobsJobIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/about_/version': {
-      id: '/about_/version'
-      path: '/about/version'
-      fullPath: '/about/version'
-      preLoaderRoute: typeof AboutVersionRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/about_/onboarding': {
-      id: '/about_/onboarding'
-      path: '/about/onboarding'
-      fullPath: '/about/onboarding'
-      preLoaderRoute: typeof AboutOnboardingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/about_/controls': {
-      id: '/about_/controls'
-      path: '/about/controls'
-      fullPath: '/about/controls'
-      preLoaderRoute: typeof AboutControlsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  AdminRoute: AdminRoute,
+  DependenciesRoute: DependenciesRoute,
+  LogSearchRoute: LogSearchRoute,
   ScriptsManagerRoute: ScriptsManagerRoute,
-  SetupRoute: SetupRoute,
   SubmitRoute: SubmitRoute,
   AboutControlsRoute: AboutControlsRoute,
   AboutOnboardingRoute: AboutOnboardingRoute,
+  AboutRateLimitsRoute: AboutRateLimitsRoute,
+  AboutScriptFilesRoute: AboutScriptFilesRoute,
   AboutVersionRoute: AboutVersionRoute,
+  AdminOperationsRoute: AdminOperationsRoute,
+  AdminQueuesRoute: AdminQueuesRoute,
+  AdminRateLimitsRoute: AdminRateLimitsRoute,
+  AdminSchedulerRoute: AdminSchedulerRoute,
+  AdminUsageRoute: AdminUsageRoute,
+  HelpOnboardingRoute: HelpOnboardingRoute,
+  HelpScriptFilesRoute: HelpScriptFilesRoute,
+  HelpScriptVersionsRoute: HelpScriptVersionsRoute,
   JobsJobIdRoute: JobsJobIdRoute,
   JobsIndexRoute: JobsIndexRoute,
 }

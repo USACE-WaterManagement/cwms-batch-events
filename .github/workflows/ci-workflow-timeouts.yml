@@ -1,0 +1,20 @@
+name: CI Workflow Timeout Policy
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/**"
+      - "tools/check_workflow_timeouts.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  timeout-policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check workflow job timeouts
+        run: python tools/check_workflow_timeouts.py

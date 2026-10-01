@@ -4,6 +4,57 @@
  */
 
 export interface paths {
+    "/about/application": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Application Info */
+        get: operations["get_application_info_about_application_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/about/schema": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Schema Info */
+        get: operations["get_schema_info_about_schema_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/job-runners/default": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Default Job Runner */
+        get: operations["get_default_job_runner_job_runners_default_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/jobs": {
         parameters: {
             query?: never;
@@ -56,33 +107,18 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/notifications/templates": {
+    "/jobs/{job_id}/logs/page": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Get Templates */
-        get: operations["get_templates_notifications_templates_get"];
-        put?: never;
-        /** Post Template */
-        post: operations["post_template_notifications_templates_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/notifications/cda-user-lists": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Available Cda User Lists */
-        get: operations["get_available_cda_user_lists_notifications_cda_user_lists_get"];
+        /**
+         * Get Log Page
+         * @description Read a bounded log page. Pass nextCursor to retrieve subsequent output.
+         */
+        get: operations["get_log_page_jobs__job_id__logs_page_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -91,25 +127,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/notifications/templates/{template_id}": {
+    "/repository-status": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
-        /** Put Template */
-        put: operations["put_template_notifications_templates__template_id__put"];
+        /** Repository Status */
+        get: operations["repository_status_repository_status_get"];
+        put?: never;
         post?: never;
-        /** Delete Template */
-        delete: operations["delete_template_notifications_templates__template_id__delete"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/notifications/templates/{template_id}/preview": {
+    "/repository-files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Repository Files */
+        get: operations["repository_files_repository_files_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scripts/{script_id}/upgrade": {
         parameters: {
             query?: never;
             header?: never;
@@ -118,45 +170,9 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Preview Template */
-        post: operations["preview_template_notifications_templates__template_id__preview_post"];
+        /** Upgrade Script Configuration */
+        post: operations["upgrade_script_configuration_scripts__script_id__upgrade_post"];
         delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/notifications/rules": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Rules */
-        get: operations["get_rules_notifications_rules_get"];
-        put?: never;
-        /** Post Rule */
-        post: operations["post_rule_notifications_rules_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/notifications/rules/{rule_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /** Put Rule */
-        put: operations["put_rule_notifications_rules__rule_id__put"];
-        post?: never;
-        /** Delete Rule */
-        delete: operations["delete_rule_notifications_rules__rule_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -198,6 +214,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/scripts/scheduled": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Scheduled Scripts */
+        get: operations["get_scheduled_scripts_scripts_scheduled_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/scripts/catalog": {
         parameters: {
             query?: never;
@@ -207,6 +240,65 @@ export interface paths {
         };
         /** Get User Scripts Catalog */
         get: operations["get_user_scripts_catalog_scripts_catalog_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/server-logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Server Logs
+         * @description Read up to 200 events, oldest first, within a maximum 24-hour window.
+         *
+         *     Pass nextCursor and the returned startTime/endTime for the next page,
+         *     including after empty pages. Only the server-configured group/prefix is read.
+         *     Named levels filter the canonical JSON level field in CloudWatch before
+         *     pagination. ALL includes historical text. UNKNOWN scans each bounded page.
+         */
+        get: operations["get_server_logs_server_logs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/me/offices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Offices */
+        get: operations["get_offices_users_me_offices_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/me/system-admin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get System Admin */
+        get: operations["get_system_admin_users_me_system_admin_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -232,23 +324,244 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/scripts/{script_id}/schedule-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Script Schedule Status */
+        get: operations["script_schedule_status_scripts__script_id__schedule_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scheduler/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Scheduler Status */
+        get: operations["scheduler_status_scheduler_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Operations */
+        get: operations["operations_admin_operations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/repository-releases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Releases */
+        get: operations["releases_repository_releases_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/repository-releases/{release_id}/jars": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Jars */
+        get: operations["jars_repository_releases__release_id__jars_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/release-jars/jobs/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download */
+        get: operations["download_release_jars_jobs__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** CdaUserListRead */
-        CdaUserListRead: {
-            /** Office-Id */
-            "office-id": string;
-            /** User-List-Id */
-            "user-list-id": string;
-            /** Description */
-            description?: string | null;
+        /** ApplicationInfo */
+        ApplicationInfo: {
+            /** Name */
+            name: string;
+            /** Apiversion */
+            apiVersion: string;
+            /** Environment */
+            environment: string;
+            /** Buildrevision */
+            buildRevision: string;
+            /** Buildtime */
+            buildTime: string | null;
+            /** Authenticationenvironment */
+            authenticationEnvironment: string;
+            /** Jobrunner */
+            jobRunner: string;
+            /** Rootpath */
+            rootPath: string;
+            user: components["schemas"]["UserAccess"];
+        };
+        /** AttentionJob */
+        AttentionJob: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Office */
+            office: string;
+            /** Name */
+            name: string;
+            /** Status */
+            status: string;
+            /** Ageminutes */
+            ageMinutes: number;
+            /** Batchcheckedat */
+            batchCheckedAt: string | null;
+            /** Reason */
+            reason?: string | null;
+        };
+        /** DailyUsage */
+        DailyUsage: {
+            /** Day */
+            day: string;
+            /** Runs */
+            runs: number;
+            /** Failed */
+            failed: number;
+        };
+        /** DefaultJobRunner */
+        DefaultJobRunner: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Slug */
+            slug: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        CdaUserListRead: {
+            "office-id": string;
+            "user-list-id": string;
+            description?: string | null;
+        };
+        NotificationEventType: "job_failed";
+        NotificationTemplateCreate: {
+            office: string;
+            slug: string;
+            subjectTemplate: string;
+            bodyTemplate: string;
+        };
+        NotificationTemplateRead: components["schemas"]["NotificationTemplateCreate"] & {
+            id: string;
+            usageCount: number;
+            createdTime: string;
+            updatedTime: string;
+        };
+        NotificationTemplateUpdate: components["schemas"]["NotificationTemplateCreate"];
+        RenderedNotification: {
+            recipients: string[];
+            subject: string;
+            body: string;
+            data: Record<string, string | null>;
+        };
+        ScriptNotificationRuleCreate: {
+            scriptId: string;
+            eventType: components["schemas"]["NotificationEventType"];
+            templateId: string;
+            cdaUserListId?: string | null;
+            cdaUserListOffice?: string | null;
+            manualRecipients?: string[];
+            active?: boolean;
+        };
+        ScriptNotificationRuleRead: components["schemas"]["ScriptNotificationRuleCreate"] & {
+            id: string;
+            createdTime: string;
+            updatedTime: string;
+        };
+        ScriptNotificationRuleUpdate: components["schemas"]["ScriptNotificationRuleCreate"];
+        /** JobLogPage */
+        JobLogPage: {
+            /** Logs */
+            logs: string;
+            /** Message */
+            message?: string | null;
+            /** Nextcursor */
+            nextCursor?: string | null;
+            /**
+             * Hasmore
+             * @default false
+             */
+            hasMore: boolean;
+            /**
+             * Reset
+             * @default false
+             */
+            reset: boolean;
+            /**
+             * Available
+             * @default true
+             */
+            available: boolean;
+            /**
+             * Supportslive
+             * @default true
+             */
+            supportsLive: boolean;
         };
         /** JobLogs */
         JobLogs: {
@@ -257,6 +570,37 @@ export interface components {
         };
         /** JobRecord */
         JobRecord: {
+            /**
+             * Configversion
+             * @default 1
+             */
+            configVersion: number;
+            /**
+             * Executiontype
+             * @default github_file
+             */
+            executionType: string | null;
+            /**
+             * Runtime
+             * @default python
+             */
+            runtime: string;
+            /** Repopath */
+            repoPath: string;
+            /** Commandargs */
+            commandArgs?: string[];
+            /** Commandplaceholder */
+            commandPlaceholder?: string | null;
+            /** Resourcesize */
+            resourceSize?: "small" | "medium" | "large";
+            /**
+             * Commandmode
+             * @default arguments
+             */
+            commandMode: string;
+            /** Shellcommand */
+            shellCommand?: string | null;
+            releaseJar?: components["schemas"]["ReleaseJar"] | null;
             /**
              * Id
              * Format: uuid
@@ -271,12 +615,24 @@ export interface components {
             jobStatus: components["schemas"]["JobStatus"];
             /** Username */
             username: string;
+            /** Displayname */
+            displayName?: string;
+            /**
+             * Runtrigger
+             * @default unknown
+             * @enum {string}
+             */
+            runTrigger: "manual" | "scheduled" | "unknown";
+            /** Scheduledfor */
+            scheduledFor?: string | null;
+            /** Scheduletimezone */
+            scheduleTimezone?: string | null;
+            /** Scheduleauthor */
+            scheduleAuthor?: string | null;
+            /** Dispatchclaimedat */
+            dispatchClaimedAt?: string | null;
             /** Office */
             office: string;
-            /** Repopath */
-            repoPath: string;
-            /** Executiontype */
-            executionType: string | null;
             /**
              * Createdtime
              * Format: date-time
@@ -293,106 +649,149 @@ export interface components {
             jobRunnerId: string;
             /** Externaljobid */
             externalJobId?: string | null;
+            /** Loggroup */
+            logGroup?: string | null;
+            /** Logstream */
+            logStream?: string | null;
+            /** Batchstatus */
+            batchStatus?: string | null;
+            /** Batchstatusreason */
+            batchStatusReason?: string | null;
         };
         /**
          * JobStatus
          * @enum {string}
          */
-        JobStatus: "Failed" | "Pending" | "Running" | "Completed";
-        /**
-         * NotificationEventType
-         * @enum {string}
-         */
-        NotificationEventType: "job_failed";
-        /** NotificationPreviewRequest */
-        NotificationPreviewRequest: {
-            /** Jobid */
-            jobId?: string | null;
-            /** Data */
-            data?: {
-                [key: string]: string | null;
-            };
-            /** Subjecttemplate */
-            subjectTemplate?: string | null;
-            /** Bodytemplate */
-            bodyTemplate?: string | null;
+        JobStatus: "Cancelled" | "Cancelling" | "Dispatch unknown" | "Failed" | "Pending" | "Running" | "Completed";
+        /** EnvironmentVariable */
+        EnvironmentVariable: {
+            /** Name */
+            name: string;
+            /** Value */
+            value: string;
         };
-        /** NotificationTemplateCreate */
-        NotificationTemplateCreate: {
-            /** Office */
-            office: string;
-            /** Slug */
-            slug: string;
-            /** Subjecttemplate */
-            subjectTemplate: string;
-            /** Bodytemplate */
-            bodyTemplate: string;
-        };
-        /** NotificationTemplateRead */
-        NotificationTemplateRead: {
-            /** Office */
-            office: string;
-            /** Slug */
-            slug: string;
-            /** Subjecttemplate */
-            subjectTemplate: string;
-            /** Bodytemplate */
-            bodyTemplate: string;
+        /** OperationsSummary */
+        OperationsSummary: {
             /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /**
-             * Usagecount
-             * @default 0
-             */
-            usageCount: number;
-            /**
-             * Createdtime
+             * Asof
              * Format: date-time
              */
-            createdTime: string;
+            asOf: string;
             /**
-             * Updatedtime
+             * Since
              * Format: date-time
              */
-            updatedTime: string;
+            since: string;
+            /** Offices */
+            offices: string[];
+            /** Usage */
+            usage: components["schemas"]["Usage"][];
+            /** Topjobs */
+            topJobs: components["schemas"]["Usage"][];
+            /** Daily */
+            daily: components["schemas"]["DailyUsage"][];
+            /** Attention */
+            attention: components["schemas"]["AttentionJob"][];
+            /** Failures */
+            failures: components["schemas"]["AttentionJob"][];
+            /** Attentiontotal */
+            attentionTotal: number;
+            /** Queued */
+            queued: number;
+            /** Running */
+            running: number;
+            /** Registered */
+            registered: number;
+            /** Automatic */
+            automatic: number;
         };
-        /** NotificationTemplateUpdate */
-        NotificationTemplateUpdate: {
-            /** Office */
-            office: string;
-            /** Slug */
-            slug: string;
-            /** Subjecttemplate */
-            subjectTemplate: string;
-            /** Bodytemplate */
-            bodyTemplate: string;
+        /** ReleaseJar */
+        ReleaseJar: {
+            /** Repository */
+            repository: string;
+            /** Releaseid */
+            releaseId: number;
+            /** Assetid */
+            assetId: number;
+            /** Tag */
+            tag: string;
+            /** Name */
+            name: string;
+            /** Sha256 */
+            sha256: string;
+            /** Size */
+            size: number;
         };
-        /** RenderedNotification */
-        RenderedNotification: {
-            /** Recipients */
-            recipients: string[];
-            /** Subject */
-            subject: string;
-            /** Body */
-            body: string;
-            /** Data */
-            data: {
-                [key: string]: string | null;
-            };
+        /** SchedulerStatus */
+        SchedulerStatus: {
+            /** Enabled */
+            enabled: boolean;
+            /** Tasks */
+            tasks: components["schemas"]["TaskHealth"][];
+            /** Pendingdelivery */
+            pendingDelivery: number;
+            /** Needsattention */
+            needsAttention: number;
+            /** Invalidschedules */
+            invalidSchedules: number;
+        };
+        /** SchemaInfo */
+        SchemaInfo: {
+            /** Name */
+            name: string;
+            /** Version */
+            version: string;
+            /** Description */
+            description: string;
+            /**
+             * Installedon
+             * Format: date-time
+             */
+            installedOn: string;
         };
         /** ScriptCreate */
         ScriptCreate: {
+            /**
+             * Configversion
+             * @default 4
+             * @enum {integer}
+             */
+            configVersion: 2 | 3 | 4;
+            /**
+             * Executiontype
+             * @default github_file
+             * @enum {string}
+             */
+            executionType: "github_file" | "command";
+            /**
+             * Runtime
+             * @default python
+             * @enum {string}
+             */
+            runtime: "python" | "java" | "shell";
+            /** Repopath */
+            repoPath: string;
+            /** Commandargs */
+            commandArgs?: string[];
+            /** Commandplaceholder */
+            commandPlaceholder?: string | null;
+            /** Environmentvariables */
+            environmentVariables?: components["schemas"]["EnvironmentVariable"][];
+            /** Resourcesize */
+            resourceSize?: "small" | "medium" | "large";
+            /**
+             * Commandmode
+             * @default arguments
+             * @enum {string}
+             */
+            commandMode: "arguments" | "shell";
+            /** Shellcommand */
+            shellCommand?: string | null;
+            releaseJar?: components["schemas"]["ReleaseJar"] | null;
             /** Name */
             name: string;
             /** Description */
             description: string;
-            /** Repopath */
-            repoPath: string;
-            /** Executiontype */
-            executionType: string;
             /**
              * Active
              * @default true
@@ -408,112 +807,67 @@ export interface components {
              * @default []
              */
             jobRunners: string[];
+            /**
+             * Scheduleenabled
+             * @default false
+             */
+            scheduleEnabled: boolean;
+            /**
+             * Scheduletype
+             * @default manual
+             */
+            scheduleType: string;
+            /** Scheduleminute */
+            scheduleMinute?: number | null;
+            /** Schedulecron */
+            scheduleCron?: string | null;
+            /**
+             * Scheduletimezone
+             * @default UTC
+             */
+            scheduleTimezone: string;
             /** Office */
             office: string;
         };
-        /** ScriptNotificationRuleCreate */
-        ScriptNotificationRuleCreate: {
-            /**
-             * Scriptid
-             * Format: uuid
-             */
-            scriptId: string;
-            /** @default job_failed */
-            eventType: components["schemas"]["NotificationEventType"];
-            /**
-             * Templateid
-             * Format: uuid
-             */
-            templateId: string;
-            /** Cdauserlistid */
-            cdaUserListId?: string | null;
-            /** Cdauserlistoffice */
-            cdaUserListOffice?: string | null;
-            /** Manualrecipients */
-            manualRecipients?: string[];
-            /**
-             * Active
-             * @default true
-             */
-            active: boolean;
-        };
-        /** ScriptNotificationRuleRead */
-        ScriptNotificationRuleRead: {
-            /**
-             * Scriptid
-             * Format: uuid
-             */
-            scriptId: string;
-            /** @default job_failed */
-            eventType: components["schemas"]["NotificationEventType"];
-            /**
-             * Templateid
-             * Format: uuid
-             */
-            templateId: string;
-            /** Cdauserlistid */
-            cdaUserListId?: string | null;
-            /** Cdauserlistoffice */
-            cdaUserListOffice?: string | null;
-            /** Manualrecipients */
-            manualRecipients?: string[];
-            /**
-             * Active
-             * @default true
-             */
-            active: boolean;
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /**
-             * Createdtime
-             * Format: date-time
-             */
-            createdTime: string;
-            /**
-             * Updatedtime
-             * Format: date-time
-             */
-            updatedTime: string;
-        };
-        /** ScriptNotificationRuleUpdate */
-        ScriptNotificationRuleUpdate: {
-            /**
-             * Scriptid
-             * Format: uuid
-             */
-            scriptId: string;
-            /** @default job_failed */
-            eventType: components["schemas"]["NotificationEventType"];
-            /**
-             * Templateid
-             * Format: uuid
-             */
-            templateId: string;
-            /** Cdauserlistid */
-            cdaUserListId?: string | null;
-            /** Cdauserlistoffice */
-            cdaUserListOffice?: string | null;
-            /** Manualrecipients */
-            manualRecipients?: string[];
-            /**
-             * Active
-             * @default true
-             */
-            active: boolean;
-        };
         /** ScriptRead */
         ScriptRead: {
+            /**
+             * Configversion
+             * @default 1
+             */
+            configVersion: number;
+            /**
+             * Executiontype
+             * @default github_file
+             */
+            executionType: string | null;
+            /**
+             * Runtime
+             * @default python
+             */
+            runtime: string;
+            /** Repopath */
+            repoPath: string;
+            /** Commandargs */
+            commandArgs?: string[];
+            /** Commandplaceholder */
+            commandPlaceholder?: string | null;
+            /** Environmentvariables */
+            environmentVariables?: components["schemas"]["EnvironmentVariable"][];
+            /** Resourcesize */
+            resourceSize?: "small" | "medium" | "large";
+            /**
+             * Commandmode
+             * @default arguments
+             */
+            commandMode: string;
+            /** Shellcommand */
+            shellCommand?: string | null;
+            releaseJar?: components["schemas"]["ReleaseJar"] | null;
             /** Name */
             name: string;
             /** Description */
             description: string;
-            /** Repopath */
-            repoPath: string;
-            /** Executiontype */
-            executionType: string;
             /**
              * Active
              * @default true
@@ -529,6 +883,25 @@ export interface components {
              * @default []
              */
             jobRunners: string[];
+            /**
+             * Scheduleenabled
+             * @default false
+             */
+            scheduleEnabled: boolean;
+            /**
+             * Scheduletype
+             * @default manual
+             */
+            scheduleType: string;
+            /** Scheduleminute */
+            scheduleMinute?: number | null;
+            /** Schedulecron */
+            scheduleCron?: string | null;
+            /**
+             * Scheduletimezone
+             * @default UTC
+             */
+            scheduleTimezone: string;
             /**
              * Id
              * Format: uuid
@@ -548,6 +921,12 @@ export interface components {
              * Format: date-time
              */
             updatedTime: string;
+            /** Scheduleupdatedname */
+            scheduleUpdatedName?: string | null;
+            /** Scheduleupdatedat */
+            scheduleUpdatedAt?: string | null;
+            /** Scheduleerror */
+            scheduleError?: string | null;
         };
         /** ScriptRunRequest */
         ScriptRunRequest: {
@@ -556,17 +935,79 @@ export interface components {
              * Format: uuid
              */
             scriptId: string;
+            /** Upgradetoversion */
+            upgradeToVersion?: 3 | null;
+            /** Commandmode */
+            commandMode?: ("arguments" | "shell") | null;
+            /** Shellcommand */
+            shellCommand?: string | null;
+            /**
+             * Commandargs
+             * @description Arguments for this run only. Omit or use null for saved arguments; [] clears them. Requires version 2 or later.
+             */
+            commandArgs?: string[] | null;
+            /**
+             * Runtrigger
+             * @description Caller-reported trigger for display only. Grants no permissions. UI sends manual. Cron/scheduler clients send scheduled. Omitted values remain unknown.
+             * @default unknown
+             * @enum {string}
+             */
+            runTrigger: "manual" | "scheduled" | "unknown";
+        };
+        /** ScriptScheduleStatus */
+        ScriptScheduleStatus: {
+            /** Nextrunat */
+            nextRunAt: string | null;
+            /** Lastfinishedat */
+            lastFinishedAt: string | null;
+            /** Lastrunstatus */
+            lastRunStatus: string | null;
+            /** Lastruntrigger */
+            lastRunTrigger: string | null;
         };
         /** ScriptUpdate */
         ScriptUpdate: {
+            /**
+             * Configversion
+             * @default 4
+             * @enum {integer}
+             */
+            configVersion: 2 | 3 | 4;
+            /**
+             * Executiontype
+             * @default github_file
+             * @enum {string}
+             */
+            executionType: "github_file" | "command";
+            /**
+             * Runtime
+             * @default python
+             * @enum {string}
+             */
+            runtime: "python" | "java" | "shell";
+            /** Repopath */
+            repoPath: string;
+            /** Commandargs */
+            commandArgs?: string[];
+            /** Commandplaceholder */
+            commandPlaceholder?: string | null;
+            /** Environmentvariables */
+            environmentVariables?: components["schemas"]["EnvironmentVariable"][];
+            /** Resourcesize */
+            resourceSize?: "small" | "medium" | "large";
+            /**
+             * Commandmode
+             * @default arguments
+             * @enum {string}
+             */
+            commandMode: "arguments" | "shell";
+            /** Shellcommand */
+            shellCommand?: string | null;
+            releaseJar?: components["schemas"]["ReleaseJar"] | null;
             /** Name */
             name: string;
             /** Description */
             description: string;
-            /** Repopath */
-            repoPath: string;
-            /** Executiontype */
-            executionType: string;
             /**
              * Active
              * @default true
@@ -582,6 +1023,108 @@ export interface components {
              * @default []
              */
             jobRunners: string[];
+            /**
+             * Scheduleenabled
+             * @default false
+             */
+            scheduleEnabled: boolean;
+            /**
+             * Scheduletype
+             * @default manual
+             */
+            scheduleType: string;
+            /** Scheduleminute */
+            scheduleMinute?: number | null;
+            /** Schedulecron */
+            scheduleCron?: string | null;
+            /**
+             * Scheduletimezone
+             * @default UTC
+             */
+            scheduleTimezone: string;
+        };
+        /** ServerLogEntry */
+        ServerLogEntry: {
+            /** Eventid */
+            eventId: string;
+            /** Timestamp */
+            timestamp: number;
+            /** Ingestiontime */
+            ingestionTime?: number | null;
+            /** Logstreamname */
+            logStreamName: string;
+            /** Level */
+            level: string;
+            /** Message */
+            message: string;
+            /** Fields */
+            fields?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** ServerLogPage */
+        ServerLogPage: {
+            /** Entries */
+            entries: components["schemas"]["ServerLogEntry"][];
+            /** Nextcursor */
+            nextCursor?: string | null;
+            /** Starttime */
+            startTime: number;
+            /** Endtime */
+            endTime: number;
+            /** Loggroup */
+            logGroup: string;
+            /**
+             * Level
+             * @default ALL
+             * @enum {string}
+             */
+            level: "ALL" | "TRACE" | "DEBUG" | "INFO" | "WARNING" | "ERROR" | "CRITICAL" | "UNKNOWN";
+        };
+        /** TaskHealth */
+        TaskHealth: {
+            /** Name */
+            name: string;
+            /** Lastsuccess */
+            lastSuccess: string | null;
+            /** Nextexpectedat */
+            nextExpectedAt?: string | null;
+            /** Healthy */
+            healthy: boolean;
+        };
+        /** Usage */
+        Usage: {
+            /** Office */
+            office: string;
+            /** Scriptid */
+            scriptId?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Runs */
+            runs: number;
+            /** Failed */
+            failed: number;
+            /** Completed */
+            completed: number;
+            /** Users */
+            users: number;
+            /** Runtimeminutes */
+            runtimeMinutes: number;
+            /** Missingduration */
+            missingDuration: number;
+        };
+        /** UserAccess */
+        UserAccess: {
+            /** Username */
+            username: string;
+            /** Offices */
+            offices: string[];
+            /** Adminoffices */
+            adminOffices: string[];
+            /** Roles */
+            roles: {
+                [key: string]: string[];
+            };
         };
         /** ValidationError */
         ValidationError: {
@@ -605,7 +1148,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    get_jobs_for_user_jobs_get: {
+    get_application_info_about_application_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -620,7 +1163,89 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    "application/json": components["schemas"]["ApplicationInfo"];
+                };
+            };
+        };
+    };
+    get_schema_info_about_schema_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchemaInfo"];
+                };
+            };
+        };
+    };
+    get_default_job_runner_job_runners_default_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DefaultJobRunner"];
+                };
+            };
+        };
+    };
+    get_jobs_for_user_jobs_get: {
+        parameters: {
+            query?: {
+                /** @description Maximum jobs to return. Omit to return all jobs. */
+                limit?: number | null;
+                /** @description Number of jobs to skip, newest first. */
+                offset?: number;
+                scriptId?: string | null;
+                submittedFrom?: string | null;
+                submittedBefore?: string | null;
+                latestPerScript?: boolean;
+                /** @description Offices to include. Defaults to all accessible offices. */
+                office?: string[] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    /** @description Total jobs in the user's CWMS offices when pagination is requested. */
+                    "X-Total-Count"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
                     "application/json": components["schemas"]["JobRecord"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -720,7 +1345,60 @@ export interface operations {
             };
         };
     };
-    get_templates_notifications_templates_get: {
+    get_log_page_jobs__job_id__logs_page_get: {
+        parameters: {
+            query?: {
+                cursor?: string | null;
+            };
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobLogPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    repository_status_repository_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    repository_files_repository_files_get: {
         parameters: {
             query: {
                 office: string;
@@ -737,7 +1415,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NotificationTemplateRead"][];
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -751,176 +1429,13 @@ export interface operations {
             };
         };
     };
-    post_template_notifications_templates_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["NotificationTemplateCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NotificationTemplateRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_available_cda_user_lists_notifications_cda_user_lists_get: {
-        parameters: {
-            query: {
-                office: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CdaUserListRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    put_template_notifications_templates__template_id__put: {
+    upgrade_script_configuration_scripts__script_id__upgrade_post: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                template_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["NotificationTemplateUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NotificationTemplateRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_template_notifications_templates__template_id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                template_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    preview_template_notifications_templates__template_id__preview_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                template_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["NotificationPreviewRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RenderedNotification"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_rules_notifications_rules_get: {
-        parameters: {
-            query: {
                 script_id: string;
             };
-            header?: never;
-            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -931,105 +1446,8 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ScriptNotificationRuleRead"][];
+                    "application/json": components["schemas"]["ScriptRead"];
                 };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    post_rule_notifications_rules_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ScriptNotificationRuleCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ScriptNotificationRuleRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    put_rule_notifications_rules__rule_id__put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                rule_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ScriptNotificationRuleUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ScriptNotificationRuleRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_rule_notifications_rules__rule_id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                rule_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -1170,6 +1588,26 @@ export interface operations {
             };
         };
     };
+    get_scheduled_scripts_scripts_scheduled_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScriptRead"][];
+                };
+            };
+        };
+    };
     get_user_scripts_catalog_scripts_catalog_get: {
         parameters: {
             query?: never;
@@ -1190,6 +1628,81 @@ export interface operations {
             };
         };
     };
+    get_server_logs_server_logs_get: {
+        parameters: {
+            query?: {
+                cursor?: string | null;
+                start_time?: number | null;
+                end_time?: number | null;
+                /** @description CloudWatch JSON level; ALL includes historical text. UNKNOWN scans a bounded page for unclassified entries. */
+                level?: "ALL" | "TRACE" | "DEBUG" | "INFO" | "WARNING" | "ERROR" | "CRITICAL" | "UNKNOWN";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServerLogPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_offices_users_me_offices_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
+                };
+            };
+        };
+    };
+    get_system_admin_users_me_system_admin_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": boolean;
+                };
+            };
+        };
+    };
     get_admin_offices_users_me_admin_offices_get: {
         parameters: {
             query?: never;
@@ -1206,6 +1719,201 @@ export interface operations {
                 };
                 content: {
                     "application/json": string[];
+                };
+            };
+        };
+    };
+    script_schedule_status_scripts__script_id__schedule_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                script_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScriptScheduleStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    scheduler_status_scheduler_status_get: {
+        parameters: {
+            query?: {
+                office?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchedulerStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    operations_admin_operations_get: {
+        parameters: {
+            query?: {
+                days?: number;
+                office?: string | null;
+                queueMinutes?: number;
+                runMinutes?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationsSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    releases_repository_releases_get: {
+        parameters: {
+            query: {
+                office: string;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    jars_repository_releases__release_id__jars_get: {
+        parameters: {
+            query: {
+                office: string;
+                page?: number;
+            };
+            header?: never;
+            path: {
+                release_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_release_jars_jobs__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-artifact-ticket"?: string;
+            };
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

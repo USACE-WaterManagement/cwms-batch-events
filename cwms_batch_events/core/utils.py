@@ -1,12 +1,13 @@
 import uuid
 
-from cwms_batch_events.core.settings import settings
+from cwms_batch_events.core.settings import RunnerSettings, get_settings
 
 BATCH_RUNNER_ID = "58600a09-f18e-42c5-9d3c-df52ebe409f9"
 LOCAL_RUNNER_ID = "13f391ef-7597-4b4b-a0ef-0926c09d4649"
 
 
 def get_runner_id() -> uuid.UUID:
+    settings = get_settings(RunnerSettings)
     return (
         uuid.UUID(LOCAL_RUNNER_ID)
         if settings.default_job_runner == "docker-local"
@@ -15,6 +16,7 @@ def get_runner_id() -> uuid.UUID:
 
 
 def get_runner_slug() -> str:
+    settings = get_settings(RunnerSettings)
     return "docker-local" if settings.default_job_runner == "docker-local" else "batch"
 
 

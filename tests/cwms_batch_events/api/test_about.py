@@ -17,7 +17,7 @@ def test_application_info_returns_deployment_and_user_details(client, user):
         "environment": "local",
         "buildRevision": "local",
         "buildTime": None,
-        "authenticationEnvironment": "local mock",
+        "authenticationEnvironment": "TEST",
         "jobRunner": "batch",
         "rootPath": "/",
         "user": {

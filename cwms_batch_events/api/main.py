@@ -1,7 +1,11 @@
 import logging
-import sys
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from cwms_batch_events.core.settings import ApiSettings, get_settings
+
+# Validate before router imports create database or authentication dependencies.
+settings = get_settings(ApiSettings)
+
 from cwms_batch_events.api.routers import (
     about,
     health,
@@ -9,18 +13,33 @@ from cwms_batch_events.api.routers import (
     job_runners,
     jobs,
     notifications,
+    repository_files,
     scripts,
+    server_logs,
     users,
+    scheduler,
+    admin,
+    log_search,
+    release_jars,
 )
-from cwms_batch_events.core.settings import settings
+from cwms_batch_events.core.log_diagnostics import configure_log_diagnostics
+from cwms_batch_events.core.logging_config import configure_logging
+from cwms_batch_events.api.openapi import configure_rate_limit_openapi
+from cwms_batch_events.api.request_logging import RequestLoggingMiddleware
+from cwms_batch_events.core.maintenance import lifespan
+from cwms_batch_events.core.rate_limit import OfficeRateLimit, OfficeRateLimitStore, RateLimitMiddleware
+from cwms_batch_events.api.openapi import configure_rate_limit_openapi
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    stream=sys.stdout,
-)
+configure_logging(api=True)
+configure_log_diagnostics()
+logging.getLogger(__name__).info("API initialized", extra={"event": "api_initialized"})
 
-app = FastAPI(root_path=settings.root_path)
+app = FastAPI(root_path=settings.fastapi_root_path, lifespan=lifespan)
+configure_rate_limit_openapi(app)
+app.state.rate_limit_store = OfficeRateLimitStore(OfficeRateLimit(
+    settings.rate_limit_requests_per_minute,
+    settings.rate_limit_job_submissions_per_minute,
+))
 
 
 origins = r"http://localhost(:\d+)?"
@@ -32,6 +51,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(RequestLoggingMiddleware)
+app.add_middleware(
+    RateLimitMiddleware,
+    requests_per_minute=settings.rate_limit_requests_per_minute,
+    job_submissions_per_minute=settings.rate_limit_job_submissions_per_minute,
+    documentation_url=settings.rate_limit_documentation_url,
+    office_rate_limit_store=app.state.rate_limit_store,
+)
 
 app.include_router(health.router)
 app.include_router(about.router)
@@ -39,5 +66,11 @@ app.include_router(internal.router)
 app.include_router(job_runners.router)
 app.include_router(jobs.router)
 app.include_router(notifications.router)
+app.include_router(repository_files.router)
 app.include_router(scripts.router)
+app.include_router(server_logs.router)
 app.include_router(users.router)
+app.include_router(scheduler.router)
+app.include_router(admin.router)
+app.include_router(log_search.router)
+app.include_router(release_jars.router)

@@ -1,5 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@usace-watermanagement/groundwork-water";
+import { useQuery, useQueryClient, type InfiniteData } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useAuth } from "@usace-watermanagement/groundwork-water/auth/useAuth";
 import fetchWithAuth from "../../utils/fetchWithAuth";
 import { components } from "../../generated/api-types";
 
@@ -7,20 +8,39 @@ export type JobDetails = components["schemas"]["JobRecord"];
 
 const useJobDetails = (jobId: string) => {
   const auth = useAuth();
+  const client = useQueryClient();
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ["job", jobId],
+    meta: { pageError: true },
+    enabled: auth.isAuth,
     queryFn: () => fetchJob(jobId, auth.token),
     refetchInterval: (query) => {
+      if (query.state.status === "error") return false;
       const data = query.state.data;
       if (
         data &&
-        (data.jobStatus === "Completed" || data.jobStatus === "Failed")
+        (data.jobStatus === "Completed" || data.jobStatus === "Failed" || data.jobStatus === "Cancelled")
       )
         return false;
       return 5000;
     },
   });
+  useEffect(() => {
+    if (!query.data) return;
+    const fresh = query.data;
+    // Reuse the selected job's poll in run lists and history, with no extra GET.
+    client.setQueriesData<JobDetails[] | { jobs: JobDetails[]; total: number } | InfiniteData<{ jobs: JobDetails[]; total: number; offset: number }>>(
+      { queryKey: ["jobs"] }, cached => {
+        if (!cached) return cached;
+        const update = (jobs: JobDetails[]) => jobs.map(job => job.id === fresh.id ? fresh : job);
+        if (Array.isArray(cached)) return update(cached);
+        if ("pages" in cached) return { ...cached, pages: cached.pages.map(page => ({ ...page, jobs: update(page.jobs) })) };
+        return { ...cached, jobs: update(cached.jobs) };
+      },
+    );
+  }, [client, query.data, query.dataUpdatedAt]);
+  return query;
 };
 
 const fetchJob = async (jobId: string, token?: string): Promise<JobDetails> => {

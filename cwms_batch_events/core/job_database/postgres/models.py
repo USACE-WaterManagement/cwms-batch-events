@@ -13,7 +13,7 @@ from sqlalchemy import (
     VARCHAR,
     text,
 )
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from typing import Optional
 import uuid
@@ -35,6 +35,7 @@ scripts_job_runners = Table(
 
 class JobModel(Base):
     __tablename__ = "jobs"
+    release_jar: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
@@ -46,9 +47,27 @@ class JobModel(Base):
     script_slug: Mapped[str | None]
     job_status: Mapped[JobStatus] = mapped_column(VARCHAR)
     username: Mapped[str]
+    display_name: Mapped[str | None]
+    run_trigger: Mapped[str] = mapped_column(default="unknown", server_default="unknown")
+    scheduled_for: Mapped[datetime.datetime | None]
+    schedule_timezone: Mapped[str | None]
+    schedule_author: Mapped[str | None]
+    dispatch_claimed_at: Mapped[datetime.datetime | None]
     office: Mapped[str]
     repo_path: Mapped[str]
+    config_version: Mapped[int] = mapped_column(default=1, server_default="1")
+    runtime: Mapped[str] = mapped_column(default="python", server_default="python")
+    command_args: Mapped[list[str]] = mapped_column(
+        ARRAY(String), default=list, server_default="{}"
+    )
+    command_placeholder: Mapped[str | None]
+    environment_variables: Mapped[list[dict]] = mapped_column(
+        JSONB, default=list, server_default="[]"
+    )
+    resource_size: Mapped[str] = mapped_column(default="medium", server_default="medium")
     execution_type: Mapped[str | None]
+    command_mode: Mapped[str] = mapped_column(default="arguments", server_default="arguments")
+    shell_command: Mapped[str | None]
     created_time: Mapped[datetime.datetime] = mapped_column(
         server_default=func.current_timestamp()
     )
@@ -58,8 +77,18 @@ class JobModel(Base):
         UUID(as_uuid=True), ForeignKey("job_runners.id")
     )
     external_job_id: Mapped[Optional[str]]
+    log_group: Mapped[str | None]
+    log_stream: Mapped[str | None]
+    batch_status: Mapped[str | None]
+    batch_status_reason: Mapped[str | None]
+    batch_details_time: Mapped[datetime.datetime | None]
+    batch_checked_at: Mapped[datetime.datetime | None]
+    cancellation_requested_at: Mapped[datetime.datetime | None]
 
     script: Mapped["ScriptModel | None"] = relationship("ScriptModel", lazy="selectin")
+    # Keep row-locking queries free of an implicit outer join. Callers can
+    # still access the runner through SQLAlchemy's separate select-in load.
+    job_runner: Mapped["JobRunnerModel"] = relationship("JobRunnerModel", lazy="selectin")
 
 
 class JobRunnerModel(Base):
@@ -81,16 +110,45 @@ class JobRunnerModel(Base):
 
 class ScriptModel(Base):
     __tablename__ = "scripts"
+    release_jar: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    configuration_key: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), default=uuid.uuid4, server_default=func.gen_random_uuid()
     )
     office: Mapped[str]
     name: Mapped[str]
     slug: Mapped[str]
     description: Mapped[str]
     repo_path: Mapped[str]
+    config_version: Mapped[int] = mapped_column(default=1, server_default="1")
+    runtime: Mapped[str] = mapped_column(default="python", server_default="python")
+    command_args: Mapped[list[str]] = mapped_column(
+        ARRAY(String), default=list, server_default="{}"
+    )
+    command_placeholder: Mapped[str | None]
+    environment_variables: Mapped[list[dict]] = mapped_column(
+        JSONB, default=list, server_default="[]"
+    )
+    resource_size: Mapped[str] = mapped_column(default="medium", server_default="medium")
     execution_type: Mapped[str]
+    command_mode: Mapped[str] = mapped_column(default="arguments", server_default="arguments")
+    shell_command: Mapped[str | None]
+    schedule_enabled: Mapped[bool] = mapped_column(
+        default=False, server_default="false"
+    )
+    schedule_type: Mapped[str] = mapped_column(
+        default="manual", server_default="manual"
+    )
+    schedule_minute: Mapped[int | None]
+    schedule_cron: Mapped[str | None]
+    schedule_timezone: Mapped[str] = mapped_column(default="UTC", server_default="UTC")
+    schedule_updated_by: Mapped[str | None]
+    schedule_updated_name: Mapped[str | None]
+    schedule_updated_at: Mapped[datetime.datetime | None]
+    schedule_error: Mapped[str | None]
     active: Mapped[bool]
     roles: Mapped[list[str]] = mapped_column(ARRAY(String))
     created_time: Mapped[datetime.datetime] = mapped_column(
