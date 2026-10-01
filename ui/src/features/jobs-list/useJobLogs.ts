@@ -59,7 +59,8 @@ const useJobLogs = (jobId: string, status: string, interval: number, endTime?: s
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
-    refetchOnMount: false,
+    // Re-entering a run view must check for output that arrived while it was closed.
+    refetchOnMount: "always",
   });
   return {
     ...query,
