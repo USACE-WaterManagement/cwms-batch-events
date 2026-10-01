@@ -2,6 +2,8 @@ import hashlib
 import io
 import sys
 import time
+import ssl
+import urllib.error
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
@@ -48,6 +50,28 @@ def test_checksum_failure_never_starts_java(tmp_path):
     with patch.object(sys, 'argv', ['-c', *command[3:]]), patch('urllib.request.urlopen', return_value=io.BytesIO(b'bad-data')), patch('tempfile.mkdtemp', return_value=str(tmp_path)), patch('os.execvp') as execute, pytest.raises(SystemExit):
         exec(BOOTSTRAP, {})
     execute.assert_not_called()
+
+
+@pytest.mark.parametrize(('error', 'message'), [
+    (TimeoutError('private-detail'), 'Timed out contacting the artifact API'),
+    (urllib.error.URLError(TimeoutError('private-detail')), 'Timed out contacting the artifact API'),
+    (urllib.error.URLError('private-detail'), 'Check DNS, routing'),
+    (urllib.error.URLError(ssl.SSLError('private-detail')), 'TLS validation failed'),
+    (urllib.error.HTTPError('http://private-host', 403, 'private-detail', {}, None), 'HTTP 403'),
+    (OSError('private-detail'), 'Check runner storage'),
+    (RuntimeError('private-detail'), 'Unexpected download failure'),
+])
+def test_download_failure_reports_safe_diagnostic(tmp_path, capsys, error, message):
+    command = jar_command(SimpleNamespace(job_id='one', payload=SimpleNamespace(release_jar=asset(), command_args=[])), 'http://private-host', 'private-key')
+    with patch.object(sys, 'argv', ['-c', *command[3:]]), patch('urllib.request.urlopen', side_effect=error), patch('tempfile.mkdtemp', return_value=str(tmp_path)), patch('os.execvp') as execute, pytest.raises(SystemExit) as stopped:
+        exec(BOOTSTRAP, {})
+    assert stopped.value.code == 1
+    execute.assert_not_called()
+    output = capsys.readouterr().err
+    assert message in output
+    assert 'Java was not started' in output
+    for sensitive in ['private-detail', 'private-host', 'private-key', command[4]]:
+        assert sensitive not in output
 
 
 def test_github_redirect_does_not_forward_credentials():
