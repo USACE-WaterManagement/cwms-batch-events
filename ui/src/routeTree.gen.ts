@@ -508,6 +508,7 @@ const rootRouteChildren: RootRouteChildren = {
   DependenciesRoute: DependenciesRoute,
   LogSearchRoute: LogSearchRoute,
   ScriptsManagerRoute: ScriptsManagerRoute,
+  SetupRoute: SetupRoute,
   SubmitRoute: SubmitRoute,
   AboutControlsRoute: AboutControlsRoute,
   AboutOnboardingRoute: AboutOnboardingRoute,
