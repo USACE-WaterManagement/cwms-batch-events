@@ -34,7 +34,6 @@ export const ScriptsWorkspace = ({ officeSelector, office, initialScriptId, init
   const navigate = useNavigate();
   const auth = useAuth();
   const scripts = useOfficeScripts(office);
-  const jobs = useJobsList(true, true);
   const createScriptMutation = useCreateScript(office);
   const deleteScriptMutation = useDeleteScript(office);
   const updateScriptMutation = useUpdateScript(office);
@@ -50,6 +49,7 @@ export const ScriptsWorkspace = ({ officeSelector, office, initialScriptId, init
   const [panelTab, setPanelTab] = useState({ index: initialJobId ? 2 : 0, revision: 0 });
   const [selectedJobId, setSelectedJobId] = useState<string | undefined>(initialJobId);
   const [importOpened, setImportOpened] = useState(false);
+  const jobs = useJobsList(!creating && panelMode !== "edit", true);
   const showTab = (index: number) => setPanelTab(previous => ({ index, revision: previous.revision + 1 }));
 
   const routeState = JSON.stringify([initialScriptId, initialJobId, initialEdit]);

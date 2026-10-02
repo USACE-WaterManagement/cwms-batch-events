@@ -104,6 +104,28 @@ test("save marks missing fields and sections, keeps drafts, and preserves an old
   expect(writes[0].commandArgs).toEqual(original.commandArgs);
 });
 
+test("pauses job polling while editing a configuration", async ({ page }) => {
+  await page.clock.install();
+  let jobs = 0;
+  await page.route("**/api/**", route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/admin-offices")) return route.fulfill({ json: ["SWT"] });
+    if (path.endsWith("/job-runners/default")) return route.fulfill({ json: { id: "runner-1" } });
+    if (path.endsWith("/jobs")) {
+      jobs++;
+      return route.fulfill({ json: [] });
+    }
+    if (path.endsWith("/scripts")) return route.fulfill({ json: [original] });
+    return route.fulfill({ json: [] });
+  });
+
+  await open(page);
+  await expect.poll(() => jobs).toBe(1);
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await page.clock.fastForward(10000);
+  expect(jobs).toBe(1);
+});
+
 test("invalid cron and timezone highlight Schedule and recover without losing values", async ({ page }) => {
   await page.route("**/api/**", route => {
     const path = new URL(route.request().url()).pathname;
