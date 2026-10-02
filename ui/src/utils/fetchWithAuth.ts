@@ -44,8 +44,13 @@ const fetchWithAuth = async (
         message = "Some fields are invalid. Check your entries and try again.";
         fields = {};
         for (const issue of body.detail) {
-          const field = issue.loc?.[1];
-          if (typeof field === "string" && typeof issue.msg === "string") fields[field] = issue.msg;
+          const location: unknown[] = Array.isArray(issue.loc) ? issue.loc.slice(1) : [];
+          const field = location.reduce((path: string, part: unknown) => {
+            if (typeof part === "number") return `${path}[${part}]`;
+            if (typeof part !== "string") return path;
+            return path ? `${path}.${part}` : part;
+          }, "");
+          if (field && typeof issue.msg === "string") fields[field] = issue.msg;
         }
       }
     }

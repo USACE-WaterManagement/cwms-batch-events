@@ -1,9 +1,40 @@
 import { meetsMinimumInterval } from "./schedulePresets";
 import type { ScriptFormData } from "./types";
 
+const protectedEnvironmentNames = new Set([
+  "OFFICE", "TZ", "SKIP_GIT_CLONE", "GITHUB_BRANCH", "ENVIRONMENT",
+]);
+const protectedEnvironmentTerms = [
+  "KEY", "SECRET", "PASSWORD", "TOKEN", "CREDENTIAL", "AUTH", "PRIVATE", "CERT",
+];
+
+function environmentVariableError(name: string, index: number, names: string[]): { field: string; message: string } | undefined {
+  const field = `environmentVariables[${index}].name`;
+  if (!name) return { field, message: "Enter an environment variable name." };
+  if (!/^[A-Z][A-Z0-9_]*$/.test(name) || name.length > 64) {
+    return { field, message: "Use an uppercase name with letters, numbers, and underscores, starting with a letter, and no more than 64 characters." };
+  }
+  if (protectedEnvironmentNames.has(name) || name.startsWith("BATCH_EVENTS_")) {
+    return { field, message: "This name is reserved by Batch Events and cannot be overridden." };
+  }
+  if (protectedEnvironmentTerms.some(term => name.includes(term))) {
+    return { field, message: "Names containing secret-related terms are not allowed because job environment variables are not stored securely like secrets." };
+  }
+  if (names.indexOf(name) !== index) return { field, message: "Environment variable names must be unique." };
+  return undefined;
+}
+
 export function validateScriptForm(form: ScriptFormData): Record<string, string> {
   const errors: Record<string, string> = {};
   if (!form.name.trim()) errors.name = "Enter a script name.";
+  const environmentVariables = form.environmentVariables ?? [];
+  if (environmentVariables.length > 20) errors.environmentVariables = "A script may define at most 20 environment variables.";
+  const environmentNames = environmentVariables.map(variable => variable.name);
+  environmentVariables.forEach((variable, index) => {
+    const error = environmentVariableError(variable.name, index, environmentNames);
+    if (error) errors[error.field] = error.message;
+    if (variable.value.length > 2048) errors[`environmentVariables[${index}].value`] = "Values must be no more than 2048 characters.";
+  });
   if (form.commandMode === "shell") {
     if ((form.configVersion ?? 1) < 3) errors.commandMode = "Upgrade configuration before using Bash command mode.";
     if (!form.shellCommand?.trim() || form.shellCommand.includes("\0")) errors.shellCommand = "Enter a Bash command without NUL characters.";

@@ -31,6 +31,9 @@ git push -u origin add-daily-report`}</code></pre>
     <p>Open <Link to="/scripts-manager">Job Manager</Link>, select <strong>SWT</strong>, and choose <strong>New +</strong>. Select <strong>District GitHub repository</strong> as the source and the matching runtime. Browse to the file or type its repository-relative path, such as <code>python/reports/daily_report.py</code>. Add any required arguments and optional execution roles, then save.</p>
     <p>Roles are optional. Leave them empty to allow users with office access to run the script without an additional CDA execution role. Selecting roles requires the user to match at least one role for that office.</p>
     <p>The browser filters files for the selected runtime. Use <strong>All files</strong> when needed. Saving a script definition does not create or upload a file in GitHub.</p>
+    <H2>Environment values</H2>
+    <p>Environment values are available to every run of the job, but they are not stored securely like secrets. Enter non-sensitive configuration only. Passwords, API keys, tokens, certificates, and other sensitive values must be provided through the approved secret configuration instead.</p>
+    <p>Names must be uppercase identifiers. Batch Events runtime names and names containing terms such as <code>KEY</code>, <code>SECRET</code>, <code>PASSWORD</code>, <code>TOKEN</code>, or <code>AUTH</code> are reserved and cannot be overridden.</p>
     <H2>5. Run and review the job</H2>
     <p>Select <strong>Run job</strong> at the end of the script row. Review the saved settings in the <strong>Run job</strong> tab and select <strong>Submit job</strong>. The new run opens in <strong>Run history</strong> with its status and output. Use <strong>Details</strong> to edit the script or <strong>Runs</strong> on the row to return to its history. <Link to="/jobs">Job History</Link> lists your runs across all scripts.</p>
     <H2>Inspect a Bash environment value</H2>

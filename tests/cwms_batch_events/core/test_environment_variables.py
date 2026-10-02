@@ -11,6 +11,11 @@ def test_protected_environment_names_are_rejected(name):
         EnvironmentVariable(name=name, value="value")
 
 
+def test_secret_like_environment_name_explains_storage_boundary():
+    with pytest.raises(ValidationError, match="not stored securely like secrets"):
+        EnvironmentVariable(name="API_KEY", value="value")
+
+
 def test_environment_variable_names_and_values_are_preserved():
     payload = make_script_create_payload(
         environmentVariables=[{"name": "REPORT_MODE", "value": "daily"}]
