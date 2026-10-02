@@ -94,6 +94,7 @@ export default function DependenciesPage() {
   const requirementsUrl = `${repositoryUrl}/blob/${ref}/${path}`;
   const issuesUrl = `${repositoryUrl}/issues`;
   const baseRequirementsUrl = dependencies.data ? `https://github.com/${dependencies.data.base_repository}/blob/${dependencies.data.base_ref}/${dependencies.data.base_path}` : "https://github.com/USACE/cwbi-wm-images";
+  const baseIssuesUrl = dependencies.data ? `https://github.com/${dependencies.data.base_repository}/issues` : "https://github.com/USACE/cwbi-wm-images/issues";
 
   return <main className="mx-auto max-w-6xl py-6 sm:py-10">
     <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between"><div className="max-w-3xl">
@@ -113,6 +114,6 @@ export default function DependenciesPage() {
     </Card>
     <p className="mt-3 text-sm text-slate-600"><span className="mr-2 inline-block rounded bg-blue-50 px-2 py-1 font-semibold text-blue-900">District override</span> The district requirement differs from the shared base image. Amber rows identify overrides that are older than the base image.</p>
     <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm"><ExternalLink href={baseRequirementsUrl}>View base image requirements</ExternalLink><ExternalLink href={requirementsUrl}>View {selectedOffice} requirements</ExternalLink><ExternalLink href={issuesUrl}>Open {selectedOffice} issues</ExternalLink></div>
-    <Card className="mt-6 border-amber-200 bg-amber-50 p-5 sm:p-6"><H2 className="text-lg">Need a package or version bump?</H2><Text className="mt-2 text-amber-950">Request additions or upgrades for the enterprise base image through the <ExternalLink href={issuesUrl}>{selectedOffice} repository issues</ExternalLink>.</Text></Card>
+    <Card className="mt-6 border-amber-200 bg-amber-50 p-5 sm:p-6"><H2 className="text-lg">Need a package or version bump?</H2><Text className="mt-2 text-amber-950">Request additions or upgrades for the enterprise base image through the <ExternalLink href={baseIssuesUrl}>shared base image repository issues</ExternalLink>.</Text></Card>
   </main>;
 }
