@@ -48,7 +48,10 @@ class EnvironmentVariable(CamelModel):
         if value in PROTECTED_ENVIRONMENT_NAMES or value.startswith("BATCH_EVENTS_"):
             raise ValueError("This environment variable name is reserved")
         if any(term in value for term in PROTECTED_ENVIRONMENT_TERMS):
-            raise ValueError("Environment variable names cannot contain secret-related terms")
+            raise ValueError(
+                "Environment variable names containing secret-related terms are not allowed "
+                "because job environment variables are not stored securely like secrets"
+            )
         return value
 
 
