@@ -152,7 +152,6 @@ class JobStatus(str, Enum):
     PENDING = "Pending"
     RUNNING = "Running"
     COMPLETED = "Completed"
-    CANCELLED = "Cancelled"
 
 
 class CdaUserProfile(BaseModel):
