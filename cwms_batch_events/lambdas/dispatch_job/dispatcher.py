@@ -92,6 +92,7 @@ def lambda_handler(event, context):
     records = event.get("Records", [])
     logger.debug("Received SQS batch", extra={"event": "dispatch_received", "count": len(records)})
 
+    failures = []
     for record in records:
         body_raw = record["body"]
 
@@ -99,29 +100,60 @@ def lambda_handler(event, context):
             message = JobMessage.model_validate_json(body_raw)
         except (json.JSONDecodeError, ValidationError):
             logger.error("Invalid job queue message", extra={"event": "dispatch_invalid_message"})
-            raise ValueError("Invalid job queue message") from None
+            failures.append(ValueError("Invalid job queue message"))
+            continue
 
         # Reset for each SQS record, including when dispatch raises.
-        with bind_log_context(job_id=str(message.job_id), request_id=message.request_id):
-            _dispatch_and_bind(message, headers)
+        try:
+            with bind_log_context(job_id=str(message.job_id), request_id=message.request_id):
+                _dispatch_and_bind(message, headers)
+        except Exception as exc:
+            failures.append(exc)
+    if failures:
+        # Deployed mappings retry the whole SQS batch. Process every record so
+        # one bad office cannot starve others; claims protect successful retries.
+        raise failures[0]
 
 
 def _dispatch_and_bind(message, headers):
-    if message.requested_by.source == "scheduler":
-        claim = requests.post(
-            f"{API_BASE_URL}/internal/jobs/{message.job_id}/claim-scheduled-dispatch",
-            headers=headers, timeout=10,
-        )
-        claim.raise_for_status()
-        if not claim.json()["claimed"]:
-            logger.info("Scheduled occurrence already claimed. Suppressing duplicate dispatch", extra={"event": "scheduled_dispatch_duplicate", "job_id": message.job_id})
+    claim = requests.post(
+        f"{API_BASE_URL}/internal/jobs/{message.job_id}/claim-dispatch",
+        headers=headers, timeout=10,
+    )
+    claim.raise_for_status()
+    outcome = claim.json()
+    if not outcome["claimed"]:
+        if outcome["external_job_id"] or outcome["status"] in ("Completed", "Failed", "Dispatch unknown"):
+            logger.info("Job already dispatched or closed to dispatch", extra={"event": "dispatch_duplicate"})
             return
+        # Another invocation may have submitted it before losing its API response.
+        # Keep retrying the observation, never SubmitJob, until linked or timed out.
+        raise RuntimeError("Dispatch already claimed; awaiting its outcome")
     logger.debug("Dispatching job", extra={"event": "job_dispatching"})
     try:
         external_job_id = dispatch_job(message)
-    except ClientError:
+    except ClientError as exc:
         logger.exception("Failed to submit Batch job", extra={"event": "job_dispatch_failed"})
+        code = exc.response.get("Error", {}).get("Code")
+        if exc.operation_name == "SubmitJob" and code in {
+            "ClientException", "AccessDeniedException", "AccessDenied",
+        }:
+            # Only a definitive SubmitJob rejection is a proven dispatch failure.
+            # Do not expose arbitrary AWS messages (which can contain commands).
+            detail = exc.response.get("Error", {}).get("Message", "")
+            if code == "ClientException" and "JobDefinition" in detail and (
+                "does not exist" in detail or "ACTIVE" in detail
+            ):
+                reason = (f"Dispatch failed: no active AWS Batch job definition is available for "
+                          f"office {message.payload.office.upper()}. Ask an administrator to configure it before submitting a new run.")
+            else:
+                reason = "Dispatch failed: AWS Batch rejected the submission. Ask an administrator to check the dispatcher logs and runner configuration."
+            _record_failure(message, headers, reason)
+            return
         raise
+    except MissingJobRunner:
+        _record_failure(message, headers, "Dispatch failed: the requested job runner is not supported.")
+        return
 
     try:
         bind_request = BindExternalJobIdRequest(external_job_id=external_job_id)
@@ -138,3 +170,12 @@ def _dispatch_and_bind(message, headers):
         raise RuntimeError("Events API rejected message")
 
     logger.info("Dispatched job and recorded Batch ID", extra={"event": "job_dispatched", "external_job_id": external_job_id})
+
+
+def _record_failure(message, headers, reason):
+    response = requests.post(
+        f"{API_BASE_URL}/internal/jobs/{message.job_id}/dispatch-failure",
+        headers=headers, json={"reason": reason}, timeout=10,
+    )
+    # Never acknowledge SQS until the API has committed the outcome.
+    response.raise_for_status()

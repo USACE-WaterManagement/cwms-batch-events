@@ -1,6 +1,9 @@
 from uuid import UUID
 from datetime import datetime
+import logging
+
 import boto3
+from botocore.exceptions import ClientError
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy.exc import NoResultFound
@@ -20,19 +23,17 @@ from cwms_batch_events.core.models import (
     CamelModel,
     JobLogs,
     JobLogPage,
+    JobCancellationResponse,
     JobRecord,
     JobSource,
-    JobStatus,
     ScriptRunOptions,
     ScriptRunRequest,
 )
 from cwms_batch_events.core.rate_limit import RateLimitMiddleware
 from cwms_batch_events.core.queue import JobQueue
-from cwms_batch_events.core.settings import get_settings
-
-settings = get_settings()
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
+logger = logging.getLogger(__name__)
 
 
 class JobRateLimitStatus(CamelModel):
@@ -47,10 +48,35 @@ def get_office_job(job_id: UUID, user: User, job_db: JobDatabase) -> JobRecord:
     job = job_db.get_job_by_id(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    if job.office.casefold() not in {office.casefold() for office in user.offices}:
+    hq_admin = {"Data Acquisition Mgr", "Data Exchange Mgr"}.intersection(user.roles.get("HQ", []))
+    if not hq_admin and job.office.casefold() not in {office.casefold() for office in user.offices}:
         # Share only the office needed to request access, never job metadata.
         raise HTTPException(status_code=403, detail={"code": "office_access_required", "office": job.office})
     return job
+
+
+def can_control_job(job: JobRecord, user: User) -> bool:
+    if "Data Acquisition Mgr" in user.roles.get("HQ", []) or "Data Exchange Mgr" in user.roles.get("HQ", []):
+        return True
+    return job.office.casefold() in {office.casefold() for office in user.offices}
+
+
+def stop_local_job(job_id: UUID) -> None:
+    from docker.client import DockerClient, from_env
+
+    client: DockerClient = from_env()
+    containers = client.containers.list(filters={"label": f"cwms-batch-events.job-id={job_id}"})
+    if not containers:
+        raise RuntimeError("The local runner did not expose a stoppable container for this job.")
+    for container in containers:
+        container.stop(timeout=10)
+
+
+def request_batch_stop(external_job_id: str, action: str, reason: str) -> dict:
+    batch = boto3.client("batch")
+    if action == "cancel":
+        return batch.cancel_job(jobId=external_job_id, reason=reason)
+    return batch.terminate_job(jobId=external_job_id, reason=reason)
 
 
 @router.get(
@@ -188,34 +214,43 @@ def get_job_by_id(
     return job
 
 
-@router.post("/{job_id}/cancel")
+@router.post("/{job_id}/cancel", response_model=JobCancellationResponse)
 def cancel_job(
     job_id: UUID,
-    request: Request,
+    reason: str = Query("User requested cancellation", min_length=1, max_length=500),
     user: User = Depends(get_current_user),
     job_db: JobDatabase = Depends(get_job_database),
-) -> JobRecord:
+) -> JobCancellationResponse:
     job = get_office_job(job_id, user, job_db)
-    if job.job_status in {JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED}:
-        return job
+    if not can_control_job(job, user):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "You do not have permission to cancel this job")
+    try:
+        result = job_db.request_job_cancellation(job_id, user, reason)
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
 
-    if job.external_job_id:
-        boto3.client("batch").terminate_job(
-            jobId=job.external_job_id,
-            reason="Cancelled by Batch Events user",
-        )
-    elif settings.default_job_runner == "docker-local":
-        from docker import from_env
+    if result["action"] in ("cancel", "terminate"):
+        try:
+            if result.get("runner") == "docker-local":
+                stop_local_job(job_id)
+                return JobCancellationResponse(**job_db.complete_local_cancellation(job_id, user, reason))
+            response = request_batch_stop(result["external_job_id"], result["action"], reason)
+            job_db.record_cancellation_response(job_id, user, result["action"], {
+                "http_status": response.get("ResponseMetadata", {}).get("HTTPStatusCode"),
+                "request_id": response.get("ResponseMetadata", {}).get("RequestId"),
+            })
+            logger.info("Batch cancellation requested", extra={"event": "job_cancellation_requested", "job_id": job_id, "action": result["action"]})
+            result.pop("external_job_id", None)
+            result["message"] = "Cancellation requested. The job remains visible until AWS Batch confirms the result."
+            return JobCancellationResponse(**result)
+        except (ClientError, RuntimeError, OSError) as exc:
+            logger.warning("Job cancellation could not be sent", extra={"event": "job_cancellation_failed", "job_id": job_id, "error_type": type(exc).__name__})
+            job_db.record_cancellation_failure(job_id, user, "Cancellation request could not be sent. Check the runner state and try again.")
+            if isinstance(exc, ClientError):
+                raise HTTPException(status.HTTP_502_BAD_GATEWAY, "The runner rejected the cancellation request") from exc
+            raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "The runner could not accept the cancellation request") from exc
 
-        client = from_env()
-        for container in client.containers.list(
-            all=True,
-            filters={"label": f"BatchEventsJobId={job_id}"},
-        ):
-            container.stop(timeout=5)
-
-    job_db.update_job_status(job_id, JobStatus.CANCELLED)
-    return job_db.get_job_by_id(job_id)
+    return JobCancellationResponse(**result)
 
 
 @router.get("/{job_id}/logs")

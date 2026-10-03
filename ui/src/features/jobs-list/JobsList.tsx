@@ -1,6 +1,6 @@
 import { RunDatePicker, type RunDateRange } from "./RunHistoryControls";
 import { RequestErrorPage } from "../../shared/components/StatePage";
-import { useAuth } from "@usace-watermanagement/groundwork-water";
+import { useAuth } from "@usace-watermanagement/groundwork-water/auth/useAuth";
 import { LoadingRows } from "../../shared/components/LoadingRows";
 import { Button, Modal, UsaceBox } from "@usace/groundwork";
 import { useQuery } from "@tanstack/react-query";

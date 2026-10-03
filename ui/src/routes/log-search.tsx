@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useAuth } from "@usace-watermanagement/groundwork-water";
+import { useAuth } from "@usace-watermanagement/groundwork-water/auth/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { MdSearch, MdOpenInNew, MdArrowBack } from "react-icons/md";

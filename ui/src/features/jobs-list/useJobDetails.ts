@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { useAuth } from "@usace-watermanagement/groundwork-water";
+import { useAuth } from "@usace-watermanagement/groundwork-water/auth/useAuth";
 import fetchWithAuth from "../../utils/fetchWithAuth";
 import { components } from "../../generated/api-types";
 
@@ -20,7 +20,7 @@ const useJobDetails = (jobId: string) => {
       const data = query.state.data;
       if (
         data &&
-        (data.jobStatus === "Completed" || data.jobStatus === "Failed")
+        (data.jobStatus === "Completed" || data.jobStatus === "Failed" || data.jobStatus === "Cancelled")
       )
         return false;
       return 5000;

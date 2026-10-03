@@ -79,7 +79,7 @@ export const ScriptView = ({ script, section, onSectionChange }: ScriptViewProps
             {scriptRuntime(script)}
           </ViewField>
 
-          <ViewField label={<span>Command<span className="block text-xs font-normal text-slate-500">v{script.configVersion ?? 1}</span></span>}>
+          <ViewField label="Command">
             <pre tabIndex={0} className="overflow-x-auto whitespace-pre rounded bg-slate-50 p-2">
               {savedCommandPreview(script)}
             </pre>

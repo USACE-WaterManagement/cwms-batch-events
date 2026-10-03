@@ -7,8 +7,9 @@ import useJobDetails from "./useJobDetails";
 import { Link } from "@tanstack/react-router";
 import { ShareJob } from "./ShareJob";
 import useAdminOffices from "../scripts-manager/useAdminOffices";
-import { useAuth } from "@usace-watermanagement/groundwork-water";
+import { useAuth } from "@usace-watermanagement/groundwork-water/auth/useAuth";
 import LoginPrompt from "../auth/LoginPrompt";
+import CancelJobButton from "./CancelJobButton";
 
 interface JobDetailFullProps {
   jobId: string;
@@ -34,7 +35,7 @@ const JobDetailFull = ({ jobId, standalone = false }: JobDetailFullProps) => {
           {standalone && data.scriptId && !admins.isPending && !admins.data?.includes(data.office) && <Link to="/submit" search={{ office: data.office, scriptId: data.scriptId }} className="action-link"><MdArrowBack aria-hidden />Back to script view</Link>}
           {!standalone && <Link to="/jobs/$jobId" params={{ jobId }} className="action-link"><MdOpenInNew aria-hidden />Open job page</Link>}
         </div>
-        <ShareJob key={jobId} jobId={jobId} />
+        <div className="flex flex-wrap items-center gap-2"><CancelJobButton job={data} /><ShareJob key={jobId} jobId={jobId} /></div>
       </nav>
       <JobDetail job={data} />
       <JobLogs key={jobId} jobId={jobId} status={data.jobStatus} batchStatus={data.batchStatus} endTime={data.endTime} />

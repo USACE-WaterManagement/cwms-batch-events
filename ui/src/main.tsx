@@ -6,10 +6,8 @@ import { queryClient } from "./utils/queryClient";
 import ErrorToasts from "./components/ErrorToasts";
 import ConnectivityStatus from "./shared/components/ConnectivityStatus";
 import { LinkProvider } from "@usace/groundwork";
-import {
-  AuthProvider,
-  createKeycloakAuthMethod,
-} from "@usace-watermanagement/groundwork-water";
+import { AuthProvider } from "@usace-watermanagement/groundwork-water/auth/AuthProvider";
+import { createKeycloakAuthMethod } from "@usace-watermanagement/groundwork-water/auth/keycloakAuthMethod";
 import createMockAuthMethod from "./features/auth/mockAuthMethod.ts";
 import { Link, RouterProvider, createRouter } from "@tanstack/react-router";
 

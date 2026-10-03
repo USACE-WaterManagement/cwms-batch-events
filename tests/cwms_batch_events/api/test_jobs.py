@@ -1,10 +1,11 @@
 import pytest
+from unittest.mock import patch
 from uuid import uuid4
 
 from sqlalchemy.exc import NoResultFound
 
 from cwms_batch_events.api.main import app
-from cwms_batch_events.core.models import JobSource
+from cwms_batch_events.core.models import JobSource, JobStatus
 from cwms_batch_events.core.models import JobLogPage
 from cwms_batch_events.core.rate_limit import OfficeRateLimit, RateLimitStatus
 from tests.factories import make_job_record
@@ -146,6 +147,46 @@ def test_get_job_by_id_returns_404_when_missing(client, job_db):
 
     assert response.status_code == 404
     assert response.json() == {"detail": "Job not found"}
+
+
+def test_cancel_queued_job_returns_database_result(client, job_db, user):
+    job = make_job_record(job_status=JobStatus.PENDING)
+    job_db.get_job_by_id.return_value = job
+    job_db.request_job_cancellation.return_value = {
+        "action": "cancelled", "status": JobStatus.CANCELLED,
+        "message": "The queued job was removed before dispatch.",
+    }
+
+    response = client.post(f"/jobs/{job.id}/cancel")
+
+    assert response.status_code == 200
+    assert response.json()["action"] == "cancelled"
+    job_db.request_job_cancellation.assert_called_once_with(job.id, user, "User requested cancellation")
+
+
+def test_cancel_batch_job_requests_termination(client, job_db, user):
+    job = make_job_record(job_status=JobStatus.RUNNING, external_job_id="batch-123")
+    job_db.get_job_by_id.return_value = job
+    job_db.request_job_cancellation.return_value = {
+        "action": "terminate", "status": JobStatus.CANCELLING,
+        "external_job_id": "batch-123", "runner": "batch",
+        "message": "Cancellation requested.",
+    }
+    with patch("cwms_batch_events.api.routers.jobs.request_batch_stop", return_value={}):
+        response = client.post(f"/jobs/{job.id}/cancel")
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "Cancelling"
+
+
+def test_cancel_rejects_job_from_unrelated_office(client, job_db, user):
+    job = make_job_record(office="SPK")
+    job_db.get_job_by_id.return_value = job
+
+    response = client.post(f"/jobs/{job.id}/cancel")
+
+    assert response.status_code == 403
+    job_db.request_job_cancellation.assert_not_called()
 
 
 def test_get_logs_for_job_returns_logs(client, job_logger, job_db):

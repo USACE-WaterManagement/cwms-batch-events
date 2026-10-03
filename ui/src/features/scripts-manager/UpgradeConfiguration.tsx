@@ -1,6 +1,6 @@
 import { notifySuccess } from "../../utils/actionNotifications";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@usace-watermanagement/groundwork-water";
+import { useAuth } from "@usace-watermanagement/groundwork-water/auth/useAuth";
 import { Button } from "@usace/groundwork";
 import fetchWithAuth from "../../utils/fetchWithAuth";
 import LoadingSpinner from "../../shared/components/LoadingSpinner";

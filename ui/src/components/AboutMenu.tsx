@@ -4,6 +4,19 @@ import { MdChevronRight, MdExpandMore, MdOpenInNew } from "react-icons/md";
 
 interface MenuLink { text: string; href: string; external?: boolean }
 
+const repository = "https://github.com/USACE-WaterManagement/cwms-batch-events";
+const documentationLinks: MenuLink[] = [
+  { text: "Dispatch outcomes", href: `${repository}/blob/cwbi-dev/docs/dispatch-outcomes.md`, external: true },
+  { text: "District repository browsing", href: `${repository}/blob/cwbi-dev/docs/github-app-repositories.md`, external: true },
+  { text: "Job cancellation", href: `${repository}/blob/cwbi-dev/docs/job-cancellation.md`, external: true },
+  { text: "Job logs", href: `${repository}/blob/cwbi-dev/docs/job-logs.md`, external: true },
+  { text: "Office history rollout", href: `${repository}/blob/cwbi-dev/docs/office-history-upgrade.md`, external: true },
+  { text: "Registered commands", href: `${repository}/blob/cwbi-dev/docs/registered-commands.md`, external: true },
+  { text: "Registered schedules", href: `${repository}/blob/cwbi-dev/docs/registered-schedules.md`, external: true },
+  { text: "Scripts Manager", href: `${repository}/blob/cwbi-dev/docs/script-manager.md`, external: true },
+  { text: "Server logs", href: `${repository}/blob/cwbi-dev/docs/server-logs.md`, external: true },
+];
+
 export function AboutMenu({ signedIn, office, repositoryUrl }: {
   signedIn: boolean; office?: string; repositoryUrl?: string;
 }) {
@@ -35,10 +48,12 @@ export function AboutMenu({ signedIn, office, repositoryUrl }: {
       { text: "Getting started", href: "/help/onboarding" },
       { text: "Script setup", href: "/help/script-files" },
       { text: "Configuration versions", href: "/help/script-versions" },
+      { text: "API rate limits", href: "/about/rate-limits" },
     ] },
+    { title: "Project documentation", links: documentationLinks },
     { title: "Developer resources", links: [
       { text: "Swagger UI", href: `${window.location.origin}/api/docs`, external: true },
-      { text: "CWMS Batch Events", href: "https://github.com/USACE-WaterManagement/cwms-batch-events", external: true },
+      { text: "CWMS Batch Events", href: repository, external: true },
       ...(repositoryUrl ? [{ text: `${office} CWBI jobs`, href: repositoryUrl, external: true }] : []),
       { text: "CWBI WM images", href: "https://github.com/USACE/cwbi-wm-images", external: true },
     ] },

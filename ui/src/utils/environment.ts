@@ -40,3 +40,15 @@ export function environmentUrl(environment: DeploymentEnvironment): string {
   currentUrl.hostname = environmentHost(currentUrl.hostname, environment);
   return currentUrl.href;
 }
+
+const cdaOrigins: Record<DeploymentEnvironment, string> = {
+  dev: "https://water.dev.cwbi.us",
+  test: "https://water.test.cwbi.us",
+  prod: "https://water.cwbi.mil",
+};
+
+export function cdaUserRolesUrl(office: string): string {
+  const environment = import.meta.env.MODE as DeploymentEnvironment;
+  const origin = cdaOrigins[environment];
+  return `${origin ?? window.location.origin}/cwms-data/user-roles/${encodeURIComponent(office)}`;
+}

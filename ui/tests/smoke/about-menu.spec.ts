@@ -18,6 +18,11 @@ test("grouped Help navigation works with keyboard, touch, and client-side routin
   await expect(menu).toBeVisible();
   await expect(menu.getByRole("link", { name: "Version and environment" })).toHaveCount(0);
   await expect(header.getByRole("link", { name: /^(Help|Dev)/ })).toHaveCount(0);
+  await expect(menu.getByRole("link", { name: "API rate limits", exact: true })).toHaveAttribute("href", "/events/about/rate-limits");
+  for (const name of [
+    "Dispatch outcomes", "District repository browsing", "Job cancellation", "Job logs",
+    "Office history rollout", "Registered commands", "Registered schedules", "Scripts Manager", "Server logs",
+  ]) await expect(menu.getByRole("link", { name, exact: true })).toHaveAttribute("href", /\/blob\/cwbi-dev\/docs\/[^/]+\.md$/);
   await page.keyboard.press("Tab");
   await expect(menu.getByRole("link", { name: "About Batch Events", exact: true })).toBeFocused();
   await page.keyboard.press("Escape");
@@ -46,6 +51,12 @@ test("grouped Help navigation works with keyboard, touch, and client-side routin
   await menu.getByRole("link", { name: "Getting started" }).click();
   await expect(page).toHaveURL(/\/help\/onboarding$/);
   await expect(menu).toHaveCount(0);
+  await expect(page.getByRole("tab", { name: "Python", exact: true })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Bash", exact: true })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Java", exact: true })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Bash without repo dependencies", exact: true })).toBeVisible();
+  await page.getByRole("tab", { name: "Bash without repo dependencies", exact: true }).click();
+  await expect(page.getByText("no district checkout or Python dependency install", { exact: false })).toBeVisible();
   // Mock authentication lives in memory and would be lost after a full reload.
   await expect(header.getByRole("button", { name: "Logout", exact: true })).toBeVisible();
   await about.click();

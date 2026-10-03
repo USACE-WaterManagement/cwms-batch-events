@@ -90,7 +90,9 @@ def test_verify_jwt_by_api_uses_jwks_client():
 
     assert payload == {"sub": "123"}
     jwk_client_cls.assert_called_once()
-    jwt_decode.assert_called_once_with("token", signing_key, ["RS256"])
+    jwt_decode.assert_called_once_with(
+        "token", signing_key, ["RS256"], options={"require": ["exp"]}
+    )
 
 
 @pytest.mark.parametrize("environment", ["TEST", "PROD"])
@@ -116,7 +118,7 @@ def test_verify_jwt_by_saved_key_uses_saved_public_key_and_issuer(environment):
         "pem",
         algorithms=["RS256"],
         issuer=mock_issuer[environment],
-        options={"verify_aud": False},
+        options={"verify_aud": False, "require": ["exp"]},
     )
 
 

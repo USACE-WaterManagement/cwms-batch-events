@@ -2,7 +2,7 @@ import { useState } from "react";
 import useScriptsCatalog from "./useScriptCatalog";
 import { Dropdown } from "@usace/groundwork";
 import ScriptExecutor from "./ScriptExecutor";
-import { useAuth } from "@usace-watermanagement/groundwork-water";
+import { useAuth } from "@usace-watermanagement/groundwork-water/auth/useAuth";
 import { OfficeSelector } from "../../shared/components/OfficeSelector";
 import { useRememberedOffice } from "../../shared/hooks/useRememberedOffice";
 import LoginPrompt from "../auth/LoginPrompt";

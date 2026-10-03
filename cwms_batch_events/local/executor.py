@@ -1,5 +1,4 @@
 import logging
-import threading
 from cwms_batch_events.core.job_database.base import JobDatabase
 from cwms_batch_events.core.job_logger.base import JobLogger
 from cwms_batch_events.core.execution import command_for_payload, skips_repository_checkout
@@ -35,6 +34,10 @@ class LocalExecutor:
         container = None
 
         try:
+            current = self.db.get_job_by_id(message.job_id)
+            if current is not None and isinstance(getattr(current, "job_status", None), JobStatus) and current.job_status != JobStatus.PENDING:
+                logger.info("Local job was cancelled before execution", extra={"event": "local_job_not_started", "job_id": message.job_id})
+                return
             command = command_for_payload(message.payload, runner="local")
             if message.payload.release_jar:
                 command = jar_command(message, os.environ.get("ARTIFACT_API_URL"), os.environ.get("APP_KEY"))
@@ -42,8 +45,8 @@ class LocalExecutor:
                 image=f"{message.payload.office}-jobs",
                 command=command,
                 detach=True,
+                labels={"cwms-batch-events.job-id": str(message.job_id)},
                 stderr=True,
-                labels={"BatchEventsJobId": str(message.job_id)},
                 nano_cpus=int(float(RESOURCE_PROFILES[message.payload.resource_size]["vcpus"]) * 1_000_000_000),
                 mem_limit=int(RESOURCE_PROFILES[message.payload.resource_size]["memory"]) * 1024 * 1024,
                 environment=[
@@ -58,33 +61,21 @@ class LocalExecutor:
                 ],
             )
 
-            if self.db.get_job_by_id(message.job_id).job_status == JobStatus.CANCELLED:
+            current = self.db.get_job_by_id(message.job_id)
+            if current is not None and getattr(current, "job_status", None) == JobStatus.CANCELLED:
+                container.stop(timeout=10)
+                logger.info("Local job was cancelled during startup", extra={"event": "local_job_stopped_before_start", "job_id": message.job_id})
                 return
             self.db.update_job_status(message.job_id, JobStatus.RUNNING)
             logger.info("Local job started", extra={"event": "local_job_started", "job_id": message.job_id})
 
-            streamed_logs: list[str] = []
-
-            def stream_logs():
-                try:
-                    for chunk in container.logs(stream=True, follow=True):
-                        streamed_logs.append(chunk.decode("utf-8", errors="replace"))
-                        self.logger.push_logs_for_job(message.job_id, "".join(streamed_logs))
-                except Exception:
-                    logger.exception("Local job log streaming failed", extra={"event": "local_log_stream_failed", "job_id": message.job_id})
-
-            log_thread = threading.Thread(target=stream_logs, name=f"job-log-{message.job_id}", daemon=True)
-            log_thread.start()
             result = container.wait()
-            log_thread.join(timeout=5)
             status_code = result["StatusCode"]
             logger.log(logging.INFO if status_code == 0 else logging.WARNING, "Local job exited", extra={"event": "local_job_exited", "job_id": message.job_id, "exit_code": status_code})
 
-            logs = "".join(streamed_logs) or container.logs().decode("utf-8")
+            logs = container.logs().decode("utf-8")
             self.logger.push_logs_for_job(message.job_id, logs)
 
-            if self.db.get_job_by_id(message.job_id).job_status == JobStatus.CANCELLED:
-                return
             if status_code == 0:
                 self.db.update_job_status(message.job_id, JobStatus.COMPLETED)
             else:

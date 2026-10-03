@@ -110,6 +110,9 @@ class CloudWatchJobLogger:
 
         job = self.refresh_job(job_id)
         if not job.external_job_id:
+            if job.job_status in ("Failed", "Dispatch unknown"):
+                return JobLogPage(logs="", available=False, supports_live=False,
+                                  message=job.batch_status_reason or "Dispatch did not complete; no AWS job is linked.")
             log_timing("awaiting_dispatch", job_id=job_id)
             return JobLogPage(logs="", available=False, next_cursor=cursor,
                               message="Waiting for dispatch: no AWS Batch job has been linked yet.")

@@ -87,6 +87,10 @@ class Settings(LoggingSettings, StorageSettings, ExecutorSettings, RunnerSetting
     github_repository_ref: str = ""
     repository_mock_mode: bool = False
     scheduler_enabled: bool = True
+    dispatch_watchdog_enabled: bool = True
+    dispatch_timeout_minutes: int = Field(default=60, ge=1)
+    cancellation_watchdog_enabled: bool = True
+    cancellation_timeout_minutes: int = Field(default=15, ge=1)
     api_version: str = "local"
     app_key: str | None = None
     auth_environment: str | None = None
@@ -114,6 +118,8 @@ class ApiSettings(Settings, DatabaseSettings):
     @model_validator(mode="after")
     def validate_api(self):
         self.require("app_key")
+        if self.mock_user and self.deployment_environment not in {"local", "test"}:
+            raise ValueError("MOCK_USER is only permitted for local or test deployments")
         if not self.mock_user:
             self.require("auth_environment", "cda_api_root")
             if self.auth_environment not in {"LOCAL", "TEST", "PROD"}:

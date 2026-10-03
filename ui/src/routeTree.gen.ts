@@ -22,6 +22,7 @@ import { Route as AboutRateLimitsRouteImport } from './routes/about_.rate-limits
 import { Route as AboutScriptFilesRouteImport } from './routes/about_.script-files'
 import { Route as AboutVersionRouteImport } from './routes/about_.version'
 import { Route as AdminOperationsRouteImport } from './routes/admin_.operations'
+import { Route as AdminQueuesRouteImport } from './routes/admin_.queues'
 import { Route as AdminRateLimitsRouteImport } from './routes/admin_.rate-limits'
 import { Route as AdminSchedulerRouteImport } from './routes/admin_.scheduler'
 import { Route as AdminUsageRouteImport } from './routes/admin_.usage'
@@ -45,7 +46,7 @@ const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() => import('./routes/admin.lazy').then((d) => d.Route))
 const DependenciesRoute = DependenciesRouteImport.update({
   id: '/dependencies',
   path: '/dependencies',
@@ -95,22 +96,33 @@ const AdminOperationsRoute = AdminOperationsRouteImport.update({
   id: '/admin_/operations',
   path: '/admin/operations',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() =>
+  import('./routes/admin_.operations.lazy').then((d) => d.Route),
+)
+const AdminQueuesRoute = AdminQueuesRouteImport.update({
+  id: '/admin_/queues',
+  path: '/admin/queues',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/admin_.queues.lazy').then((d) => d.Route))
 const AdminRateLimitsRoute = AdminRateLimitsRouteImport.update({
   id: '/admin_/rate-limits',
   path: '/admin/rate-limits',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() =>
+  import('./routes/admin_.rate-limits.lazy').then((d) => d.Route),
+)
 const AdminSchedulerRoute = AdminSchedulerRouteImport.update({
   id: '/admin_/scheduler',
   path: '/admin/scheduler',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() =>
+  import('./routes/admin_.scheduler.lazy').then((d) => d.Route),
+)
 const AdminUsageRoute = AdminUsageRouteImport.update({
   id: '/admin_/usage',
   path: '/admin/usage',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() => import('./routes/admin_.usage.lazy').then((d) => d.Route))
 const HelpOnboardingRoute = HelpOnboardingRouteImport.update({
   id: '/help_/onboarding',
   path: '/help/onboarding',
@@ -151,6 +163,7 @@ export interface FileRoutesByFullPath {
   '/about/script-files': typeof AboutScriptFilesRoute
   '/about/version': typeof AboutVersionRoute
   '/admin/operations': typeof AdminOperationsRoute
+  '/admin/queues': typeof AdminQueuesRoute
   '/admin/rate-limits': typeof AdminRateLimitsRoute
   '/admin/scheduler': typeof AdminSchedulerRoute
   '/admin/usage': typeof AdminUsageRoute
@@ -174,6 +187,7 @@ export interface FileRoutesByTo {
   '/about/script-files': typeof AboutScriptFilesRoute
   '/about/version': typeof AboutVersionRoute
   '/admin/operations': typeof AdminOperationsRoute
+  '/admin/queues': typeof AdminQueuesRoute
   '/admin/rate-limits': typeof AdminRateLimitsRoute
   '/admin/scheduler': typeof AdminSchedulerRoute
   '/admin/usage': typeof AdminUsageRoute
@@ -198,6 +212,7 @@ export interface FileRoutesById {
   '/about_/script-files': typeof AboutScriptFilesRoute
   '/about_/version': typeof AboutVersionRoute
   '/admin_/operations': typeof AdminOperationsRoute
+  '/admin_/queues': typeof AdminQueuesRoute
   '/admin_/rate-limits': typeof AdminRateLimitsRoute
   '/admin_/scheduler': typeof AdminSchedulerRoute
   '/admin_/usage': typeof AdminUsageRoute
@@ -223,6 +238,7 @@ export interface FileRouteTypes {
     | '/about/script-files'
     | '/about/version'
     | '/admin/operations'
+    | '/admin/queues'
     | '/admin/rate-limits'
     | '/admin/scheduler'
     | '/admin/usage'
@@ -246,6 +262,7 @@ export interface FileRouteTypes {
     | '/about/script-files'
     | '/about/version'
     | '/admin/operations'
+    | '/admin/queues'
     | '/admin/rate-limits'
     | '/admin/scheduler'
     | '/admin/usage'
@@ -269,6 +286,7 @@ export interface FileRouteTypes {
     | '/about_/script-files'
     | '/about_/version'
     | '/admin_/operations'
+    | '/admin_/queues'
     | '/admin_/rate-limits'
     | '/admin_/scheduler'
     | '/admin_/usage'
@@ -293,6 +311,7 @@ export interface RootRouteChildren {
   AboutScriptFilesRoute: typeof AboutScriptFilesRoute
   AboutVersionRoute: typeof AboutVersionRoute
   AdminOperationsRoute: typeof AdminOperationsRoute
+  AdminQueuesRoute: typeof AdminQueuesRoute
   AdminRateLimitsRoute: typeof AdminRateLimitsRoute
   AdminSchedulerRoute: typeof AdminSchedulerRoute
   AdminUsageRoute: typeof AdminUsageRoute
@@ -396,6 +415,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminOperationsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin_/queues': {
+      id: '/admin_/queues'
+      path: '/admin/queues'
+      fullPath: '/admin/queues'
+      preLoaderRoute: typeof AdminQueuesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin_/rate-limits': {
       id: '/admin_/rate-limits'
       path: '/admin/rate-limits'
@@ -469,6 +495,7 @@ const rootRouteChildren: RootRouteChildren = {
   AboutScriptFilesRoute: AboutScriptFilesRoute,
   AboutVersionRoute: AboutVersionRoute,
   AdminOperationsRoute: AdminOperationsRoute,
+  AdminQueuesRoute: AdminQueuesRoute,
   AdminRateLimitsRoute: AdminRateLimitsRoute,
   AdminSchedulerRoute: AdminSchedulerRoute,
   AdminUsageRoute: AdminUsageRoute,

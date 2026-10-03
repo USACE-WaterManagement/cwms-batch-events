@@ -217,6 +217,7 @@ export const ScriptForm = ({
   office,
   script,
   isPending,
+  mutationError,
   onDelete,
   onSave,
   onCancelEdit,
@@ -271,7 +272,8 @@ export const ScriptForm = ({
     onValidationChange?.(Object.keys(next).length > 0);
     const first = Object.keys(next)[0];
     if (first) {
-      setSection(fieldSections[first] ?? "general");
+      const sectionField = first.match(/^[^.[]+/)?.[0] ?? first;
+      setSection(fieldSections[sectionField] ?? "general");
       requestAnimationFrame(() => document.getElementById(first)?.focus());
     }
   };
@@ -286,7 +288,10 @@ export const ScriptForm = ({
       setDraftRestored(false);
     }
     catch (error) {
-      if (error instanceof ApiError && error.fields) showErrors(error.fields);
+      if (error instanceof ApiError) {
+        if (error.fields) showErrors(error.fields);
+        else if (error.status === 409) showErrors({ name: error.message });
+      }
     }
   };
   const validation = (field: string) => ({
@@ -296,6 +301,14 @@ export const ScriptForm = ({
     className: errors[field] ? "rounded border-2 border-red-600 bg-red-50 p-2" : "rounded border p-2",
   });
   const errorFor = (field: string) => errors[field] && <p id={`${field}-error`} className="text-sm text-red-800">{errors[field]}</p>;
+  const environmentErrorFor = (index: number, field: "name" | "value") => {
+    const key = `environmentVariables[${index}].${field}`;
+    const message = errors[key];
+    if (!message) return null;
+    return <p id={`${key}-error`} className="text-sm text-red-800">
+      {message}{field === "name" && message.includes("secret-related") && <> <Link to="/help/script-files" target="_blank" rel="noopener noreferrer" className="font-medium underline">Learn why</Link></>}
+    </p>;
+  };
   const changeForm = (next: ScriptFormData) => {
     if (next.runtime !== "java" || next.executionType !== "github_file" || next.commandMode === "shell") next = { ...next, releaseJar: null };
     setForm(next);
@@ -348,7 +361,9 @@ export const ScriptForm = ({
       }}
     >
       <div className="script-form-layout flex flex-col gap-y-2">
-        {Object.keys(errors).length > 0 && <div role="alert" className="rounded border border-red-500 bg-red-50 p-3 text-sm text-red-800">Review the highlighted sections and fields before saving.</div>}
+        {(Object.keys(errors).length > 0 || mutationError) && <div role="alert" className="rounded border border-red-500 bg-red-50 p-3 text-sm text-red-800">
+          {mutationError ? <>{mutationError.message}{mutationError.message.includes("secret-related") && <> <Link to="/help/script-files" target="_blank" rel="noopener noreferrer" className="font-medium underline">Learn why</Link></>}</> : "Review the highlighted sections and fields before saving."}
+        </div>}
         <div className="script-form-fields">
         <ScriptSections active={section} onSelect={setSection} errors={errors}>
         <Fieldset disabled={isPending} className="flex min-w-0 flex-col gap-1">
@@ -460,7 +475,11 @@ export const ScriptForm = ({
               {(form.environmentVariables ?? []).map((variable, index) => (
                 <div className="grid gap-2 rounded border p-3 @md/script-panel:grid-cols-[1fr_1fr_auto]" key={index}>
                   <Input
+                    id={`environmentVariables[${index}].name`}
                     aria-label={`Environment variable ${index + 1} name`}
+                    aria-invalid={Boolean(errors[`environmentVariables[${index}].name`])}
+                    aria-describedby={errors[`environmentVariables[${index}].name`] ? `environmentVariables[${index}].name-error` : undefined}
+                    className={errors[`environmentVariables[${index}].name`] ? "rounded border-2 border-red-600 bg-red-50 p-2" : "rounded border p-2"}
                     placeholder="NAME"
                     value={variable.name}
                     onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
@@ -469,8 +488,13 @@ export const ScriptForm = ({
                       update("environmentVariables", next);
                     }}
                   />
+                  {environmentErrorFor(index, "name")}
                   <Input
+                    id={`environmentVariables[${index}].value`}
                     aria-label={`Environment variable ${index + 1} value`}
+                    aria-invalid={Boolean(errors[`environmentVariables[${index}].value`])}
+                    aria-describedby={errors[`environmentVariables[${index}].value`] ? `environmentVariables[${index}].value-error` : undefined}
+                    className={errors[`environmentVariables[${index}].value`] ? "rounded border-2 border-red-600 bg-red-50 p-2" : "rounded border p-2"}
                     placeholder="Value"
                     value={variable.value}
                     onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
@@ -479,6 +503,7 @@ export const ScriptForm = ({
                       update("environmentVariables", next);
                     }}
                   />
+                  {environmentErrorFor(index, "value")}
                   <Button type="button" onClick={() => update("environmentVariables", (form.environmentVariables ?? []).filter((_, itemIndex) => itemIndex !== index))}>
                     Remove
                   </Button>
@@ -488,6 +513,7 @@ export const ScriptForm = ({
                 Add variable
               </Button>
               <Text>Names must be uppercase identifiers. Runtime and secret-like names are reserved.</Text>
+              {errorFor("environmentVariables")}
             </div>
           </ConfigSection>
           <ConfigSection id="resources" active={section}>

@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef } from "react";
-import { useAuth } from "@usace-watermanagement/groundwork-water";
+import { useAuth } from "@usace-watermanagement/groundwork-water/auth/useAuth";
 import fetchWithAuth from "../../utils/fetchWithAuth";
 import { components } from "../../generated/api-types";
 
@@ -59,7 +59,8 @@ const useJobLogs = (jobId: string, status: string, interval: number, endTime?: s
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
-    refetchOnMount: false,
+    // Re-entering a run view must check for output that arrived while it was closed.
+    refetchOnMount: "always",
   });
   return {
     ...query,

@@ -48,7 +48,10 @@ class EnvironmentVariable(CamelModel):
         if value in PROTECTED_ENVIRONMENT_NAMES or value.startswith("BATCH_EVENTS_"):
             raise ValueError("This environment variable name is reserved")
         if any(term in value for term in PROTECTED_ENVIRONMENT_TERMS):
-            raise ValueError("Environment variable names cannot contain secret-related terms")
+            raise ValueError(
+                "Environment variable names containing secret-related terms are not allowed "
+                "because job environment variables are not stored securely like secrets"
+            )
         return value
 
 
@@ -142,6 +145,9 @@ class ExecutionOptions(ExecutionRecord):
 
 
 class JobStatus(str, Enum):
+    CANCELLED = "Cancelled"
+    CANCELLING = "Cancelling"
+    DISPATCH_UNKNOWN = "Dispatch unknown"
     FAILED = "Failed"
     PENDING = "Pending"
     RUNNING = "Running"
@@ -184,6 +190,7 @@ class JobRecord(ExecutionRecord):
     schedule_timezone: str | None = None
     schedule_author: str | None = None
     dispatch_claimed_at: datetime | None = None
+    cancellation_requested_at: datetime | None = None
 
     @field_serializer("username")
     def public_username(self, value: str) -> str:
@@ -204,6 +211,12 @@ class JobRecord(ExecutionRecord):
     log_stream: str | None = None
     batch_status: str | None = None
     batch_status_reason: str | None = None
+
+
+class JobCancellationResponse(CamelModel):
+    action: Literal["cancelled", "cancel", "terminate", "already_finished", "already_requested"]
+    status: JobStatus
+    message: str
 
 
 class JobRunner(CamelModel):

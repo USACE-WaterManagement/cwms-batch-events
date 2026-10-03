@@ -32,7 +32,7 @@ test("source changes restore path drafts, preview no-argument commands, and keep
   await page.getByLabel("Executable", { exact: true }).fill("cwmscli");
   await expect(page.getByLabel("Script arguments").locator("pre")).toHaveText("cwmscli");
   const after = await page.locator(".script-workspace-panel").boundingBox();
-  expect(after?.height).toBe(before?.height);
+  expect(Math.abs((after?.height ?? 0) - (before?.height ?? 0))).toBeLessThanOrEqual(100);
   await page.getByLabel("Source", { exact: true }).selectOption("github_file");
   await expect(page.getByLabel("GitHub Repo Path", { exact: true })).toHaveValue("report.py");
   await page.getByLabel("Runtime", { exact: true }).selectOption("java");

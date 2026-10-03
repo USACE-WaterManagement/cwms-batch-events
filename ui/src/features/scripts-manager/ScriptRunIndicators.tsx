@@ -12,7 +12,7 @@ export const ScriptRunIndicators = ({ jobs, scriptName, onSelectRun }: {
 }) => {
   const latest = [...jobs].sort((a, b) => new Date(b.createdTime).getTime() - new Date(a.createdTime).getTime())[0];
   const activeRun = latest && (latest.jobStatus === "Running" || latest.jobStatus === "Pending") ? latest : undefined;
-  const failed = latest?.jobStatus === "Failed" ? latest : undefined;
+  const failed = (latest?.jobStatus === "Failed" || latest?.jobStatus === "Dispatch unknown") ? latest : undefined;
 
   if (!activeRun && !failed) return null;
 
@@ -25,10 +25,10 @@ export const ScriptRunIndicators = ({ jobs, scriptName, onSelectRun }: {
       {activeRun.batchStatus ? jobStatusLabel(activeRun) : activeRun.jobStatus === "Running" ? "Running" : "Queued"}
     </button>}
     {failed && <button type="button" onClick={() => onSelectRun(failed.id)}
-      aria-label={`View latest failed run for ${scriptName}`}
-      title={`Latest run failed ${new Date(failureTime(failed)).toLocaleString()}.`}
+      aria-label={`View latest ${failed.jobStatus === "Failed" ? "failed" : "unresolved"} run for ${scriptName}`}
+      title={failed.batchStatusReason || `Latest run ${jobStatusLabel(failed).toLowerCase()} ${new Date(failureTime(failed)).toLocaleString()}.`}
       className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-900 hover:bg-amber-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600">
-      <FaTriangleExclamation aria-hidden="true" /> Failed
+      <FaTriangleExclamation aria-hidden="true" /> {jobStatusLabel(failed)}
     </button>}
   </div>;
 };

@@ -1,6 +1,7 @@
 import os
 import sys
 os.environ.setdefault("SCHEDULER_ENABLED", "false")
+os.environ.setdefault("DISPATCH_WATCHDOG_ENABLED", "false")
 from pathlib import Path
 
 
