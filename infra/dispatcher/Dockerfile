@@ -24,7 +24,7 @@ COPY --from=builder /usr/local /usr/local
 RUN python -m pip uninstall --yes pip setuptools wheel
 
 COPY cwms_batch_events ./cwms_batch_events
-COPY infra/dispatcher ./infra/dispatcher
+COPY infra ./infra
 
 ENV PYTHONPATH=/app
 

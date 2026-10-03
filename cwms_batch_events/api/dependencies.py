@@ -1,3 +1,6 @@
+import logging
+
+from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import Depends
 
 from cwms_batch_events.core.auth.user.dependencies import (
@@ -10,10 +13,13 @@ from cwms_batch_events.core.job_database.postgres.session import create_session
 from cwms_batch_events.core.job_logger.base import JobLogger
 from cwms_batch_events.core.job_logger.cloudwatch import CloudWatchJobLogger
 from cwms_batch_events.core.job_logger.s3 import S3JobLogger
+from cwms_batch_events.core.notification_queue import NotificationQueue
 from cwms_batch_events.core.queue import JobQueue
 from cwms_batch_events.core.settings import get_settings
 
 settings = get_settings()
+
+logger = logging.getLogger(__name__)
 
 if settings.mock_user:
     get_current_user = get_current_user_mock
@@ -42,3 +48,13 @@ def get_job_logger(db=Depends(get_job_database)) -> JobLogger:
 
 def get_job_queue() -> JobQueue:
     return JobQueue()
+
+
+def get_notification_queue() -> NotificationQueue | None:
+    try:
+        return NotificationQueue()
+    except (BotoCoreError, ClientError):
+        logger.exception(
+            "Notification queue is unavailable; job status updates will continue"
+        )
+        return None

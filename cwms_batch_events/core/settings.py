@@ -66,11 +66,29 @@ class DatabaseSettings(ComponentSettings):
 
 class ExecutorSettings(ComponentSettings):
     cda_api_root: str | None = None
+    cda_bearer_token: str = ""
+    cda_client_id: str = ""
+    cda_client_secret: str = ""
+    cda_token_url: str = ""
+    cda_token_host_header: str = ""
 
 
 class RunnerSettings(ComponentSettings):
     default_job_runner: Literal["batch", "docker-local"] = "batch"
     sqs_endpoint_url: str | None = None
+    notification_queue_name: str = "cwms-batch-events-notifications"
+    notification_delivery_mode: str = "log"
+    notification_from_address: str = ""
+
+
+class NotificationSettings(ComponentSettings):
+    sqs_endpoint_url: str | None = None
+    aws_default_region: str = "us-east-1"
+    aws_access_key_id: str = "testing"
+    aws_secret_access_key: str = "testing"
+    notification_queue_name: str = "cwms-batch-events-notifications"
+    notification_delivery_mode: str = "log"
+    notification_from_address: str = ""
 
 
 class Settings(LoggingSettings, StorageSettings, ExecutorSettings, RunnerSettings):
@@ -161,3 +179,17 @@ def _get_settings(settings_type: type[ComponentSettings] = Settings) -> Componen
 # lru_cache's return annotation does not preserve the class-to-instance relation.
 # Describe that relation without changing its runtime cache or cache_clear API.
 get_settings = cast(_SettingsFactory, _get_settings)
+
+
+class _SettingsProxy:
+    def __getattr__(self, name):
+        if name in {"sqs_endpoint_url", "aws_default_region", "aws_access_key_id", "aws_secret_access_key", "notification_queue_name", "notification_delivery_mode", "notification_from_address"}:
+            return getattr(get_settings(NotificationSettings), name)
+        if name in {"cda_api_root", "cda_bearer_token", "cda_client_id", "cda_client_secret", "cda_token_url", "cda_token_host_header"}:
+            return getattr(get_settings(ExecutorSettings), name)
+        if name in {"aws_access_key_id", "aws_secret_access_key"}:
+            return getattr(get_settings(AwsSettings), name)
+        return getattr(get_settings(), name)
+
+
+settings = _SettingsProxy()

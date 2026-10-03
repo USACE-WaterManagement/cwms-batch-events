@@ -2,7 +2,7 @@ from datetime import datetime
 from pathlib import PurePosixPath
 from typing import Literal
 from enum import Enum
-from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_serializer, field_validator, model_validator
 from cwms_batch_events.core.display_names import readable_name
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from pydantic.alias_generators import to_camel
@@ -303,6 +303,130 @@ class JobMessage(BaseModel):
     payload: ScriptRunOptions
     # Optional for compatibility with messages queued before correlation support.
     request_id: str | None = Field(default=None, pattern=r"^[a-f0-9]{32}$")
+
+
+class NotificationSeverity(str, Enum):
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
+
+
+class LegacyNotificationMessage(BaseModel):
+    version: Literal["1.0"]
+    template: str
+    office: str
+    severity: NotificationSeverity
+    recipients: list[EmailStr] = Field(min_length=1, max_length=100)
+    subject: str = Field(min_length=1, max_length=998)
+    body: str = Field(min_length=1, max_length=100_000)
+    created_at: datetime
+    data: dict[str, str | None]
+
+
+class EmailNotificationMessage(CamelModel):
+    version: Literal["1.1"] = "1.1"
+    message_type: str = Field(min_length=1, max_length=128, pattern=r"^[a-z0-9]+(?:[-_][a-z0-9]+)*$")
+    source: str = Field(min_length=1, max_length=128)
+    office: str = Field(min_length=1, max_length=16)
+    severity: NotificationSeverity
+    recipients: list[EmailStr] = Field(min_length=1, max_length=100)
+    subject: str = Field(min_length=1, max_length=998)
+    body: str = Field(min_length=1, max_length=100_000)
+    created_at: datetime
+    template: str | None = Field(default=None, max_length=128)
+    data: dict[str, str | None] = Field(default_factory=dict)
+
+
+class NotificationEventType(str, Enum):
+    JOB_FAILED = "job_failed"
+
+
+class CdaUserListRead(BaseModel):
+    office_id: str = Field(alias="office-id")
+    user_list_id: str = Field(alias="user-list-id")
+    description: str | None = None
+
+
+class NotificationTemplateBase(CamelModel):
+    office: str = Field(min_length=1, max_length=16)
+    slug: str = Field(pattern=r"^[a-z0-9]+(?:[-_][a-z0-9]+)*$", max_length=128)
+    subject_template: str = Field(min_length=1, max_length=998)
+    body_template: str = Field(min_length=1, max_length=100_000)
+
+
+class NotificationTemplateCreate(NotificationTemplateBase):
+    pass
+
+
+class NotificationTemplateUpdate(NotificationTemplateBase):
+    pass
+
+
+class NotificationTemplateRead(NotificationTemplateBase):
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    usage_count: int = Field(default=0, ge=0)
+    created_time: datetime
+    updated_time: datetime
+
+
+class ScriptNotificationRuleBase(CamelModel):
+    script_id: UUID
+    event_type: NotificationEventType = NotificationEventType.JOB_FAILED
+    template_id: UUID
+    cda_user_list_id: str | None = Field(default=None, max_length=128)
+    cda_user_list_office: str | None = Field(default=None, max_length=16)
+    manual_recipients: list[EmailStr] = Field(default_factory=list, max_length=100)
+    active: bool = True
+
+    @field_validator("manual_recipients")
+    @classmethod
+    def normalize_recipients(cls, recipients):
+        return list(dict.fromkeys(str(recipient).lower() for recipient in recipients))
+
+    @field_validator("cda_user_list_id", "cda_user_list_office")
+    @classmethod
+    def normalize_user_list_values(cls, value):
+        return value.strip().upper() if value else None
+
+    @model_validator(mode="after")
+    def require_complete_user_list_reference(self):
+        if bool(self.cda_user_list_id) != bool(self.cda_user_list_office):
+            raise ValueError("CDA user list ID and office must be provided together")
+        return self
+
+
+class ScriptNotificationRuleCreate(ScriptNotificationRuleBase):
+    pass
+
+
+class ScriptNotificationRuleUpdate(ScriptNotificationRuleBase):
+    pass
+
+
+class ScriptNotificationRuleRead(ScriptNotificationRuleBase):
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    created_time: datetime
+    updated_time: datetime
+
+
+class ScriptNotificationRuleDetails(ScriptNotificationRuleRead):
+    template: NotificationTemplateRead
+
+
+class NotificationPreviewRequest(CamelModel):
+    job_id: UUID | None = None
+    data: dict[str, str | None] = Field(default_factory=dict)
+    subject_template: str | None = None
+    body_template: str | None = None
+
+
+class RenderedNotification(CamelModel):
+    recipients: list[EmailStr]
+    subject: str
+    body: str
+    data: dict[str, str | None]
 
 
 class BatchJobStatusUpdateRequest(BaseModel):

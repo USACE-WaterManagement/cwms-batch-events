@@ -494,6 +494,46 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        CdaUserListRead: {
+            "office-id": string;
+            "user-list-id": string;
+            description?: string | null;
+        };
+        NotificationEventType: "job_failed";
+        NotificationTemplateCreate: {
+            office: string;
+            slug: string;
+            subjectTemplate: string;
+            bodyTemplate: string;
+        };
+        NotificationTemplateRead: components["schemas"]["NotificationTemplateCreate"] & {
+            id: string;
+            usageCount: number;
+            createdTime: string;
+            updatedTime: string;
+        };
+        NotificationTemplateUpdate: components["schemas"]["NotificationTemplateCreate"];
+        RenderedNotification: {
+            recipients: string[];
+            subject: string;
+            body: string;
+            data: Record<string, string | null>;
+        };
+        ScriptNotificationRuleCreate: {
+            scriptId: string;
+            eventType: components["schemas"]["NotificationEventType"];
+            templateId: string;
+            cdaUserListId?: string | null;
+            cdaUserListOffice?: string | null;
+            manualRecipients?: string[];
+            active?: boolean;
+        };
+        ScriptNotificationRuleRead: components["schemas"]["ScriptNotificationRuleCreate"] & {
+            id: string;
+            createdTime: string;
+            updatedTime: string;
+        };
+        ScriptNotificationRuleUpdate: components["schemas"]["ScriptNotificationRuleCreate"];
         /** JobLogPage */
         JobLogPage: {
             /** Logs */

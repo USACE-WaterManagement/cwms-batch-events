@@ -3,11 +3,15 @@ from sqlalchemy import (
     Column,
     DateTime,
     ForeignKey,
+    Index,
     String,
+    CheckConstraint,
+    UniqueConstraint,
     func,
     Table,
     UUID,
     VARCHAR,
+    text,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -157,3 +161,69 @@ class ScriptModel(Base):
     job_runners: Mapped[list["JobRunnerModel"]] = relationship(
         secondary=scripts_job_runners, lazy="selectin", back_populates="scripts"
     )
+
+
+class NotificationTemplateModel(Base):
+    __tablename__ = "notification_templates"
+    __table_args__ = (
+        UniqueConstraint("office", "slug", name="notification_templates_office_slug"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    office: Mapped[str]
+    slug: Mapped[str]
+    subject_template: Mapped[str]
+    body_template: Mapped[str]
+    created_time: Mapped[datetime.datetime] = mapped_column(
+        server_default=func.current_timestamp()
+    )
+    updated_time: Mapped[datetime.datetime] = mapped_column(
+        server_default=func.current_timestamp()
+    )
+
+
+class ScriptNotificationRuleModel(Base):
+    __tablename__ = "script_notification_rules"
+    __table_args__ = (
+        CheckConstraint("event_type = 'job_failed'", name="script_notification_rules_event_type"),
+        UniqueConstraint(
+            "script_id",
+            "event_type",
+            "template_id",
+            name="script_notification_rules_unique_rule",
+        ),
+        Index(
+            "script_notification_rules_one_active_job_failed",
+            "script_id",
+            "event_type",
+            unique=True,
+            postgresql_where=text("active IS TRUE"),
+            sqlite_where=text("active IS TRUE"),
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    script_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("scripts.id", ondelete="CASCADE")
+    )
+    event_type: Mapped[str]
+    template_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("notification_templates.id", ondelete="RESTRICT")
+    )
+    cda_user_list_id: Mapped[str | None]
+    cda_user_list_office: Mapped[str | None]
+    manual_recipients: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
+    active: Mapped[bool]
+    created_time: Mapped[datetime.datetime] = mapped_column(
+        server_default=func.current_timestamp()
+    )
+    updated_time: Mapped[datetime.datetime] = mapped_column(
+        server_default=func.current_timestamp()
+    )
+
+    script: Mapped["ScriptModel"] = relationship(lazy="selectin")
+    template: Mapped["NotificationTemplateModel"] = relationship(lazy="selectin")

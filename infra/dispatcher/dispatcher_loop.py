@@ -13,6 +13,7 @@ from cwms_batch_events.core.job_database.postgres import session
 from cwms_batch_events.core.job_database.postgres.postgres import PostgresJobDatabase
 from cwms_batch_events.core.job_logger.s3 import S3JobLogger
 from cwms_batch_events.core.models import JobMessage
+from cwms_batch_events.core.notification_queue import NotificationQueue
 from cwms_batch_events.local.dispatcher import LocalJobDispatcher
 
 configure_logging(service="cwms-batch-events-local-dispatcher")
@@ -31,6 +32,7 @@ sqs = boto3.client(
 QUEUE_URL = settings.queue_url
 
 job_logger = S3JobLogger()
+notification_queue = None
 
 while True:
     logger.debug("Waiting for job queue messages")
@@ -53,7 +55,9 @@ while True:
         try:
             db_session = session.create_session()
             db = PostgresJobDatabase(db=db_session)
-            dispatcher = LocalJobDispatcher(db, job_logger)
+            if notification_queue is None:
+                notification_queue = NotificationQueue()
+            dispatcher = LocalJobDispatcher(db, job_logger, notification_queue)
             dispatcher.dispatch_job(message)
 
             sqs.delete_message(

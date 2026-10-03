@@ -14,14 +14,24 @@ from cwms_batch_events.core.execution import execution_for_config, upgrade_execu
 from cwms_batch_events.core.job_database.postgres.models import (
     JobModel,
     JobRunnerModel,
+    NotificationTemplateModel,
     ScriptModel,
+    ScriptNotificationRuleModel,
 )
 from cwms_batch_events.core.models import (
     JobRecord,
     JobStatus,
+    NotificationEventType,
+    NotificationTemplateCreate,
+    NotificationTemplateRead,
+    NotificationTemplateUpdate,
     ScriptCreate,
     ScriptRead,
     ScriptRunRequest,
+    ScriptNotificationRuleCreate,
+    ScriptNotificationRuleDetails,
+    ScriptNotificationRuleRead,
+    ScriptNotificationRuleUpdate,
     ScriptUpdate,
     ExecutionOptions,
 )
@@ -35,6 +45,12 @@ logger = logging.getLogger(__name__)
 
 class SlugError(Exception):
     pass
+
+
+class TemplateInUseError(Exception):
+    def __init__(self, usage_count: int):
+        self.usage_count = usage_count
+        super().__init__(f"Template is used by {usage_count} script{'s' if usage_count != 1 else ''}")
 
 
 def slugify(value: str) -> str:
@@ -57,6 +73,15 @@ def can_run_script(script: ScriptModel, roles: dict[str, list[str]]) -> bool:
 class PostgresJobDatabase:
     def __init__(self, db: Session):
         self.db = db
+
+    def _ensure_admin_office(self, office: str, admin_offices: list[str]) -> None:
+        if office not in admin_offices:
+            raise PermissionError(f"User does not have script admin access for office '{office}'")
+
+    def _load_script_for_admin(self, script_id: uuid.UUID, admin_offices: list[str]) -> ScriptModel:
+        script = self.db.get_one(ScriptModel, script_id)
+        self._ensure_admin_office(script.office, admin_offices)
+        return script
 
     def get_script_by_id(self, script_id):
         with self.db.begin():
@@ -554,6 +579,129 @@ class PostgresJobDatabase:
             self.db.refresh(script)
 
         return ScriptRead.model_validate(script)
+
+    def get_active_job_failed_notification_rules(self, script_id: uuid.UUID) -> list[ScriptNotificationRuleDetails]:
+        rules = self.db.scalars(
+            select(ScriptNotificationRuleModel).join(ScriptNotificationRuleModel.template).where(
+                ScriptNotificationRuleModel.script_id == script_id,
+                ScriptNotificationRuleModel.event_type == NotificationEventType.JOB_FAILED,
+                ScriptNotificationRuleModel.active.is_(True),
+            )
+        ).all()
+        return [ScriptNotificationRuleDetails.model_validate(rule) for rule in rules]
+
+    def get_notification_templates_for_office(self, office: str) -> list[NotificationTemplateRead]:
+        usage_count = select(func.count(ScriptNotificationRuleModel.id)).where(
+            ScriptNotificationRuleModel.template_id == NotificationTemplateModel.id
+        ).correlate(NotificationTemplateModel).scalar_subquery()
+        rows = self.db.execute(
+            select(NotificationTemplateModel, usage_count.label("usage_count"))
+            .where(NotificationTemplateModel.office == office)
+            .order_by(NotificationTemplateModel.slug)
+        ).all()
+        return [NotificationTemplateRead.model_validate(model).model_copy(update={"usage_count": count}) for model, count in rows]
+
+    def store_notification_template(self, payload: NotificationTemplateCreate) -> NotificationTemplateRead:
+        try:
+            with self.db.begin():
+                template = NotificationTemplateModel(**payload.model_dump(by_alias=False))
+                self.db.add(template)
+                self.db.flush()
+                self.db.refresh(template)
+            return NotificationTemplateRead.model_validate(template)
+        except IntegrityError:
+            self.db.rollback()
+            raise SlugError(f"Slug '{payload.slug}' already in use for office '{payload.office}'")
+
+    def update_notification_template(self, template_id: uuid.UUID, payload: NotificationTemplateUpdate, admin_offices: list[str]) -> NotificationTemplateRead:
+        try:
+            with self.db.begin():
+                template = self.db.get_one(NotificationTemplateModel, template_id)
+                self._ensure_admin_office(template.office, admin_offices)
+                self._ensure_admin_office(payload.office, admin_offices)
+                for field, value in payload.model_dump(by_alias=False).items():
+                    setattr(template, field, value)
+                template.updated_time = datetime.now(timezone.utc)
+                self.db.flush()
+                self.db.refresh(template)
+            return NotificationTemplateRead.model_validate(template)
+        except IntegrityError:
+            self.db.rollback()
+            raise SlugError(f"Slug '{payload.slug}' already in use for office '{payload.office}'")
+
+    def remove_notification_template_if_allowed(self, template_id: uuid.UUID, admin_offices: list[str]) -> None:
+        with self.db.begin():
+            template = self.db.get_one(NotificationTemplateModel, template_id)
+            self._ensure_admin_office(template.office, admin_offices)
+            usage_count = self.db.scalar(select(func.count(ScriptNotificationRuleModel.id)).where(ScriptNotificationRuleModel.template_id == template_id))
+            if usage_count:
+                raise TemplateInUseError(usage_count)
+            self.db.delete(template)
+
+    def get_notification_template_if_allowed(self, template_id: uuid.UUID, admin_offices: list[str]) -> NotificationTemplateRead:
+        template = self.db.get_one(NotificationTemplateModel, template_id)
+        self._ensure_admin_office(template.office, admin_offices)
+        return NotificationTemplateRead.model_validate(template)
+
+    def get_script_notification_rules(self, script_id: uuid.UUID, admin_offices: list[str]) -> list[ScriptNotificationRuleRead]:
+        self._load_script_for_admin(script_id, admin_offices)
+        rules = self.db.scalars(select(ScriptNotificationRuleModel).where(ScriptNotificationRuleModel.script_id == script_id).order_by(ScriptNotificationRuleModel.created_time)).all()
+        return [ScriptNotificationRuleRead.model_validate(rule) for rule in rules]
+
+    def store_script_notification_rule(self, payload: ScriptNotificationRuleCreate, admin_offices: list[str]) -> ScriptNotificationRuleRead:
+        with self.db.begin():
+            self._validate_rule_payload(payload, admin_offices)
+            if payload.active:
+                self._deactivate_active_script_notification_rules(payload.script_id, payload.event_type)
+            rule = ScriptNotificationRuleModel(**payload.model_dump(by_alias=False))
+            self.db.add(rule)
+            self.db.flush()
+            self.db.refresh(rule)
+        return ScriptNotificationRuleRead.model_validate(rule)
+
+    def update_script_notification_rule(self, rule_id: uuid.UUID, payload: ScriptNotificationRuleUpdate, admin_offices: list[str]) -> ScriptNotificationRuleRead:
+        with self.db.begin():
+            self._validate_rule_payload(payload, admin_offices)
+            rule = self.db.get_one(ScriptNotificationRuleModel, rule_id)
+            self._ensure_admin_office(rule.script.office, admin_offices)
+            if payload.active:
+                self._deactivate_active_script_notification_rules(payload.script_id, payload.event_type, exclude_rule_id=rule_id)
+            for field, value in payload.model_dump(by_alias=False).items():
+                setattr(rule, field, value)
+            rule.updated_time = datetime.now(timezone.utc)
+            self.db.flush()
+            self.db.refresh(rule)
+        return ScriptNotificationRuleRead.model_validate(rule)
+
+    def remove_script_notification_rule_if_allowed(self, rule_id: uuid.UUID, admin_offices: list[str]) -> None:
+        with self.db.begin():
+            rule = self.db.get_one(ScriptNotificationRuleModel, rule_id)
+            self._ensure_admin_office(rule.script.office, admin_offices)
+            self.db.delete(rule)
+
+    def _validate_rule_payload(self, payload: ScriptNotificationRuleCreate | ScriptNotificationRuleUpdate, admin_offices: list[str]) -> None:
+        script = self._load_script_for_admin(payload.script_id, admin_offices)
+        template = self.db.get_one(NotificationTemplateModel, payload.template_id)
+        if payload.event_type != NotificationEventType.JOB_FAILED:
+            raise ValueError("Only job_failed notification rules are supported")
+        if template.office != script.office:
+            raise ValueError("Notification template office must match script office")
+        if payload.cda_user_list_office and payload.cda_user_list_office not in admin_offices:
+            raise PermissionError("User does not have script admin access for CDA user list office " f"'{payload.cda_user_list_office}'")
+        if not payload.cda_user_list_id and not payload.manual_recipients:
+            raise ValueError("A CDA user list or at least one manual recipient is required")
+
+    def _deactivate_active_script_notification_rules(self, script_id: uuid.UUID, event_type: NotificationEventType, exclude_rule_id: uuid.UUID | None = None) -> None:
+        statement = select(ScriptNotificationRuleModel).where(
+            ScriptNotificationRuleModel.script_id == script_id,
+            ScriptNotificationRuleModel.event_type == event_type,
+            ScriptNotificationRuleModel.active.is_(True),
+        )
+        if exclude_rule_id is not None:
+            statement = statement.where(ScriptNotificationRuleModel.id != exclude_rule_id)
+        for rule in self.db.scalars(statement).all():
+            rule.active = False
+            rule.updated_time = datetime.now(timezone.utc)
 
     @staticmethod
     def _record_schedule_author(script: ScriptModel, actor: User | None):

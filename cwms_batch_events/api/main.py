@@ -12,6 +12,7 @@ from cwms_batch_events.api.routers import (
     internal,
     job_runners,
     jobs,
+    notifications,
     repository_files,
     scripts,
     server_logs,
@@ -64,6 +65,7 @@ app.include_router(about.router)
 app.include_router(internal.router)
 app.include_router(job_runners.router)
 app.include_router(jobs.router)
+app.include_router(notifications.router)
 app.include_router(repository_files.router)
 app.include_router(scripts.router)
 app.include_router(server_logs.router)

@@ -1,4 +1,5 @@
 import logging
+import traceback
 from cwms_batch_events.core.job_database.base import JobDatabase
 from cwms_batch_events.core.job_logger.base import JobLogger
 from cwms_batch_events.core.execution import command_for_payload, skips_repository_checkout
@@ -10,6 +11,8 @@ import os
 
 from cwms_batch_events.core.job_correlation import runner_environment
 from cwms_batch_events.core.logging_config import bind_log_context
+from cwms_batch_events.core.notification_queue import NotificationQueue
+from cwms_batch_events.core.notifications import enqueue_failed_job_notifications
 
 settings = get_settings(ExecutorSettings)
 
@@ -18,9 +21,27 @@ logger = logging.getLogger(__name__)
 
 
 class LocalExecutor:
-    def __init__(self, db: JobDatabase, logger: JobLogger):
+    def __init__(self, db: JobDatabase, logger: JobLogger, notification_queue: NotificationQueue | None = None):
         self.db = db
         self.logger = logger
+        self.notification_queue = notification_queue
+
+    def _send_failed_job_alert(self, message: JobMessage, *, error_message: str | None = None, logs: str | None = None):
+        if self.notification_queue is None:
+            return
+        job = self.db.get_job_by_id(message.job_id)
+        if job is None:
+            return
+        try:
+            enqueue_failed_job_notifications(
+                job,
+                self.db,
+                self.notification_queue,
+                error_message=error_message,
+                logs=logs,
+            )
+        except Exception:
+            logger.exception("Failed to enqueue local job failure notification", extra={"job_id": message.job_id})
 
     def run_job(self, message: JobMessage):
         with bind_log_context(service="cwms-batch-events-local-runner", job_id=str(message.job_id), request_id=message.request_id):
@@ -80,10 +101,21 @@ class LocalExecutor:
                 self.db.update_job_status(message.job_id, JobStatus.COMPLETED)
             else:
                 self.db.update_job_status(message.job_id, JobStatus.FAILED)
+                self._send_failed_job_alert(
+                    message,
+                    error_message=f"Local job exited with status code {status_code}",
+                    logs=logs,
+                )
 
-        except Exception:
+        except Exception as exc:
             logger.exception("Local job execution failed", extra={"event": "local_job_failed", "job_id": message.job_id})
             self.db.update_job_status(message.job_id, JobStatus.FAILED)
+            logs = traceback.format_exc()
+            try:
+                self.logger.push_logs_for_job(message.job_id, logs)
+            except Exception:
+                logger.exception("Failed to persist local job failure logs", extra={"job_id": message.job_id})
+            self._send_failed_job_alert(message, error_message=str(exc), logs=logs)
             raise
 
         finally:

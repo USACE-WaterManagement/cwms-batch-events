@@ -9,6 +9,7 @@ from cwms_batch_events.api.dependencies import (
     get_job_database,
     get_job_logger,
     get_job_queue,
+    get_notification_queue,
 )
 from cwms_batch_events.api.main import app
 from cwms_batch_events.core.auth.service.dependencies import require_internal_auth
@@ -37,6 +38,11 @@ def job_queue():
 
 
 @pytest.fixture
+def notification_queue():
+    return MagicMock()
+
+
+@pytest.fixture
 def db_session():
     return MagicMock()
 
@@ -47,12 +53,14 @@ def client(
     job_db: MagicMock,
     job_logger: MagicMock,
     job_queue: MagicMock,
+    notification_queue: MagicMock,
     db_session: MagicMock,
 ):
     app.dependency_overrides[get_current_user] = lambda: user
     app.dependency_overrides[get_job_database] = lambda: job_db
     app.dependency_overrides[get_job_logger] = lambda: job_logger
     app.dependency_overrides[get_job_queue] = lambda: job_queue
+    app.dependency_overrides[get_notification_queue] = lambda: notification_queue
     app.dependency_overrides[get_db_session] = lambda: db_session
     app.dependency_overrides[require_internal_auth] = lambda: True
 

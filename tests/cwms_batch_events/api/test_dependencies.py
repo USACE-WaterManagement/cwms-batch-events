@@ -1,5 +1,7 @@
 from unittest import mock
 
+from botocore.exceptions import ClientError
+
 from cwms_batch_events.api import dependencies
 
 
@@ -73,3 +75,28 @@ def test_get_job_queue_constructs_job_queue():
 
     assert queue == "queue"
     job_queue_cls.assert_called_once_with()
+
+
+def test_get_notification_queue_constructs_notification_queue():
+    with mock.patch(
+        "cwms_batch_events.api.dependencies.NotificationQueue",
+        return_value="queue",
+    ) as notification_queue_cls:
+        queue = dependencies.get_notification_queue()
+
+    assert queue == "queue"
+    notification_queue_cls.assert_called_once_with()
+
+
+def test_get_notification_queue_allows_status_updates_when_queue_is_missing():
+    error = ClientError(
+        {"Error": {"Code": "AWS.SimpleQueueService.NonExistentQueue"}},
+        "GetQueueUrl",
+    )
+    with mock.patch(
+        "cwms_batch_events.api.dependencies.NotificationQueue",
+        side_effect=error,
+    ):
+        queue = dependencies.get_notification_queue()
+
+    assert queue is None

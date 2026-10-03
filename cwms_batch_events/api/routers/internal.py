@@ -7,12 +7,14 @@ from pydantic import BaseModel, Field
 from cwms_batch_events.core.auth.service.dependencies import require_internal_auth
 from cwms_batch_events.api.dependencies import (
     get_job_database,
+    get_notification_queue,
 )
 from cwms_batch_events.core.job_database.base import JobDatabase
 from cwms_batch_events.core.models import (
     BatchJobStatusUpdateRequest,
     BindExternalJobIdRequest,
 )
+from cwms_batch_events.core.notification_queue import NotificationQueue
 from cwms_batch_events.core.processing import update_batch_job_status
 
 router = APIRouter(prefix="/internal", include_in_schema=False)
@@ -62,11 +64,13 @@ def update_batch_job_status_endpoint(
     payload: BatchJobStatusUpdateRequest,
     _=Depends(require_internal_auth),
     job_db: JobDatabase = Depends(get_job_database),
+    notification_queue: NotificationQueue | None = Depends(get_notification_queue),
 ):
     try:
         update_batch_job_status(
             batch_job_id, payload.status, payload.event_time, job_db,
-            **({"batch_detail": payload.batch_detail} if payload.batch_detail is not None else {}),
+            notification_queue=notification_queue,
+             **({"batch_detail": payload.batch_detail} if payload.batch_detail is not None else {}),
         )
 
     except ValueError as e:

@@ -3,6 +3,8 @@ import logging
 from cwms_batch_events.core.log_diagnostics import log_timing
 from cwms_batch_events.core.job_database.base import JobDatabase
 from cwms_batch_events.core.models import JobStatus
+from cwms_batch_events.core.notifications import enqueue_failed_job_notifications
+from cwms_batch_events.core.notification_queue import NotificationQueue
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +21,7 @@ STATUS_PRIORITY = {
 
 def update_batch_job_status(
     batch_job_id: str, status: JobStatus, time_iso: datetime, db: JobDatabase,
+    notification_queue: NotificationQueue | None = None,
     batch_detail: dict | None = None,
 ):
     job = db.get_job_by_external_id(batch_job_id)
@@ -43,3 +46,14 @@ def update_batch_job_status(
     job_id = job.id
 
     db.update_job_status(job_id, status)
+
+    if status == JobStatus.FAILED and notification_queue is not None:
+        try:
+            enqueue_failed_job_notifications(job, db, notification_queue)
+        except Exception:
+            logger.exception(
+                "Job status was updated, but its failure notification could not be queued: "
+                "job_id=%s batch_job_id=%s",
+                job_id,
+                batch_job_id,
+            )

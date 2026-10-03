@@ -15,6 +15,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as DependenciesRouteImport } from './routes/dependencies'
 import { Route as LogSearchRouteImport } from './routes/log-search'
 import { Route as ScriptsManagerRouteImport } from './routes/scripts-manager'
+import { Route as SetupRouteImport } from './routes/setup'
 import { Route as SubmitRouteImport } from './routes/submit'
 import { Route as AboutControlsRouteImport } from './routes/about_.controls'
 import { Route as AboutOnboardingRouteImport } from './routes/about_.onboarding'
@@ -60,6 +61,11 @@ const LogSearchRoute = LogSearchRouteImport.update({
 const ScriptsManagerRoute = ScriptsManagerRouteImport.update({
   id: '/scripts-manager',
   path: '/scripts-manager',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SetupRoute = SetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SubmitRoute = SubmitRouteImport.update({
@@ -156,6 +162,7 @@ export interface FileRoutesByFullPath {
   '/dependencies': typeof DependenciesRoute
   '/log-search': typeof LogSearchRoute
   '/scripts-manager': typeof ScriptsManagerRoute
+  '/setup': typeof SetupRoute
   '/submit': typeof SubmitRoute
   '/about/controls': typeof AboutControlsRoute
   '/about/onboarding': typeof AboutOnboardingRoute
@@ -180,6 +187,7 @@ export interface FileRoutesByTo {
   '/dependencies': typeof DependenciesRoute
   '/log-search': typeof LogSearchRoute
   '/scripts-manager': typeof ScriptsManagerRoute
+  '/setup': typeof SetupRoute
   '/submit': typeof SubmitRoute
   '/about/controls': typeof AboutControlsRoute
   '/about/onboarding': typeof AboutOnboardingRoute
@@ -205,6 +213,7 @@ export interface FileRoutesById {
   '/dependencies': typeof DependenciesRoute
   '/log-search': typeof LogSearchRoute
   '/scripts-manager': typeof ScriptsManagerRoute
+  '/setup': typeof SetupRoute
   '/submit': typeof SubmitRoute
   '/about_/controls': typeof AboutControlsRoute
   '/about_/onboarding': typeof AboutOnboardingRoute
@@ -231,6 +240,7 @@ export interface FileRouteTypes {
     | '/dependencies'
     | '/log-search'
     | '/scripts-manager'
+    | '/setup'
     | '/submit'
     | '/about/controls'
     | '/about/onboarding'
@@ -255,6 +265,7 @@ export interface FileRouteTypes {
     | '/dependencies'
     | '/log-search'
     | '/scripts-manager'
+    | '/setup'
     | '/submit'
     | '/about/controls'
     | '/about/onboarding'
@@ -279,6 +290,7 @@ export interface FileRouteTypes {
     | '/dependencies'
     | '/log-search'
     | '/scripts-manager'
+    | '/setup'
     | '/submit'
     | '/about_/controls'
     | '/about_/onboarding'
@@ -304,6 +316,7 @@ export interface RootRouteChildren {
   DependenciesRoute: typeof DependenciesRoute
   LogSearchRoute: typeof LogSearchRoute
   ScriptsManagerRoute: typeof ScriptsManagerRoute
+  SetupRoute: typeof SetupRoute
   SubmitRoute: typeof SubmitRoute
   AboutControlsRoute: typeof AboutControlsRoute
   AboutOnboardingRoute: typeof AboutOnboardingRoute
@@ -364,6 +377,13 @@ declare module '@tanstack/react-router' {
       path: '/scripts-manager'
       fullPath: '/scripts-manager'
       preLoaderRoute: typeof ScriptsManagerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/setup': {
+      id: '/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof SetupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/submit': {
@@ -488,6 +508,7 @@ const rootRouteChildren: RootRouteChildren = {
   DependenciesRoute: DependenciesRoute,
   LogSearchRoute: LogSearchRoute,
   ScriptsManagerRoute: ScriptsManagerRoute,
+  SetupRoute: SetupRoute,
   SubmitRoute: SubmitRoute,
   AboutControlsRoute: AboutControlsRoute,
   AboutOnboardingRoute: AboutOnboardingRoute,

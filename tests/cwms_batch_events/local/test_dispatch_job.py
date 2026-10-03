@@ -32,7 +32,7 @@ def test_dispatcher_fires_local_runner():
         dispatcher = LocalJobDispatcher(mock_db, mock_logger)
         dispatcher.dispatch_job(message)
 
-        MockLocalRunner.assert_called_once_with(mock_db, mock_logger)
+        MockLocalRunner.assert_called_once_with(mock_db, mock_logger, None)
         instance.run_job.assert_called_once_with(message)
 
 

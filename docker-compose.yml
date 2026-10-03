@@ -29,12 +29,17 @@ services:
       AUTH_HOST: http://traefik/auth
       AUTH_REALM: cwms
       CDA_API_ROOT: http://traefik/cwms-data/
+      CDA_CLIENT_ID: ${CDA_CLIENT_ID:-cwms-batch-notifications-local}
+      CDA_CLIENT_SECRET: ${CDA_CLIENT_SECRET:-local-cwms-batch-notifications-secret}
+      CDA_TOKEN_URL: ${CDA_TOKEN_URL:-http://traefik/auth/realms/cwms/protocol/openid-connect/token}
+      CDA_TOKEN_HOST_HEADER: ${CDA_TOKEN_HOST_HEADER:-localhost:8081}
       DEFAULT_JOB_RUNNER: docker-local
       DATABASE_SCHEMA: wm_events_schema
       PGUSER: *application_user
       PGPASSWORD: *application_password
       PGDATABASE: postgres
       PGHOST: db
+      NOTIFICATION_QUEUE_NAME: cwms-batch-events-notifications
       S3_BUCKET: wm-event-manager-local
       WM_WEB_INTERNAL_S3_BUCKET: wm-web-internal-local
       WM_WEB_PUBLIC_S3_BUCKET: wm-web-public-local
@@ -42,9 +47,12 @@ services:
       - ./cwms_batch_events:/code/cwms_batch_events
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
-      - minio
-      - db
-      - elasticmq
+      minio:
+        condition: service_started
+      elasticmq:
+        condition: service_started
+      flyway:
+        condition: service_completed_successfully
     command: >
       uvicorn cwms_batch_events.api.main:app --host 0.0.0.0 --port 8000 --reload
     networks:
@@ -54,13 +62,18 @@ services:
     build:
       context: .
       dockerfile: infra/dispatcher/Dockerfile
+    restart: on-failure
     depends_on:
-      - elasticmq
-      - db
+      elasticmq:
+        condition: service_started
+      flyway:
+        condition: service_completed_successfully
     environment:
       AWS_ACCESS_KEY_ID: eventsadmin
       AWS_SECRET_ACCESS_KEY: eventsadmin
       AWS_REGION: us-gov-west-1
+      AWS_DEFAULT_REGION: us-gov-west-1
+      SQS_ENDPOINT_URL: http://elasticmq:9324
       PGUSER: *application_user
       PGPASSWORD: *application_password
       PGDATABASE: postgres
@@ -69,8 +82,33 @@ services:
       CDA_API_ROOT: http://traefik/cwms-data/
       S3_BUCKET: wm-event-manager-local
       S3_ENDPOINT_URL: http://minio:9000
+      NOTIFICATION_QUEUE_NAME: cwms-batch-events-notifications
+      CDA_API_ROOT: http://traefik/cwms-data/
+      CDA_CLIENT_ID: ${CDA_CLIENT_ID:-cwms-batch-notifications-local}
+      CDA_CLIENT_SECRET: ${CDA_CLIENT_SECRET:-local-cwms-batch-notifications-secret}
+      CDA_TOKEN_URL: ${CDA_TOKEN_URL:-http://traefik/auth/realms/cwms/protocol/openid-connect/token}
+      CDA_TOKEN_HOST_HEADER: ${CDA_TOKEN_HOST_HEADER:-localhost:8081}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - cwms
+
+  notifier:
+    build:
+      context: .
+      dockerfile: infra/dispatcher/Dockerfile
+    restart: on-failure
+    depends_on:
+      - elasticmq
+    environment:
+      AWS_ACCESS_KEY_ID: eventsadmin
+      AWS_SECRET_ACCESS_KEY: eventsadmin
+      AWS_REGION: us-gov-west-1
+      AWS_DEFAULT_REGION: us-gov-west-1
+      QUEUE_URL: http://elasticmq:9324/000000000000/cwms-batch-events-notifications
+      NOTIFICATION_DELIVERY_MODE: log
+    command: >
+      python -u infra/notifications/notification_loop.py
     networks:
       - cwms
 
@@ -147,6 +185,7 @@ services:
       FLYWAY_URL: jdbc:postgresql://db:5432/postgres
       FLYWAY_USER: postgres
       FLYWAY_VALIDATE_MIGRATION_NAMING: true
+      FLYWAY_OUT_OF_ORDER: true
       FLYWAY_PLACEHOLDERS_APP_USER: *application_user
       FLYWAY_PLACEHOLDERS_APP_PASSWORD: *application_password
     volumes:
