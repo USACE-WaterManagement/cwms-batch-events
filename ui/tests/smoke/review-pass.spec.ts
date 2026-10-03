@@ -30,12 +30,12 @@ test("review controls retain sections, update runtime and run mode, and route gu
   await expect(page.getByLabel("Runtime", { exact: true })).toBeVisible();
   await page.getByLabel("Runtime", { exact: true }).selectOption("python");
   await page.getByLabel("GitHub Repo Path", { exact: true }).fill("report.py");
-  await page.getByRole("radio", { name: "Automatic", exact: true }).check();
+  await page.getByRole("switch", { name: "Schedule Disabled", exact: true }).click();
   await expect(page.getByLabel("Schedule", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Save", exact: true }).click();
   const row = page.getByRole("row").filter({ hasText: script.name });
   await expect(row.getByText("python", { exact: true })).toBeVisible();
-  await expect(row.getByText("Automatic", { exact: true })).toBeVisible();
+  await expect(row.getByText("Scheduled", { exact: true })).toBeVisible();
   await configSection(page, "Access");
   await page.getByRole("button", { name: "Edit", exact: true }).click();
   await expect(page.getByRole("combobox", { name: "Role to add" })).toBeVisible();

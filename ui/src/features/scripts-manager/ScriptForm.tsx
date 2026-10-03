@@ -1,4 +1,5 @@
 import { ScheduleTiming } from "./ScheduleTiming";
+import { ScheduleToggle } from "./ScheduleToggle";
 import { ReleaseJarPicker } from "./ReleaseJarPicker";
 import { ViewField } from "./ViewField";
 import {
@@ -206,6 +207,7 @@ interface ScriptFormProps {
   mutationError: Error | null;
   onDelete: (scriptId: string) => void;
   onSave: (data: ScriptFormData) => void | Promise<void>;
+  onScheduleToggle: (enabled: boolean) => void | Promise<void>;
   onValidationChange?: (invalid: boolean) => void;
   onCancelEdit: () => void;
   initialSection?: ScriptSection;
@@ -220,6 +222,7 @@ export const ScriptForm = ({
   mutationError,
   onDelete,
   onSave,
+  onScheduleToggle,
   onCancelEdit,
   onValidationChange,
   initialSection = "source",
@@ -365,7 +368,17 @@ export const ScriptForm = ({
           {mutationError ? <>{mutationError.message}{mutationError.message.includes("secret-related") && <> <Link to="/help/script-files" target="_blank" rel="noopener noreferrer" className="font-medium underline">Learn why</Link></>}</> : "Review the highlighted sections and fields before saving."}
         </div>}
         <div className="script-form-fields">
-        <ScriptSections active={section} onSelect={setSection} errors={errors}>
+        <ScriptSections active={section} onSelect={setSection} errors={errors} footer={<ScheduleToggle
+          enabled={form.scheduleEnabled}
+          disabled={isPending || (form.configVersion ?? 1) < 4}
+          onChange={(enabled) => {
+            const next = { ...form, scheduleEnabled: enabled, scheduleType: enabled && form.scheduleType === "manual" ? "hourly" : form.scheduleType };
+            changeForm(next);
+            if (enabled && preset === "manual") setPreset("hourly");
+            if (enabled) setSection("schedule");
+          }}
+          onToggle={onScheduleToggle}
+        />}>
         <Fieldset disabled={isPending} className="flex min-w-0 flex-col gap-1">
           <ConfigSection id="general" active={section}>
           {script && <ViewField label="Id">{script.id}</ViewField>}
@@ -560,14 +573,15 @@ export const ScriptForm = ({
               onChange={(e) => {
                 const selected = e.target.value;
                 setPreset(selected);
+                const scheduleEnabled = selected !== "manual";
                 if (selected === "daily" || selected === "monthly") {
-                  changeForm({ ...form, scheduleType: selected === "monthly" ? "monthly" : "cron", scheduleCron: presetCron(selected, scheduleTime, scheduleDay) });
+                  changeForm({ ...form, scheduleType: selected === "monthly" ? "monthly" : "cron", scheduleCron: presetCron(selected, scheduleTime, scheduleDay), scheduleEnabled });
                   return;
                 }
-                changeForm({ ...form, scheduleType: selected, scheduleEnabled: selected === "manual" ? false : form.scheduleEnabled });
+                changeForm({ ...form, scheduleType: selected, scheduleEnabled });
               }}
             >
-              <option value="manual">Manual only</option>
+              <option value="manual">No Schedule</option>
               <option value="hourly">Every hour</option>
               <option value="daily">Every day</option>
               <option value="monthly">Every month</option>
@@ -658,7 +672,7 @@ export const ScriptForm = ({
                 </div>
               </FormRow>
           {errorFor("scheduleTimezone")}
-              <p className="text-sm text-slate-600">Choose Automatic below to enable this schedule. Manual keeps it paused.</p>
+              <p className="text-sm text-slate-600">Schedule is enabled automatically when a schedule is selected. Choose Schedule disabled below to pause it.</p>
             </>
           )}
           </fieldset>
@@ -681,15 +695,6 @@ export const ScriptForm = ({
         </div>
         <div id="script-form-actions" data-script-form-actions className="script-form-actions mt-4 flex w-full flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
           <div className="flex items-center gap-2">
-            <fieldset className="flex flex-wrap gap-3" disabled={isPending}>
-              <legend className="mb-1 text-xs text-slate-600">Run mode</legend>
-              <label className="flex cursor-pointer items-center gap-2"><input type="radio" name="runMode" checked={!form.scheduleEnabled} onChange={() => update("scheduleEnabled", false)} />Manual</label>
-              <label className="flex cursor-pointer items-center gap-2"><input type="radio" name="runMode" checked={form.scheduleEnabled} disabled={(form.configVersion ?? 1) < 4} onChange={() => {
-                changeForm({ ...form, scheduleEnabled: true, scheduleType: form.scheduleType === "manual" ? "hourly" : form.scheduleType });
-                if (preset === "manual") setPreset("hourly");
-                setSection("schedule");
-              }} />Automatic</label>
-            </fieldset>
             {!form.active && <label className="text-sm"><input type="checkbox" checked={false} onChange={() => update("active", true)} /> Reactivate inactive script</label>}
           </div>
           {script && <DeleteConfirm onDelete={() => onDelete(script?.id)} />}

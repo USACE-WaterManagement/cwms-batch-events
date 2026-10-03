@@ -15,14 +15,14 @@ const descriptions = {
   upgrade: "Review and upgrade this script's configuration version.",
 };
 
-export function ScriptSections({ active, onSelect, errors = {}, children }: {
+export function ScriptSections({ active, onSelect, errors = {}, footer, children }: {
   active: ScriptSection; onSelect: (section: ScriptSection) => void;
-  errors?: Record<string, string>; children: ReactNode;
+  errors?: Record<string, string>; footer?: ReactNode; children: ReactNode;
 }) {
   const selectId = useId();
   const invalidSections = scriptSections.filter(section => Object.keys(errors).some(field => fieldSections[field] === section.id));
   return <div className="grid min-h-0 min-w-0 overflow-hidden rounded-lg border border-slate-200 bg-white @min-[30rem]/script-panel:grid-cols-[10rem_minmax(0,1fr)]">
-    <nav aria-label="Configuration sections" className="select-none border-b border-slate-200 bg-slate-50 p-2 @min-[30rem]/script-panel:border-b-0 @min-[30rem]/script-panel:border-r @min-[30rem]/script-panel:p-0">
+    <nav aria-label="Configuration sections" className="flex select-none flex-col border-b border-slate-200 bg-slate-50 p-2 @min-[30rem]/script-panel:border-b-0 @min-[30rem]/script-panel:border-r @min-[30rem]/script-panel:p-0">
       <div className="@min-[30rem]/script-panel:hidden">
         <label htmlFor={selectId} className="mb-2 block text-xs font-semibold text-slate-600">Configuration section</label>
         <select id={selectId} value={active} onChange={event => onSelect(event.target.value as ScriptSection)}
@@ -51,6 +51,7 @@ export function ScriptSections({ active, onSelect, errors = {}, children }: {
       })}
       </div>
       </div>
+      {footer && <div className="mt-auto border-t border-slate-200 p-3">{footer}</div>}
     </nav>
     <div className="h-[clamp(32rem,65dvh,44rem)] min-w-0 overflow-y-auto overscroll-auto bg-white p-4 [scrollbar-gutter:stable]">
       <header className="mb-5 border-b border-slate-100 pb-4">

@@ -1,7 +1,7 @@
 import { configSection } from "../configSection";
 import { expect, test } from "@playwright/test";
 
-test("saves timezone schedules and disables scheduling when switched to manual", async ({
+test("saves timezone schedules and disables scheduling when switched to no schedule", async ({
   page,
 }) => {
   const errors: string[] = [];
@@ -47,6 +47,7 @@ test("saves timezone schedules and disables scheduling when switched to manual",
     .fill("python/report.py");
   await configSection(page, "Schedule");
   await page.getByLabel("Schedule", { exact: true }).selectOption("hourly");
+  await expect(page.getByRole("switch", { name: "Schedule Enabled", exact: true })).toHaveAttribute("aria-checked", "true");
   await configSection(page, "Schedule");
   await page.getByLabel("Minute", { exact: true }).fill("25");
   await configSection(page, "Schedule");
@@ -58,7 +59,7 @@ test("saves timezone schedules and disables scheduling when switched to manual",
   expect(await timezone.locator("option").count()).toBeGreaterThan(20);
   await page.getByLabel("Timezone", { exact: true }).selectOption("America/Chicago");
   await configSection(page, "Schedule");
-  await page.getByRole("radio", { name: "Automatic", exact: true }).check();
+  await expect(page.getByRole("switch", { name: "Schedule Enabled", exact: true })).toHaveAttribute("aria-checked", "true");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Edit", exact: true }),
@@ -102,6 +103,7 @@ test("saves timezone schedules and disables scheduling when switched to manual",
   await page.getByRole("button", { name: "Edit", exact: true }).click();
   await configSection(page, "Schedule");
   await page.getByLabel("Schedule", { exact: true }).selectOption("manual");
+  await expect(page.getByRole("switch", { name: "Schedule Disabled", exact: true })).toHaveAttribute("aria-checked", "false");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Edit", exact: true }),

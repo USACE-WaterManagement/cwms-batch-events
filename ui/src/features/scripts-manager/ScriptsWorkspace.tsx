@@ -142,6 +142,17 @@ export const ScriptsWorkspace = ({ officeSelector, office, initialScriptId, init
 
     setPanelMode("view");
   };
+  const onScheduleToggle = async (enabled: boolean) => {
+    if (!selectedScriptId || !selectedScript) return;
+    const jobRunners = selectedScript.jobRunners && selectedScript.jobRunners.length > 0
+      ? selectedScript.jobRunners
+      : [defaultJobRunner.data.id];
+    const payload: ScriptUpdate = { ...selectedScript, scheduleEnabled: enabled, jobRunners } as ScriptUpdate;
+    await updateScriptMutation.mutateAsync({
+      scriptId: selectedScriptId,
+      payload,
+    });
+  };
   const onCancelEdit = () => { setInvalidDetails(false); setPanelMode("view"); };
   const scrollToFormActions = () => document.querySelector<HTMLElement>("[data-script-form-actions]")?.scrollIntoView({ behavior: "smooth", block: "center" });
 
@@ -217,7 +228,7 @@ export const ScriptsWorkspace = ({ officeSelector, office, initialScriptId, init
           { name: "Details", content: <ScriptDetailPanel
             office={office} script={selectedScript} mode={panelMode} isPending={isPending}
             mutationError={mutationError} onDelete={onDelete}
-            onSave={onSave} onCancelEdit={onCancelEdit} onValidationChange={setInvalidDetails}
+            onSave={onSave} onScheduleToggle={onScheduleToggle} onCancelEdit={onCancelEdit} onValidationChange={setInvalidDetails}
             existingNames={scripts.data.map(script => script.name)} /> },
           { name: "Run job", content: <ScriptRunJob script={selectedScript} onEdit={() => { showTab(0); onEdit(); }} onSubmitted={job => {
             setSelectedScriptId(job.scriptId ?? selectedScript.id);
@@ -241,6 +252,7 @@ export const ScriptsWorkspace = ({ officeSelector, office, initialScriptId, init
         mutationError={mutationError}
         onDelete={onDelete}
         onSave={onSave}
+        onScheduleToggle={onScheduleToggle}
         onCancelEdit={onCancelEdit}
         existingNames={scripts.data.map(script => script.name)}
       />}
@@ -254,6 +266,7 @@ export const ScriptsWorkspace = ({ officeSelector, office, initialScriptId, init
           mutationError={createScriptMutation.error}
           onDelete={onDelete}
           onSave={onCreate}
+          onScheduleToggle={async () => undefined}
           onCancelEdit={onCancelCreate}
           existingNames={scripts.data.map(script => script.name)}
         />}

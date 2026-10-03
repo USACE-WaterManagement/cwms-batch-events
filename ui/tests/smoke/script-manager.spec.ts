@@ -82,7 +82,7 @@ test("browse files, field help, responsive footer, and help navigation", async (
   await page.getByLabel("Role to add").selectOption("RDL Reviewer");
   await page.getByRole("button",{name:"Add role",exact:true}).click();
   await page.setViewportSize({width:390,height:700});
-  await page.getByRole("radio",{name:"Manual",exact:true}).check();
+  await expect(page.getByRole("switch",{name:"Schedule Disabled",exact:true})).toBeVisible();
   await expect(page.getByRole("button",{name:"Save",exact:true})).toBeInViewport();
   const bounds = await page.evaluate(() => ({
     fields: document.querySelector(".script-form-fields")!.getBoundingClientRect().bottom,

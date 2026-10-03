@@ -10,6 +10,7 @@ import { ScriptSections, ConfigSection } from "./ScriptSections";
 import type { ScriptSection } from "./configurationSections";
 import { UpgradeConfiguration } from "./UpgradeConfiguration";
 import { schedulePreset } from "./schedulePresets";
+import { ScheduleToggle } from "./ScheduleToggle";
 
 function scriptSource(script: Script): string {
   if (script.releaseJar) return `GitHub Release ${script.releaseJar.tag} · ${script.releaseJar.repository}`;
@@ -29,6 +30,8 @@ interface ScriptViewProps {
   script?: Script;
   section: ScriptSection;
   onSectionChange: (section: ScriptSection) => void;
+  isPending: boolean;
+  onScheduleToggle: (enabled: boolean) => void | Promise<void>;
 }
 
 function scheduleDescription(script: Script): string {
@@ -47,11 +50,11 @@ const resourceProfiles = {
   large: { label: "Large", cpu: "2 vCPU", memory: "4 GiB" },
 } as const;
 
-export const ScriptView = ({ script, section, onSectionChange }: ScriptViewProps) => {
+export const ScriptView = ({ script, section, onSectionChange, isPending, onScheduleToggle }: ScriptViewProps) => {
   if (script) {
     return (
       <div className="flex flex-col gap-y-6">
-        <ScriptSections active={section} onSelect={onSectionChange}>
+        <ScriptSections active={section} onSelect={onSectionChange} footer={<ScheduleToggle enabled={script.scheduleEnabled} disabled={isPending} onToggle={onScheduleToggle} />}>
         <div className="flex flex-col gap-2">
           <ConfigSection id="general" active={section}>
           <ViewField label="Id">{script.id}</ViewField>

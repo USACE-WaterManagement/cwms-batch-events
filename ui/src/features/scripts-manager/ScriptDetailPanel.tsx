@@ -13,6 +13,7 @@ interface ScriptDetailPanelProps {
   mutationError: Error | null;
   onDelete: (scriptId: string) => void;
   onSave: (data: ScriptFormData) => void | Promise<void>;
+  onScheduleToggle: (enabled: boolean) => void | Promise<void>;
   onValidationChange?: (invalid: boolean) => void;
   onCancelEdit: () => void;
   existingNames?: string[];
@@ -26,6 +27,7 @@ export const ScriptDetailPanel = ({
   mutationError,
   onDelete,
   onSave,
+  onScheduleToggle,
   onCancelEdit,
   onValidationChange,
   existingNames,
@@ -41,7 +43,7 @@ export const ScriptDetailPanel = ({
   let innerComponent;
 
   if (mode === "view") {
-    innerComponent = <ScriptView script={script} section={section} onSectionChange={setSection} />;
+    innerComponent = <ScriptView script={script} section={section} onSectionChange={setSection} isPending={isPending} onScheduleToggle={onScheduleToggle} />;
   } else if (mode === "edit") {
     innerComponent = (
       <ScriptForm
@@ -52,6 +54,7 @@ export const ScriptDetailPanel = ({
         mutationError={mutationError}
         onDelete={onDelete}
         onSave={onSave}
+        onScheduleToggle={onScheduleToggle}
         onCancelEdit={onCancelEdit}
         onValidationChange={onValidationChange}
         initialSection={section}
