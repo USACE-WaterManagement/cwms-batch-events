@@ -1,5 +1,6 @@
 from uuid import UUID
 from datetime import datetime
+import boto3
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy.exc import NoResultFound
@@ -21,11 +22,15 @@ from cwms_batch_events.core.models import (
     JobLogPage,
     JobRecord,
     JobSource,
+    JobStatus,
     ScriptRunOptions,
     ScriptRunRequest,
 )
 from cwms_batch_events.core.rate_limit import RateLimitMiddleware
 from cwms_batch_events.core.queue import JobQueue
+from cwms_batch_events.core.settings import get_settings
+
+settings = get_settings()
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
@@ -181,6 +186,36 @@ def get_job_by_id(
     if isinstance(job_logger, CloudWatchJobLogger):
         return job_logger.refresh_job(job_id)
     return job
+
+
+@router.post("/{job_id}/cancel")
+def cancel_job(
+    job_id: UUID,
+    request: Request,
+    user: User = Depends(get_current_user),
+    job_db: JobDatabase = Depends(get_job_database),
+) -> JobRecord:
+    job = get_office_job(job_id, user, job_db)
+    if job.job_status in {JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED}:
+        return job
+
+    if job.external_job_id:
+        boto3.client("batch").terminate_job(
+            jobId=job.external_job_id,
+            reason="Cancelled by Batch Events user",
+        )
+    elif settings.default_job_runner == "docker-local":
+        from docker import from_env
+
+        client = from_env()
+        for container in client.containers.list(
+            all=True,
+            filters={"label": f"BatchEventsJobId={job_id}"},
+        ):
+            container.stop(timeout=5)
+
+    job_db.update_job_status(job_id, JobStatus.CANCELLED)
+    return job_db.get_job_by_id(job_id)
 
 
 @router.get("/{job_id}/logs")

@@ -393,12 +393,15 @@ class PostgresJobDatabase:
         job = self._load_job_for_update(job_id)
         previous_status = job.job_status
 
+        if previous_status == JobStatus.CANCELLED and status != JobStatus.CANCELLED:
+            return
+
         now = datetime.now(timezone.utc)
 
         job.job_status = status
         if status == JobStatus.RUNNING:
             job.run_time = now
-        elif status in (JobStatus.COMPLETED, JobStatus.FAILED):
+        elif status in (JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED):
             job.end_time = now
         self.db.commit()
 
