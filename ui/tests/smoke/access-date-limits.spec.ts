@@ -22,8 +22,8 @@ test("rendering errors use the recovery page and navigation still works", async 
 
 for (const [expression, accepted] of [
   ["* * * * *", false], ["0,1 8 * * *", false], ["*/7 * * * *", false],
-  ["0,59 * * * *", false], ["*/5 * * * *", true], ["59 9 * * *", true],
-] as const) test(`five minute schedule policy: ${expression}`, () => {
+  ["0,59 * * * *", false], ["*/5 * * * *", false], ["*/15 * * * *", true], ["59 9 * * *", true],
+] as const) test(`15 minute schedule policy: ${expression}`, () => {
   expect(meetsMinimumInterval(expression.split(" "))).toBe(accepted);
 });
 

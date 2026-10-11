@@ -219,7 +219,7 @@ const RateLimitsPane = () => (
         <Text className="mt-2">
           The default limit is 10 job submissions per minute for an Authorization bearer credential.
           Submissions have a separate limit because they consume execution resources.
-          Scheduled jobs still enforce the five-minute minimum schedule interval.
+          Scheduled jobs still enforce the 15-minute minimum schedule interval.
         </Text>
       </Card>
     </div>

@@ -141,6 +141,6 @@ is not AWS billing data. Opening logs still requires office access. Migration
 migration during a suitable deployment window because index creation takes a table
 write lock. No additional AWS resources or billing permissions are required.
 
-Schedules must have at least five minutes between selected run times.
+Schedules must have at least 15 minutes between selected run times. The migration automatically changes stored schedules below this minimum to a `*/15` minute cadence before the new validation is enforced.
 
 Run history supports submitted-date ranges and explicit pagination. Date boundaries use the browser timezone and include the selected end date. Shared job access denial exposes only the office needed to request access, without returning job metadata or logs.

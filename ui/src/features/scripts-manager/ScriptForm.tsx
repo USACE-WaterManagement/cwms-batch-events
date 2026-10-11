@@ -647,7 +647,7 @@ export const ScriptForm = ({
                     />
                     {errorFor("scheduleCron")}
                     <Text>
-                      The minimum schedule interval is 5 minutes. Minute, hour, day of month, month, day of week. For
+                      The minimum schedule interval is 15 minutes. Minute, hour, day of month, month, day of week. For
                       example: <strong className="font-mono font-bold">0 8 * * 1-5</strong>.
                     </Text>
                     <a className="inline-block py-2 font-medium text-blue-700 underline" href="https://crontab.guru/" target="_blank" rel="noopener noreferrer">Open cron calculator (new tab)</a>

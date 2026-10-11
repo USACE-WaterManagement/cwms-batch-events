@@ -3,6 +3,8 @@ from calendar import monthrange
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
+MINIMUM_SCHEDULE_INTERVAL_MINUTES = 15
+
 
 def validate_cron(expression: str) -> str:
     """Validate the numeric five-field cron syntax understood by the scheduler."""
@@ -45,7 +47,7 @@ def field_matches(field: str, value: int, minimum: int, maximum: int) -> bool:
 
 
 def validate_schedule_interval(expression: str) -> str:
-    """Require at least five minutes between selected daily time slots.
+    """Require at least 15 minutes between selected daily time slots.
 
     Include the midnight boundary. Calendar restrictions cannot relax this
     policy, which keeps the rule predictable when dates or timezones change.
@@ -55,8 +57,10 @@ def validate_schedule_interval(expression: str) -> str:
     slots = [h * 60 + m for h in range(24) if field_matches(hour, h, 0, 23)
              for m in range(60) if field_matches(minute, m, 0, 59)]
     gaps = [b - a for a, b in zip(slots, slots[1:] + [slots[0] + 1440])]
-    if min(gaps) < 5:
-        raise ValueError("The minimum schedule interval is 5 minutes. Space all selected run times at least 5 minutes apart.")
+    if min(gaps) < MINIMUM_SCHEDULE_INTERVAL_MINUTES:
+        raise ValueError(
+            "The minimum schedule interval is 15 minutes. Space all selected run times at least 15 minutes apart."
+        )
     return expression
 
 
