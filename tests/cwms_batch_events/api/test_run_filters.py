@@ -30,5 +30,5 @@ def test_api_rejects_fast_schedule(client, job_db, expression):
     payload = make_script_create_payload(configVersion=4, scheduleEnabled=True, scheduleType='cron', scheduleCron=expression)
     response = client.post('/scripts', json=payload)
     assert response.status_code == 422
-    assert '5 minutes' in response.text
+    assert '15 minutes' in response.text
     job_db.store_script.assert_not_called()

@@ -19,7 +19,7 @@ export function meetsMinimumInterval(fields: string[]): boolean {
       if (matches(fields[0], minute, 59)) slots.push(hour * 60 + minute);
     }
   }
-  return slots.every((slot, index) => (slots[index + 1] ?? slots[0] + 1440) - slot >= 5);
+  return slots.every((slot, index) => (slots[index + 1] ?? slots[0] + 1440) - slot >= 15);
 }
 
 export function schedulePreset(form: Pick<ScriptFormData, "scheduleType" | "scheduleCron">): string {

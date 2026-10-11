@@ -119,7 +119,7 @@ def main():
     register_due_jobs(now + timedelta(minutes=2))
     with create_session() as db, db.begin():
         saved = db.get(ScriptModel, script.id)
-        assert "5 minutes" in saved.schedule_error
+        assert "15 minutes" in saved.schedule_error
         assert len(db.scalars(select(JobModel).where(JobModel.script_id == script.id)).all()) == 1
         saved.schedule_enabled = False
     print("PASS: scheduler concurrency, attribution, durable retry, dispatch deduplication, office access, and disable")

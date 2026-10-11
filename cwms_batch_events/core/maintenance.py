@@ -86,7 +86,7 @@ def register_due_jobs(now=None, session_factory=create_session):
             except Exception as exc:
                 script.schedule_error = "Schedule could not be evaluated. Review the saved command and schedule."
                 if isinstance(exc, ValueError) and "minimum schedule interval" in str(exc):
-                    script.schedule_error = "The minimum schedule interval is 5 minutes. Update this schedule before it can run."
+                    script.schedule_error = "The minimum schedule interval is 15 minutes. Update this schedule before it can run."
                 logger.exception("Schedule could not be evaluated", extra={"event": "schedule_failed", "script_id": script.id, "office": script.office})
         db.execute(text("UPDATE maintenance_tasks SET last_success=:now, last_checked=:now WHERE name='schedules'"), {"now": now})
         if last and now - last > timedelta(minutes=5):

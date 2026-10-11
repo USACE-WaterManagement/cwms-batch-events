@@ -6,7 +6,7 @@ from cwms_batch_events.core.models import ScriptCreate
 from tests.factories import make_script_create_payload
 
 
-@pytest.mark.parametrize("expression", ["*/5 * * * *", "0,5,30 9 * * *", "59 9 * * *", "0 */2 * * *"])
+@pytest.mark.parametrize("expression", ["*/15 * * * *", "0,15,30 9 * * *", "59 9 * * *", "0 */2 * * *"])
 def test_accept_minimum_interval(expression):
     from cwms_batch_events.core.schedules import validate_schedule_interval
     assert validate_schedule_interval(expression) == expression
@@ -19,7 +19,7 @@ def test_invalid_existing_schedule_remains_readable_but_cannot_be_saved():
     payload = record.model_dump(by_alias=False)
     payload.update(config_version=4, schedule_type="cron", schedule_cron="* * * * *", schedule_enabled=True)
     assert ScriptRead(**payload).schedule_cron == "* * * * *"
-    with pytest.raises(ValidationError, match="5 minutes"):
+    with pytest.raises(ValidationError, match="15 minutes"):
         ScriptUpdate(**payload)
     payload["schedule_enabled"] = False
     assert not ScriptUpdate(**payload).schedule_enabled
