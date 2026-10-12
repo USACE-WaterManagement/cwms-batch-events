@@ -16,7 +16,7 @@ from cwms_batch_events.core.job_database.postgres.models import JobModel, Script
 from cwms_batch_events.core.job_database.postgres.postgres import PostgresJobDatabase
 from cwms_batch_events.core.job_database.postgres.session import create_session
 from cwms_batch_events.core.maintenance import register_due_jobs, deliver_pending_jobs
-from cwms_batch_events.core.models import ScriptCreate, ScriptRunRequest
+from cwms_batch_events.core.models import ScriptCreate, ScriptRunRequest, ScriptUpdate
 
 
 def main():
@@ -121,6 +121,14 @@ def main():
         saved = db.get(ScriptModel, script.id)
         assert "15 minutes" in saved.schedule_error
         assert len(db.scalars(select(JobModel).where(JobModel.script_id == script.id)).all()) == 1
+    with create_session() as db:
+        update_data = PostgresJobDatabase(db).get_script_by_id(script.id).model_dump(by_alias=False)
+        update_data["schedule_cron"] = "*/15 * * * *"
+        update = ScriptUpdate(**update_data)
+        PostgresJobDatabase(db).update_script(script.id, update, actor.admin_offices, actor)
+    with create_session() as db, db.begin():
+        saved = db.get(ScriptModel, script.id)
+        assert saved.schedule_error is None
         saved.schedule_enabled = False
     print("PASS: scheduler concurrency, attribution, durable retry, dispatch deduplication, office access, and disable")
 
