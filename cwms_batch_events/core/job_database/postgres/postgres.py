@@ -536,6 +536,13 @@ class PostgresJobDatabase:
             self._record_schedule_author(script, actor)
             if payload.config_version < script.config_version:
                 raise ValueError("Configuration versions cannot be downgraded. Reload this script before saving.")
+            previous_schedule = (
+                script.schedule_enabled,
+                script.schedule_type,
+                script.schedule_minute,
+                script.schedule_cron,
+                script.schedule_timezone,
+            )
             for field, value in payload.model_dump(by_alias=False).items():
                 if field == "job_runners":
                     job_runners = self.db.scalars(
@@ -548,6 +555,16 @@ class PostgresJobDatabase:
                     script.job_runners = list(job_runners)
                 else:
                     setattr(script, field, value)
+
+            current_schedule = (
+                script.schedule_enabled,
+                script.schedule_type,
+                script.schedule_minute,
+                script.schedule_cron,
+                script.schedule_timezone,
+            )
+            if current_schedule != previous_schedule:
+                script.schedule_error = None
 
             script.updated_time = datetime.now()
             self.db.flush()
