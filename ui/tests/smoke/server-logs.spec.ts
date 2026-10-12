@@ -116,3 +116,23 @@ test("server log failure is recoverable and empty state is accurate", async ({ p
   await expect(page.getByText("No matching entries in the loaded time range.")).toBeVisible();
   await expect(page.getByRole("alert").filter({ hasText: "Server logs unavailable" })).toHaveCount(0);
 });
+
+test("server log permission failure shows a warning and recovers", async ({ page }) => {
+  let denied = true;
+  await page.route("**/api/**", route => {
+    const url = new URL(route.request().url());
+    if (url.pathname.endsWith("/server-logs")) return denied
+      ? route.fulfill({ status: 503, json: { detail: { code: "cloudwatch_logs_permission_missing", message: "The API service cannot read CloudWatch logs." } } })
+      : route.fulfill({ json: { entries: [], nextCursor: null, startTime: 0, endTime: 1000, logGroup: "server" } });
+    if (url.pathname.endsWith("/repository-status")) return route.fulfill({ json: { warnings: [] } });
+    return route.fulfill({ json: [] });
+  });
+  await page.goto("/events/about");
+  await page.getByRole("button", { name: "Login", exact: true }).first().click();
+  await page.getByRole("button", { name: /View server logs/ }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "CloudWatch log access is not available" })).toBeVisible();
+  denied = false;
+  await page.getByRole("button", { name: "Refresh server logs" }).click();
+  await expect(page.getByText("No matching entries in the loaded time range.")).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: "CloudWatch log access is not available" })).toHaveCount(0);
+});

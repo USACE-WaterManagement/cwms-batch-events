@@ -32,6 +32,12 @@ LEVEL = re.compile(
 )
 
 
+def cloudwatch_permission_error(exc: ClientError) -> bool:
+    return exc.response.get("Error", {}).get("Code") in {
+        "AccessDeniedException", "UnauthorizedException", "ForbiddenException",
+    }
+
+
 class ServerLogEntry(CamelModel):
     event_id: str
     timestamp: int
@@ -141,6 +147,11 @@ def get_server_logs(
         })
         if cursor and exc.response.get("Error", {}).get("Code") == "InvalidParameterException":
             raise HTTPException(400, "Log cursor expired or invalid. Refresh server logs.") from exc
+        if cloudwatch_permission_error(exc):
+            raise HTTPException(status_code=503, detail={
+                "code": "cloudwatch_logs_permission_missing",
+                "message": "The API service cannot read CloudWatch logs. Ask an administrator to grant the configured CloudWatch Logs read permissions.",
+            }) from exc
         raise HTTPException(503, "Server logs are currently unavailable.") from exc
     except BotoCoreError as exc:
         logger.warning("CloudWatch server log client unavailable", extra={"event": "server_logs_failed", "error_type": type(exc).__name__})

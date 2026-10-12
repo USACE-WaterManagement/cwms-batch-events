@@ -8,6 +8,7 @@ from uuid import uuid4
 
 import boto3
 from botocore.config import Config
+from botocore.exceptions import BotoCoreError, ClientError
 from sqlalchemy import func, select, text
 
 from cwms_batch_events.core.dispatch import expire_dispatch
@@ -25,7 +26,8 @@ logger = logging.getLogger(__name__)
 # across deployments so old and new replicas coordinate during rolling updates.
 # Separate IDs let scheduling and queue delivery run independently.
 TASK_LOCKS = {"schedules": 730181, "queue_delivery": 730182, "dispatch_watchdog": 730183,
-              "cancellation_reconciliation": 730184}
+              "cancellation_reconciliation": 730184, "job_history_cleanup": 730185}
+CLOUDWATCH_RETENTION_GRACE = timedelta(days=1)
 
 
 def _begin(db, task):
@@ -174,6 +176,61 @@ def reconcile_cancellations(now=None, session_factory=create_session):
         db.execute(text("UPDATE maintenance_tasks SET last_success=:now WHERE name='cancellation_reconciliation'"), {"now": now})
 
 
+def _cloudwatch_logs_client():
+    return boto3.client("logs", config=Config(connect_timeout=3, read_timeout=10,
+                                               retries={"total_max_attempts": 1}))
+
+
+def _cloudwatch_retention_days(client, log_group: str) -> int | None:
+    response = client.describe_log_groups(logGroupNamePrefix=log_group, limit=50)
+    for group in response.get("logGroups", []):
+        if group.get("logGroupName") == log_group:
+            retention = group.get("retentionInDays")
+            return int(retention) if retention is not None else None
+    return None
+
+
+def cleanup_expired_job_history(now=None, session_factory=create_session, logs_factory=_cloudwatch_logs_client):
+    """Delete terminal Batch rows only after their CloudWatch logs can expire."""
+    settings = get_settings()
+    if not getattr(settings, "job_history_cleanup_enabled", True):
+        return
+    with session_factory() as db, db.begin():
+        if not _begin(db, "job_history_cleanup"):
+            return
+        now = now or db.scalar(text("SELECT CURRENT_TIMESTAMP"))
+        retention_cache = {}
+        candidates = db.scalars(select(JobModel).join(JobRunnerModel).where(
+            JobRunnerModel.slug == "batch",
+            JobModel.job_status.in_((JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED)),
+            JobModel.end_time.is_not(None),
+            JobModel.log_group.is_not(None),
+        ).order_by(JobModel.end_time, JobModel.id).limit(settings.job_history_cleanup_batch_size).with_for_update(skip_locked=True)).all()
+        expired = []
+        client = logs_factory() if candidates else None
+        for job in candidates:
+            if job.log_group not in retention_cache:
+                try:
+                    retention_cache[job.log_group] = _cloudwatch_retention_days(client, job.log_group)
+                except (BotoCoreError, ClientError):
+                    logger.exception("CloudWatch retention lookup failed", extra={
+                        "event": "job_history_cleanup_retention_failed", "log_group": job.log_group,
+                        "expected_retention_days": settings.expected_cloudwatch_log_retention_days,
+                    })
+                    retention_cache[job.log_group] = "unavailable"
+            retention = retention_cache[job.log_group]
+            if retention in (None, "unavailable"):
+                continue
+            if job.end_time + timedelta(days=retention) + CLOUDWATCH_RETENTION_GRACE <= now:
+                expired.append(job)
+        for job in expired:
+            db.delete(job)
+        db.execute(text("UPDATE maintenance_tasks SET last_success=:now WHERE name='job_history_cleanup'"), {"now": now})
+        logger.info("Job history cleanup complete", extra={
+            "event": "job_history_cleanup", "candidates": len(candidates), "deleted": len(expired),
+        })
+
+
 async def supervise(stop, tasks=None, interval=15):
     """One bounded worker per task. Never spawn replacements for a hung thread."""
     tasks = tasks or {"schedules": register_due_jobs, "queue_delivery": deliver_pending_jobs}
@@ -217,6 +274,8 @@ async def lifespan(app):
         tasks["dispatch_watchdog"] = expire_unlinked_dispatches
     if getattr(get_settings(), "cancellation_watchdog_enabled", True):
         tasks["cancellation_reconciliation"] = reconcile_cancellations
+    if getattr(get_settings(), "job_history_cleanup_enabled", False):
+        tasks["job_history_cleanup"] = cleanup_expired_job_history
     if tasks:
         worker = asyncio.create_task(supervise(stop, tasks))
     try:

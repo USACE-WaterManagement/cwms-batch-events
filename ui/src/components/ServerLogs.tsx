@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@usace-watermanagement/groundwork-water/auth/useAuth";
 import { Button } from "@usace/groundwork";
-import fetchWithAuth from "../utils/fetchWithAuth";
+import fetchWithAuth, { ApiError } from "../utils/fetchWithAuth";
 
 interface LogEntry {
   eventId: string;
@@ -28,6 +28,7 @@ export function ServerLogs() {
   const [request, setRequest] = useState<{ serial: number; cursor?: string; start?: number; end?: number }>({ serial: 0 });
   const [data, setData] = useState<LogPage>();
   const [error, setError] = useState("");
+  const [permissionWarning, setPermissionWarning] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -49,7 +50,10 @@ export function ServerLogs() {
         });
       })
       .catch((reason: unknown) => {
-        if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : "Unable to load server logs.");
+        if (!controller.signal.aborted) {
+          setPermissionWarning(reason instanceof ApiError && reason.code === "cloudwatch_logs_permission_missing");
+          setError(reason instanceof Error ? reason.message : "Unable to load server logs.");
+        }
       })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
@@ -58,6 +62,7 @@ export function ServerLogs() {
   const refresh = (newHours = hours) => {
     setLoading(true);
     setError("");
+    setPermissionWarning(false);
     setData(undefined);
     setHours(newHours);
     setRequest(previous => ({ serial: previous.serial + 1 }));
@@ -80,6 +85,7 @@ export function ServerLogs() {
       <Button type="button" disabled={loading} onClick={() => refresh()}>Refresh server logs</Button>
     </div>
     {error && <p role="alert" className="text-sm text-red-800">Server logs unavailable. {error} Use Refresh server logs to try again.</p>}
+    {permissionWarning && <p role="alert" className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">CloudWatch log access is not available to the API service. An administrator must grant the configured CloudWatch Logs read permissions. Other Batch Events features remain available.</p>}
     <p role="status" className="text-sm text-gray-600">{loading ? "Loading server logs…" : `${entries.length} entries loaded.`}</p>
     <p className="text-xs text-gray-600">{level === "UNKNOWN" ? "Unclassified historical output. Load more to scan additional pages." : "Levels filter structured logs in CloudWatch. Choose All levels to include older text logs."}</p>
     {data && <>

@@ -64,6 +64,19 @@ def test_aws_failure_is_not_empty_success(client, logs, error):
     assert "private details" not in response.text
 
 
+def test_cloudwatch_permission_failure_has_safe_machine_readable_code(client, logs):
+    logs.filter_log_events.side_effect = ClientError(
+        {"Error": {"Code": "AccessDeniedException", "Message": "private details"}},
+        "FilterLogEvents",
+    )
+    response = client.get("/server-logs")
+    assert response.status_code == 503
+    assert response.json() == {"detail": {
+        "code": "cloudwatch_logs_permission_missing",
+        "message": "The API service cannot read CloudWatch logs. Ask an administrator to grant the configured CloudWatch Logs read permissions.",
+    }}
+
+
 def test_expired_cursor(client, logs):
     logs.filter_log_events.return_value = {"events": [], "nextToken": "expired"}
     cursor = client.get("/server-logs?start_time=0&end_time=1000").json()["nextCursor"]

@@ -29,6 +29,7 @@ const fetchWithAuth = async (
       if (body?.detail?.code === "office_access_required" && typeof body.detail.office === "string" && /^[A-Z0-9-]{2,10}$/.test(body.detail.office)) office = body.detail.office;
     }
     let fields: Record<string, string> | undefined;
+    let code: string | undefined;
     let message = response.status >= 500
       ? "The server could not complete the request. Please try again later."
       : response.status === 401
@@ -36,14 +37,17 @@ const fetchWithAuth = async (
         : response.status === 403
           ? "You do not have permission to perform this action."
           : `The request could not be completed (${response.status}).`;
+    const body = response.status >= 500 ? await response.clone().json().catch(() => null) : null;
+    if (typeof body?.detail?.code === "string") code = body.detail.code;
+    if (typeof body?.detail?.message === "string") message = body.detail.message;
     // Only show intentional client-error messages, never HTML or server traces.
     if (response.status >= 400 && response.status < 500 && response.status !== 401 && response.status !== 403) {
-      const body = await response.json().catch(() => null);
-      if (typeof body?.detail === "string") message = body.detail;
-      else if (Array.isArray(body?.detail)) {
+      const clientBody = await response.json().catch(() => null);
+      if (typeof clientBody?.detail === "string") message = clientBody.detail;
+      else if (Array.isArray(clientBody?.detail)) {
         message = "Some fields are invalid. Check your entries and try again.";
         fields = {};
-        for (const issue of body.detail) {
+        for (const issue of clientBody.detail) {
           const location: unknown[] = Array.isArray(issue.loc) ? issue.loc.slice(1) : [];
           const field = location.reduce((path: string, part: unknown) => {
             if (typeof part === "number") return `${path}[${part}]`;
@@ -54,7 +58,7 @@ const fetchWithAuth = async (
         }
       }
     }
-    throw new ApiError(message, response.status, fields, office);
+    throw new ApiError(message, response.status, fields, office, code);
   }
   return response;
 };
@@ -68,7 +72,7 @@ class ConnectionError extends Error {
 }
 
 export class ApiError extends Error {
-  constructor(message: string, public readonly status: number, public readonly fields?: Record<string, string>, public readonly office?: string) {
+  constructor(message: string, public readonly status: number, public readonly fields?: Record<string, string>, public readonly office?: string, public readonly code?: string) {
     super(message);
     this.name = "ApiError";
   }
