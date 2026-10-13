@@ -83,11 +83,14 @@ def valid_ticket(job_id, ticket, key):
 
 # Runs using Python already present in the job image. Download credentials only
 # authorize this job's saved JAR. Java is exec'd so its exit code and signals win.
-BOOTSTRAP = '''import hashlib, os, sys, tempfile, urllib.request
+BOOTSTRAP = '''import hashlib, os, sys, tempfile, urllib.request, urllib.error, socket, ssl
 url, ticket, digest, expected = sys.argv[1:5]
-directory = tempfile.mkdtemp(prefix="cwms-release-")
-path = os.path.join(directory, "job.jar")
+def fail(reason):
+    print("Release JAR download or verification failed. Java was not started. " + reason, file=sys.stderr)
+    sys.exit(1)
 try:
+    directory = tempfile.mkdtemp(prefix="cwms-release-")
+    path = os.path.join(directory, "job.jar")
     request = urllib.request.Request(url, headers={"X-Artifact-Ticket": ticket})
     checksum = hashlib.sha256()
     size = 0
@@ -103,9 +106,22 @@ try:
             target.write(chunk)
     if size != int(expected) or checksum.hexdigest() != digest:
         raise ValueError("Release JAR checksum or size does not match the saved selection")
+except urllib.error.HTTPError as exc:
+    fail("Artifact API returned HTTP " + str(exc.code) + ". Check the API deployment, artifact ticket, and GitHub release access.")
+except (TimeoutError, socket.timeout):
+    fail("Timed out contacting the artifact API. Check that the API load balancer allows TCP port 80 from the Batch job security group.")
+except urllib.error.URLError as exc:
+    if isinstance(exc.reason, (TimeoutError, socket.timeout)):
+        fail("Timed out contacting the artifact API. Check that the API load balancer allows TCP port 80 from the Batch job security group.")
+    if isinstance(exc.reason, ssl.SSLError):
+        fail("TLS validation failed when contacting the artifact API. Check the endpoint certificate and runner trust store.")
+    fail("Could not connect to the artifact API. Check DNS, routing, and the Batch-to-API security group rules.")
+except ValueError:
+    fail("Downloaded JAR size or SHA-256 does not match the saved selection. Select the release asset again.")
+except OSError:
+    fail("Could not read or save the release JAR. Check runner storage and the download connection.")
 except Exception:
-    print("Release JAR download or verification failed. Java was not started.", file=sys.stderr)
-    sys.exit(1)
+    fail("Unexpected download failure. Check the API logs for this run.")
 os.execvp("java", ["java", "-jar", path, *sys.argv[5:]])
 '''
 
