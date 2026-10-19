@@ -52,11 +52,21 @@ def test_uncertain_errors_are_not_recorded_as_proven_failures(error):
     assert post.call_count == 1
 
 
-@pytest.mark.parametrize('status,external', [('Failed', None), ('Dispatch unknown', None), ('Pending', 'batch-id')])
+@pytest.mark.parametrize('status,external', [
+    ('Failed', None), ('Dispatch unknown', None), ('Pending', 'batch-id'),
+    ('Cancelled', None), ('Cancelling', None),
+])
 def test_redelivery_cannot_submit_failed_expired_or_linked_job(status, external):
     with patch(f'{MODULE}.requests.post', return_value=response(claimed=False, status=status, external_job_id=external)), patch(f'{MODULE}.dispatch_job') as dispatch:
         _dispatch_and_bind(make_job_message(), {})
     dispatch.assert_not_called()
+
+
+def test_cancelled_job_message_is_acked_instead_of_retried(caplog):
+    with patch(f'{MODULE}.requests.post', return_value=response(claimed=False, status='Cancelled', external_job_id=None)), patch(f'{MODULE}.dispatch_job') as dispatch, caplog.at_level('INFO'):
+        _dispatch_and_bind(make_job_message(), {})
+    dispatch.assert_not_called()
+    assert any(getattr(r, 'event', None) == 'dispatch_cancelled_message_acked' for r in caplog.records)
 
 
 def test_claimed_without_outcome_retries_observation_without_resubmission():

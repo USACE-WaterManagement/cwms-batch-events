@@ -123,6 +123,12 @@ def _dispatch_and_bind(message, headers):
     claim.raise_for_status()
     outcome = claim.json()
     if not outcome["claimed"]:
+        if outcome["status"] in ("Cancelled", "Cancelling"):
+            # A cancelled job can never be claimed again, so this message has no valid outcome.
+            # Ack it; raising here redelivers the whole SQS batch until retention expires.
+            logger.info("Discarding dispatch message for a cancelled job",
+                        extra={"event": "dispatch_cancelled_message_acked"})
+            return
         if outcome["external_job_id"] or outcome["status"] in ("Completed", "Failed", "Dispatch unknown"):
             logger.info("Job already dispatched or closed to dispatch", extra={"event": "dispatch_duplicate"})
             return
