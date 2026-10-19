@@ -65,5 +65,15 @@ Office sharing does not expire database rows. Track the cleanup implementation i
 [issue #230](https://github.com/USACE-WaterManagement/cwms-batch-events/issues/230).
 The proposed starting policy is 365 days of terminal run history, subject to owner
 review, with explicit handling for holds, missing finish times, log/object retention,
-and related tables. Pending/Running jobs must be reconciled before cleanup. No purge
-is enabled by this PR, and live CloudWatch/S3 lifecycle settings remain to be audited.
+and related tables. Pending/Running jobs must be reconciled before cleanup. Live
+CloudWatch/S3 lifecycle settings remain to be audited.
+
+The cleanup implementation uses the API maintenance worker and a PostgreSQL advisory
+lock, so it runs on a schedule without requiring an infrastructure scheduler. It only
+considers terminal AWS Batch jobs with an end time and saved CloudWatch log group. For
+each group it reads `retentionInDays` from CloudWatch, then removes the database row
+after that period plus a one-day ingestion grace period. Missing groups, infinite
+retention, missing permissions, and AWS lookup failures are conservative skip cases.
+The cleanup setting is enabled by default, but it never falls back to age-only deletion
+when CloudWatch retention cannot be verified. Local S3-backed jobs and rows without an
+end time remain outside this cleanup path.

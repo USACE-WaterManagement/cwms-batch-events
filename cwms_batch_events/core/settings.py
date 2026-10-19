@@ -98,6 +98,9 @@ class Settings(LoggingSettings, StorageSettings, ExecutorSettings, RunnerSetting
     auth_realm: str = "cwms"
     server_log_group: str = "ecs/cwms-batch/cwms-batch-events-api"
     server_log_stream_prefix: str = "ecs/cwms-batch-events-api/"
+    cloudwatch_log_retention_days: int | None = Field(default=None, ge=1)
+    job_history_cleanup_enabled: bool = True
+    job_history_cleanup_batch_size: int = Field(default=100, ge=1, le=1000)
     mock_user: bool = False
     root_path: str | None = None
     rate_limit_requests_per_minute: int = Field(default=120, ge=1, le=10000)
@@ -108,6 +111,16 @@ class Settings(LoggingSettings, StorageSettings, ExecutorSettings, RunnerSetting
     @property
     def fastapi_root_path(self) -> str:
         return self.root_path or ""
+
+    @property
+    def expected_cloudwatch_log_retention_days(self) -> int:
+        if self.cloudwatch_log_retention_days is not None:
+            return self.cloudwatch_log_retention_days
+        return {
+            "dev": 30,
+            "test": 365,
+            "prod": 1095,
+        }.get(self.deployment_environment.lower(), 30)
 
 
 class DynamoSettings(AwsSettings):

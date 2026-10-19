@@ -8,7 +8,7 @@ from sqlalchemy.dialects import postgresql
 
 from cwms_batch_events.core.dispatch import expire_dispatch
 from cwms_batch_events.core.job_database.postgres.postgres import PostgresJobDatabase
-from cwms_batch_events.core.maintenance import expire_unlinked_dispatches, reconcile_cancellations
+from cwms_batch_events.core.maintenance import cleanup_expired_job_history, expire_unlinked_dispatches, reconcile_cancellations
 from cwms_batch_events.core.models import JobStatus
 
 NOW = datetime.now(timezone.utc)
@@ -141,3 +141,38 @@ def test_cancellation_reconciliation_marks_stale_request_for_investigation():
             patch('cwms_batch_events.core.maintenance.get_settings', return_value=settings):
         reconcile_cancellations(NOW, factory)
     assert "has not received runner confirmation" in job.batch_status_reason
+
+
+def test_job_history_cleanup_deletes_only_rows_past_cloudwatch_retention():
+    expired = SimpleNamespace(id=uuid4(), job_status=JobStatus.COMPLETED,
+        end_time=NOW - timedelta(days=32), log_group="/jobs/dev")
+    recent = SimpleNamespace(id=uuid4(), job_status=JobStatus.FAILED,
+        end_time=NOW - timedelta(days=2), log_group="/jobs/dev")
+    session = MagicMock()
+    session.scalars.return_value.all.return_value = [expired, recent]
+    factory = MagicMock()
+    factory.return_value.__enter__.return_value = session
+    logs = MagicMock()
+    logs.describe_log_groups.return_value = {"logGroups": [{"logGroupName": "/jobs/dev", "retentionInDays": 30}]}
+    settings = SimpleNamespace(job_history_cleanup_enabled=True, job_history_cleanup_batch_size=100)
+    with patch('cwms_batch_events.core.maintenance._begin', return_value=True), \
+            patch('cwms_batch_events.core.maintenance.get_settings', return_value=settings):
+        cleanup_expired_job_history(NOW, factory, lambda: logs)
+    session.delete.assert_called_once_with(expired)
+    logs.describe_log_groups.assert_called_once_with(logGroupNamePrefix="/jobs/dev", limit=50)
+
+
+def test_job_history_cleanup_skips_when_cloudwatch_retention_cannot_be_verified():
+    job = SimpleNamespace(id=uuid4(), job_status=JobStatus.COMPLETED,
+        end_time=NOW - timedelta(days=400), log_group="/jobs/test")
+    session = MagicMock()
+    session.scalars.return_value.all.return_value = [job]
+    factory = MagicMock()
+    factory.return_value.__enter__.return_value = session
+    logs = MagicMock()
+    logs.describe_log_groups.return_value = {"logGroups": []}
+    settings = SimpleNamespace(job_history_cleanup_enabled=True, job_history_cleanup_batch_size=100)
+    with patch('cwms_batch_events.core.maintenance._begin', return_value=True), \
+            patch('cwms_batch_events.core.maintenance.get_settings', return_value=settings):
+        cleanup_expired_job_history(NOW, factory, lambda: logs)
+    session.delete.assert_not_called()
