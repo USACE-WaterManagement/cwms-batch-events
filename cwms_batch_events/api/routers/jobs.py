@@ -3,7 +3,7 @@ from datetime import datetime
 import logging
 
 import boto3
-from botocore.exceptions import ClientError
+from botocore.exceptions import BotoCoreError, ClientError
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy.exc import NoResultFound
@@ -289,3 +289,11 @@ def get_log_page(
         return job_logger.get_log_page(job_id, cursor)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="Invalid log cursor. Refresh the logs.") from exc
+    except ClientError as exc:
+        # cloudwatch.py already logged job_logs_failed with the AWS error code.
+        raise HTTPException(status_code=503, detail="Job logs are currently unavailable.") from exc
+    except BotoCoreError as exc:
+        logger.warning("CloudWatch job log client unavailable", extra={
+            "event": "job_logs_failed", "job_id": job_id, "error_type": type(exc).__name__,
+        })
+        raise HTTPException(status_code=503, detail="Job logs are currently unavailable.") from exc

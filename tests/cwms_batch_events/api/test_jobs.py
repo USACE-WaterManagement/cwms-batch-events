@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import patch
 from uuid import uuid4
 
+from botocore.exceptions import ClientError, NoCredentialsError
 from sqlalchemy.exc import NoResultFound
 
 from cwms_batch_events.api.main import app
@@ -35,6 +36,19 @@ def test_log_page_rejects_invalid_and_oversized_cursor(client, job_db, job_logge
     job_logger.get_log_page.side_effect = ValueError("bad cursor")
     assert client.get(f"/jobs/{job.id}/logs/page?cursor=bad").status_code == 400
     assert client.get(f"/jobs/{job.id}/logs/page?cursor={'x' * 16385}").status_code == 422
+
+
+@pytest.mark.parametrize("error", [
+    ClientError({"Error": {"Code": "AccessDeniedException", "Message": "not authorized"}}, "GetLogEvents"),
+    NoCredentialsError(),
+])
+def test_log_page_reports_unavailable_when_cloudwatch_cannot_be_read(client, job_db, job_logger, user, error):
+    job = make_job_record(username=user.username)
+    job_db.get_job_by_id.return_value = job
+    job_logger.get_log_page.side_effect = error
+    response = client.get(f"/jobs/{job.id}/logs/page")
+    assert response.status_code == 503
+    assert response.json()["detail"] == "Job logs are currently unavailable."
 
 
 def test_get_jobs_for_offices_returns_jobs(client, job_db, user):
