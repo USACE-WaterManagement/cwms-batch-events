@@ -193,6 +193,50 @@ def test_cancel_batch_job_requests_termination(client, job_db, user):
     assert response.json()["status"] == "Cancelling"
 
 
+def test_rejected_cancellation_records_the_aws_reason(client, job_db, user, caplog):
+    job = make_job_record(job_status=JobStatus.RUNNING, external_job_id="batch-123", batch_status="RUNNING")
+    job_db.get_job_by_id.return_value = job
+    job_db.request_job_cancellation.return_value = {
+        "action": "terminate", "status": JobStatus.CANCELLING,
+        "external_job_id": "batch-123", "runner": "batch", "message": "Cancellation requested.",
+    }
+    error = ClientError({"Error": {
+        "Code": "InvalidRequestException",
+        "Message": "cannot terminate container for command python /jobs/private.py",
+    }}, "TerminateJob")
+
+    with patch("cwms_batch_events.api.routers.jobs.request_batch_stop", side_effect=error), caplog.at_level("WARNING"):
+        response = client.post(f"/jobs/{job.id}/cancel")
+
+    assert response.status_code == 502
+    assert "private.py" not in response.text
+
+    record = next(r for r in caplog.records if getattr(r, "event", None) == "job_cancellation_failed")
+    assert (record.aws_error_code, record.action, record.batch_status) == (
+        "InvalidRequestException", "terminate", "RUNNING")
+    assert "private.py" not in record.getMessage()
+
+    reason = job_db.record_cancellation_failure.call_args.args[2]
+    assert "InvalidRequestException" in reason and "private.py" not in reason
+
+
+def test_unreachable_runner_cancellation_reports_no_aws_code(client, job_db, user, caplog):
+    job = make_job_record(job_status=JobStatus.RUNNING, external_job_id="batch-123", batch_status="RUNNING")
+    job_db.get_job_by_id.return_value = job
+    job_db.request_job_cancellation.return_value = {
+        "action": "terminate", "status": JobStatus.CANCELLING,
+        "external_job_id": "batch-123", "runner": "batch", "message": "Cancellation requested.",
+    }
+
+    with patch("cwms_batch_events.api.routers.jobs.request_batch_stop", side_effect=RuntimeError("refused")), caplog.at_level("WARNING"):
+        response = client.post(f"/jobs/{job.id}/cancel")
+
+    assert response.status_code == 503
+    record = next(r for r in caplog.records if getattr(r, "event", None) == "job_cancellation_failed")
+    assert record.aws_error_code is None
+    assert "try again" in job_db.record_cancellation_failure.call_args.args[2]
+
+
 def test_cancel_rejects_job_from_unrelated_office(client, job_db, user):
     job = make_job_record(office="SPK")
     job_db.get_job_by_id.return_value = job

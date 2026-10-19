@@ -72,6 +72,13 @@ def stop_local_job(job_id: UUID) -> None:
         container.stop(timeout=10)
 
 
+def aws_error_code(exc: Exception) -> str | None:
+    """AWS error code only. Batch error messages can echo the submitted command, so they stay in the logs."""
+    response = getattr(exc, "response", None)
+    error = response.get("Error") if isinstance(response, dict) else None
+    return error.get("Code") if isinstance(error, dict) else None
+
+
 def request_batch_stop(external_job_id: str, action: str, reason: str) -> dict:
     batch = boto3.client("batch")
     if action == "cancel":
@@ -244,8 +251,16 @@ def cancel_job(
             result["message"] = "Cancellation requested. The job remains visible until AWS Batch confirms the result."
             return JobCancellationResponse(**result)
         except (ClientError, RuntimeError, OSError) as exc:
-            logger.warning("Job cancellation could not be sent", extra={"event": "job_cancellation_failed", "job_id": job_id, "error_type": type(exc).__name__})
-            job_db.record_cancellation_failure(job_id, user, "Cancellation request could not be sent. Check the runner state and try again.")
+            code = aws_error_code(exc)
+            logger.warning("Job cancellation could not be sent", extra={
+                "event": "job_cancellation_failed", "job_id": job_id, "error_type": type(exc).__name__,
+                "aws_error_code": code, "action": result["action"],
+                "batch_status": job.batch_status, "external_job_id": result.get("external_job_id"),
+            })
+            detail = ("Cancellation request could not be sent. Check the runner state and try again."
+                      if code is None
+                      else f"Cancellation request could not be sent. The runner refused it ({code}).")
+            job_db.record_cancellation_failure(job_id, user, detail)
             if isinstance(exc, ClientError):
                 raise HTTPException(status.HTTP_502_BAD_GATEWAY, "The runner rejected the cancellation request") from exc
             raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "The runner could not accept the cancellation request") from exc
