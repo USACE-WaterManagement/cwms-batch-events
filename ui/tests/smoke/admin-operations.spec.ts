@@ -1,0 +1,196 @@
+import { test, expect } from "@playwright/test";
+import { mkdir } from "node:fs/promises";
+import { join } from "node:path";
+
+test("Controls explains HQ dashboard access on desktop and mobile", async ({ page }) => {
+  await page.route("**/api/**", route => route.fulfill({ json: [] }));
+  await page.goto("/events/about/controls");
+  await expect(page.getByRole("heading", { name: "View admin dashboards" })).toBeVisible();
+  await expect(page.getByText("Data Acquisition Mgr in HQ", { exact: true })).toBeVisible();
+  await expect(page.getByText(/This role in another office does not grant dashboard access/)).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("heading", { name: "View admin dashboards" }).scrollIntoViewIfNeeded();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+const summary = {
+  asOf: "2026-09-25T00:00:00Z", since: "2026-09-18T00:00:00Z", offices: ["SWT", "SWF", "SAC"],
+  usage: [
+    { office: "SWT", runs: 120, completed: 114, failed: 4, users: 8, runtimeMinutes: 900, missingDuration: 1 },
+    { office: "SWF", runs: 80, completed: 75, failed: 5, users: 5, runtimeMinutes: 600, missingDuration: 0 },
+    { office: "SAC", runs: 40, completed: 40, failed: 0, users: 3, runtimeMinutes: 300, missingDuration: 0 },
+  ],
+  topJobs: [{ office: "SWT", scriptId: "report", name: "Daily reservoir report", runs: 30, completed: 29, failed: 1, users: 4, runtimeMinutes: 600, missingDuration: 0 }],
+  daily: [{ day: "2026-09-23", runs: 120, failed: 4 }, { day: "2026-09-24", runs: 120, failed: 5 }],
+  queued: 2, running: 3, registered: 20, automatic: 12, attentionTotal: 2,
+  attention: [{ id: "queued-job", office: "SWT", name: "Queued forecast", status: "Pending", ageMinutes: 85, batchCheckedAt: null },
+    { id: "long-job", office: "SWF", name: "Long report", status: "Running", ageMinutes: 180, batchCheckedAt: "2026-09-24T20:00:00Z" }],
+  failures: [{ id: "failed-job", office: "SWT", name: "Failed forecast", status: "Failed", ageMinutes: 90, reason: "Process exited with code 1", batchCheckedAt: null }],
+};
+
+test("HQ dashboard reports usage, queue issues, failures and clearly labeled cost scenarios", async ({ page }) => {
+  const queries: URLSearchParams[] = [];
+  const errors: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await page.route("**/api/**", route => {
+    const url = new URL(route.request().url());
+    if (url.pathname.endsWith("/system-admin")) return route.fulfill({ json: true });
+    if (url.pathname.endsWith("/admin/operations")) { queries.push(url.searchParams); return route.fulfill({ json: summary }); }
+    if (url.pathname.endsWith("/scheduler/status")) return route.fulfill({ json: { enabled: true, tasks: [{ name: "schedules", healthy: true }, { name: "queue_delivery", healthy: true }, { name: "dispatch_watchdog", healthy: true }], pendingDelivery: 0, needsAttention: 0, invalidSchedules: 0 } });
+    return route.fulfill({ json: [] });
+  });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/events/admin");
+  await page.getByRole("button", { name: "Login", exact: true }).first().click();
+  await expect(page.getByText("1,800", { exact: true })).toBeVisible();
+  await expect(page.getByRole("table")).toContainText("SWT");
+  if (process.env.PR_SCREENSHOT_DIR) {
+    await mkdir(process.env.PR_SCREENSHOT_DIR, { recursive: true });
+    await page.screenshot({ path: join(process.env.PR_SCREENSHOT_DIR, "admin-overview-fixture.png"), fullPage: true });
+  }
+  await page.getByRole("link", { name: "Operations", exact: true }).click();
+  await expect(page).toHaveURL(/\/events\/admin\/operations$/);
+  await expect(page.getByText("Queued forecast", { exact: true })).toBeVisible();
+  await expect(page.getByText("Process exited with code 1", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Open job", exact: true }).first()).toHaveAttribute("href", "/events/jobs/queued-job");
+  await page.getByLabel("Queue age", { exact: true }).selectOption("30");
+  await expect.poll(() => queries.at(-1)?.get("queueMinutes")).toBe("30");
+  await page.getByRole("link", { name: "Usage", exact: true }).click();
+  await expect(page).toHaveURL(/\/events\/admin\/usage$/);
+  await page.getByRole("button", { name: "Cost", exact: true }).click();
+  await page.getByLabel("Planning rate (USD per job runtime hour)").fill("2");
+  await expect(page.getByText("Scenario estimate: $60.00", { exact: true })).toBeVisible();
+  await expect(page.getByText(/This is not an AWS bill/)).toBeVisible();
+  await page.getByRole("button", { name: "Jobs", exact: true }).click();
+  await expect(page.getByRole("table")).toContainText("Daily reservoir report");
+  await page.getByLabel("Office", { exact: true }).selectOption("SWT");
+  await expect(page.getByText(/All task definitions for SWT/)).toBeVisible();
+  await page.getByLabel("Sort tasks", { exact: true }).selectOption("runs");
+  await expect.poll(() => queries.at(-1)?.get("taskSort")).toBe("runs");
+  await expect.poll(() => queries.at(-1)?.get("taskDirection")).toBe("desc");
+  await page.getByLabel("Office", { exact: true }).selectOption("SWF");
+  await expect.poll(() => queries.at(-1)?.get("office")).toBe("SWF");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("link", { name: "Overview", exact: true }).click();
+  await expect(page).toHaveURL(/\/events\/admin$/);
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  if (process.env.PR_SCREENSHOT_DIR) await page.screenshot({ path: join(process.env.PR_SCREENSHOT_DIR, "admin-mobile-fixture.png"), fullPage: true });
+  expect(errors).toEqual([]);
+});
+
+test("rate limit help explains credential counters and process refresh", async ({ page }) => {
+  let rateLimit = { office: "SWT", requestsPerMinute: 120, jobSubmissionsPerMinute: 10, requestOverride: false, jobSubmissionOverride: false, changedBy: null, changedAt: null };
+  await page.route("**/api/**", route => {
+    const url = new URL(route.request().url());
+    if (url.pathname.endsWith("/system-admin")) return route.fulfill({ json: true });
+    if (url.pathname.endsWith("/admin/rate-limits") && route.request().method() === "GET") return route.fulfill({ json: [rateLimit] });
+    if (url.pathname.endsWith("/admin/rate-limits/SWT") && route.request().method() === "PUT") {
+      const payload = route.request().postDataJSON();
+      rateLimit = { ...rateLimit, ...payload, requestOverride: true, jobSubmissionOverride: true, changedBy: "test-user", changedAt: "2026-09-30T20:00:00Z" };
+      return route.fulfill({ json: rateLimit });
+    }
+    if (url.pathname.endsWith("/admin/rate-limits/SWT") && route.request().method() === "DELETE") {
+      rateLimit = { ...rateLimit, requestsPerMinute: 120, jobSubmissionsPerMinute: 10, requestOverride: false, jobSubmissionOverride: false };
+      return route.fulfill({ status: 204, body: "" });
+    }
+    if (url.pathname.endsWith("/admin/rate-limits/SWT/history")) return route.fulfill({ json: [{ id: 1, office: "SWT", action: "created", previousRequestsPerMinute: null, previousJobSubmissionsPerMinute: null, newRequestsPerMinute: 120, newJobSubmissionsPerMinute: 10, changedBy: "test-user", changedAt: "2026-09-27T20:00:00Z" }] });
+    return route.fulfill({ json: summary });
+  });
+  await page.goto("/events/admin");
+  await page.getByRole("button", { name: "Login", exact: true }).first().click();
+  await page.getByRole("link", { name: "Rate limits", exact: true }).click();
+  await expect(page).toHaveURL(/\/events\/admin\/rate-limits$/);
+  await expect(page.locator("summary").getByText("SWT", { exact: true })).toBeVisible();
+  await expect(page.getByText("Default", { exact: true }).first()).toBeVisible();
+  await page.locator("summary").click();
+  await expect(page.getByRole("heading", { name: "Change history" })).toBeVisible();
+  await expect(page.getByText("test-user", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "How rate limits are applied", exact: true }).click();
+  await expect(page.getByRole("dialog")).toContainText("authenticated bearer credential");
+  await expect(page.getByRole("dialog")).toContainText("active counters are kept in memory");
+  await expect(page.getByRole("dialog")).toContainText("about once per minute");
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByLabel("Requests/min", { exact: true }).fill("240");
+  await page.getByLabel("Jobs/min", { exact: true }).fill("40");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: "SWT rate limit saved" })).toBeVisible();
+  await expect(page.locator("summary")).toContainText("240");
+  await expect(page.locator("summary")).toContainText("40");
+  await page.getByRole("button", { name: "Use defaults", exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: "SWT rate limit reset to defaults" })).toBeVisible();
+  await expect(page.locator("summary")).toContainText("120");
+  await expect(page.locator("summary")).toContainText("10");
+});
+
+test("pagination reserves row space while new history is loading", async ({ page }) => {
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  await page.route("**/api/**", async route => {
+    const url = new URL(route.request().url());
+    if (url.pathname.endsWith("/jobs")) {
+      const offset = Number(url.searchParams.get("offset"));
+      if (offset) await gate;
+      return route.fulfill({ json: Array.from({ length: 10 }, (_, index) => ({ id: `job-${index + offset}`, scriptName: `Job ${index + offset}`, office: "SWT", jobStatus: "Completed", createdTime: "2026-09-24T12:00:00Z" })), headers: { "X-Total-Count": "20" } });
+    }
+    return route.fulfill({ json: [] });
+  });
+  await page.goto("/events/jobs");
+  await page.getByRole("button", { name: "Login", exact: true }).first().click();
+  const results = page.getByRole("region", { name: "Job history results" });
+  await expect(results.getByRole("link")).toHaveCount(10);
+  const before = await results.boundingBox();
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page.getByRole("status", { name: "Loading job history", exact: true })).toBeVisible();
+  await expect(page.getByText("Page 2 of 2 (20 jobs)", { exact: true })).toBeVisible();
+  expect((await results.boundingBox())?.height).toBe(before?.height);
+  release();
+  await expect(results.getByRole("link").first()).toContainText("Job 10");
+  expect((await results.boundingBox())?.height).toBe(before?.height);
+});
+
+test("admin section routes load their selected section directly", async ({ page }) => {
+  await page.route("**/api/**", route => {
+    const url = new URL(route.request().url());
+    if (url.pathname.endsWith("/system-admin")) return route.fulfill({ json: true });
+    return route.fulfill({ json: summary });
+  });
+  await page.goto("/events/admin/operations");
+  await page.getByRole("button", { name: "Login", exact: true }).first().click();
+  await expect(page.getByRole("heading", { name: "Jobs needing attention" })).toBeVisible();
+});
+
+test("admin attention preserves unresolved dispatches with their reason", async ({ page }) => {
+  const reason = "Dispatch timed out without a linked AWS Batch job. Check AWS before rerunning.";
+  await page.route("**/api/**", route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/system-admin")) return route.fulfill({ json: true });
+    if (path.endsWith("/admin/operations")) return route.fulfill({ json: { ...summary,
+      queued: 0, running: 0, attentionTotal: 1, attention: [{ id: "unknown", office: "NWDP", name: "Unresolved run",
+        status: "Dispatch unknown", ageMinutes: 100000, batchCheckedAt: null, reason }] } });
+    return route.fulfill({ json: [] });
+  });
+  await page.goto("/events/admin/operations");
+  await page.getByRole("button", { name: "Login", exact: true }).first().click();
+  await expect(page.getByText(reason, { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Open job", exact: true }).first()).toHaveAttribute("href", "/events/jobs/unknown");
+});
+
+test("scheduler dashboard identifies the dispatch watchdog and next check", async ({ page }) => {
+  await page.route("**/api/**", route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/system-admin")) return route.fulfill({ json: true });
+    if (path.endsWith("/scheduler/status")) return route.fulfill({ json: {
+      enabled: true,
+      tasks: [{ name: "schedules", healthy: true, lastSuccess: "2026-09-30T12:00:00Z", nextExpectedAt: "2026-09-30T12:00:15Z" },
+        { name: "queue_delivery", healthy: true, lastSuccess: "2026-09-30T12:00:00Z", nextExpectedAt: "2026-09-30T12:00:15Z" },
+        { name: "dispatch_watchdog", healthy: true, lastSuccess: "2026-09-30T12:00:00Z", nextExpectedAt: "2026-09-30T12:00:15Z" }],
+      pendingDelivery: 0, needsAttention: 0, invalidSchedules: 0,
+    } });
+    return route.fulfill({ json: summary });
+  });
+  await page.goto("/events/admin/scheduler");
+  await page.getByRole("button", { name: "Login", exact: true }).first().click();
+  await expect(page.getByText(/Dispatch watchdog:/)).toBeVisible();
+  await expect(page.getByText(/next around/).first()).toBeVisible();
+});

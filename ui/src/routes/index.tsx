@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useAuth } from "@usace-watermanagement/groundwork-water";
+import { useAuth } from "@usace-watermanagement/groundwork-water/auth/useAuth";
 import { Button, Card, H1, H2, Text } from "@usace/groundwork";
 import { FiArrowRight, FiBookOpen, FiInfo, FiLogIn } from "react-icons/fi";
 import JobsList from "../features/jobs-list/JobsList";
@@ -73,7 +73,7 @@ function HomePage() {
             <H2>New user onboarding</H2>
             <Text className="mt-2">Follow the steps for preparing, defining, and running a job.</Text>
             <Link
-              to="/about/onboarding"
+              to="/help/onboarding"
               className="mt-5 inline-flex items-center gap-2 font-semibold text-blue-700 underline decoration-blue-300 underline-offset-4"
             >
               Open Onboarding

@@ -1,5 +1,6 @@
+import { notifySuccess } from "../../utils/actionNotifications";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@usace-watermanagement/groundwork-water";
+import { useAuth } from "@usace-watermanagement/groundwork-water/auth/useAuth";
 import fetchWithAuth from "../../utils/fetchWithAuth";
 import { Script } from "./types";
 
@@ -12,6 +13,7 @@ export const useDeleteScript = (office: string) => {
       deleteScript({ ...args, token: auth.token }),
 
     onSuccess: (_data, args) => {
+      notifySuccess("Script deleted.");
       queryClient.setQueryData<Script[]>(["scripts", office], (old) =>
         old?.filter((script) => script.id !== args.scriptId),
       );

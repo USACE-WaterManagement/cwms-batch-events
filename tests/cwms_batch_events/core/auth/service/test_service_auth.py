@@ -18,7 +18,7 @@ client = TestClient(app)
 @pytest.fixture
 def internal_auth_token():
     with mock.patch(
-        "cwms_batch_events.core.settings.settings.app_key",
+        "cwms_batch_events.core.auth.service.dependencies.settings.app_key",
         "expected-token",
     ):
         yield "expected-token"
@@ -41,7 +41,7 @@ def test_valid_token_succeeds(internal_auth_token):
 
 
 def test_missing_app_key_returns_500():
-    with mock.patch("cwms_batch_events.core.settings.settings.app_key", ""):
+    with mock.patch("cwms_batch_events.core.auth.service.dependencies.settings.app_key", ""):
         r = client.post("/internal", headers={"X-Internal-Token": "anything"})
 
     assert r.status_code == 500

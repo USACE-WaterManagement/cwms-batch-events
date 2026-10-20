@@ -1,12 +1,13 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "./utils/queryClient";
+import ErrorToasts from "./components/ErrorToasts";
+import ConnectivityStatus from "./shared/components/ConnectivityStatus";
 import { LinkProvider } from "@usace/groundwork";
-import {
-  AuthProvider,
-  createKeycloakAuthMethod,
-} from "@usace-watermanagement/groundwork-water";
+import { AuthProvider } from "@usace-watermanagement/groundwork-water/auth/AuthProvider";
+import { createKeycloakAuthMethod } from "@usace-watermanagement/groundwork-water/auth/keycloakAuthMethod";
 import createMockAuthMethod from "./features/auth/mockAuthMethod.ts";
 import { Link, RouterProvider, createRouter } from "@tanstack/react-router";
 
@@ -49,7 +50,11 @@ const authMethod = (() => {
   }
 })();
 
-const queryClient = new QueryClient();
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`);
+  });
+}
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -57,6 +62,8 @@ createRoot(document.getElementById("root")!).render(
       <AuthProvider method={authMethod}>
         <LinkProvider component={Link} hrefMap="to">
           <RouterProvider router={router} />
+          <ErrorToasts />
+          <ConnectivityStatus showBanner={false} />
         </LinkProvider>
       </AuthProvider>
     </QueryClientProvider>

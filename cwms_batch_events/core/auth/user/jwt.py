@@ -1,7 +1,12 @@
+import logging
 import jwt
 from jwt import PyJWKClient
 
-from cwms_batch_events.core.settings import settings
+from cwms_batch_events.core.settings import get_settings
+
+settings = get_settings()
+
+logger = logging.getLogger(__name__)
 
 AUTH_HOST = settings.auth_host
 AUTH_REALM = settings.auth_realm
@@ -21,13 +26,14 @@ ISSUER = {
 
 
 def get_public_pem():
+    if not settings.auth_environment:
+        raise ValueError("AUTH_ENVIRONMENT is not configured")
+
     try:
         public_key = PUBLIC_KEY[settings.auth_environment]
-    except KeyError as e:
-        print(
-            f"Cannot find PUBLIC_KEY for AUTH_ENVIRONMENT setting of '{settings.auth_environment}'"
-        )
-        raise e
+    except KeyError:
+        logger.error("No public key configured for AUTH_ENVIRONMENT")
+        raise
     return raw_key_to_pem(public_key)
 
 
@@ -48,17 +54,29 @@ def verify_jwt(token: str) -> dict:
 def verify_jwt_by_api(token: str) -> dict:
     jwks = PyJWKClient(KEYCLOAK_JWKS)
     key = jwks.get_signing_key_from_jwt(token)
-    payload = jwt.decode(token, key, ["RS256"])
+    payload = jwt.decode(
+        token,
+        key,
+        ["RS256"],
+        options={"require": ["exp"]},
+    )
     return payload
 
 
 def verify_jwt_by_saved_key(token: str) -> dict:
+    auth_environment = settings.auth_environment
+    if auth_environment is None or auth_environment not in ISSUER:
+        raise ValueError(
+            f"Invalid AUTH_ENVIRONMENT: '{auth_environment}'. "
+            f"Must be one of {list(ISSUER.keys())}"
+        )
+
     key = get_public_pem()
     payload = jwt.decode(
         token,
         key,
         algorithms=["RS256"],
-        issuer=ISSUER[settings.auth_environment],
-        options={"verify_aud": False},
+        issuer=ISSUER[auth_environment],
+        options={"verify_aud": False, "require": ["exp"]},
     )
     return payload

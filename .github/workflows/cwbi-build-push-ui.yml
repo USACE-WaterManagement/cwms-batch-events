@@ -22,6 +22,7 @@ permissions:
 jobs:
   Build-Push-UI-to-Env:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Git clone the repository
         uses: actions/checkout@v4
@@ -76,6 +77,9 @@ jobs:
           cd ui
           VITE_UI_VERSION="$(git rev-parse --short=12 HEAD)" \
           VITE_UI_BUILD_TIME="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+          VITE_BATCH_EVENTS_DEV_URL="${{ vars.BATCH_EVENTS_DEV_URL }}" \
+          VITE_BATCH_EVENTS_TEST_URL="${{ vars.BATCH_EVENTS_TEST_URL }}" \
+          VITE_BATCH_EVENTS_PROD_URL="${{ vars.BATCH_EVENTS_PROD_URL }}" \
           npx vite build --mode $BUILD_MODE
 
       - name: Configure AWS Credentials

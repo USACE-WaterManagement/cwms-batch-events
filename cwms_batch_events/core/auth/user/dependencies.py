@@ -4,6 +4,7 @@ from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBea
 from cachetools import TTLCache
 from cwms_batch_events.core.auth.user.jwt import verify_jwt
 from cwms_batch_events.core.auth.user.models import User
+from cwms_batch_events.core.display_names import readable_name
 from cwms_batch_events.core.auth.user.roles import (
     CdaUserProfileError,
     get_user_admin_offices,
@@ -55,6 +56,7 @@ async def get_current_user_cwms(
     if cache_key in user_cache:
         return user_cache[cache_key]
 
+    claims = {}
     if credentials.scheme.lower() == "bearer":
         token = credentials.credentials
         try:
@@ -93,6 +95,12 @@ async def get_current_user_cwms(
     admin_offices = get_user_admin_offices(cda_user)
     user = User(
         username=cda_user.user_name,
+        display_name=readable_name(
+            claims.get("name"),
+            " ".join(str(claims.get(part) or "") for part in ("given_name", "family_name")),
+            claims.get("preferred_username"),
+            cda_user.user_name,
+        ),
         offices=allowed_offices,
         admin_offices=admin_offices,
         roles=cda_user.roles,

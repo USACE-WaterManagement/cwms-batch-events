@@ -35,6 +35,7 @@ $$;
 -- grant privileges
 GRANT SELECT ON ALL TABLES IN SCHEMA ${flyway:defaultSchema} TO events_reader;
 GRANT INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA ${flyway:defaultSchema} TO events_writer;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA ${flyway:defaultSchema} TO events_writer;
 
 REVOKE ALL ON flyway_schema_history FROM events_reader;
 REVOKE ALL ON flyway_schema_history FROM events_writer;

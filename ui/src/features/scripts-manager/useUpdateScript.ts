@@ -1,5 +1,6 @@
+import { notifySuccess } from "../../utils/actionNotifications";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@usace-watermanagement/groundwork-water";
+import { useAuth } from "@usace-watermanagement/groundwork-water/auth/useAuth";
 import fetchWithAuth from "../../utils/fetchWithAuth";
 import { Script, ScriptUpdate } from "./types";
 
@@ -12,6 +13,9 @@ export const useUpdateScript = (office: string) => {
       updateScript({ ...args, token: auth.token }),
 
     onSuccess: (updatedScript) => {
+      notifySuccess("Script saved.");
+      void queryClient.invalidateQueries({ queryKey: ["scheduleTiming", updatedScript.id] });
+      void queryClient.invalidateQueries({ queryKey: ["catalog"] });
       queryClient.setQueryData<Script[]>(["scripts", office], (oldData) => {
         if (!oldData) return oldData;
 

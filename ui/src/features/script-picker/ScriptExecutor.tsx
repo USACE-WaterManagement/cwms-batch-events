@@ -1,31 +1,13 @@
-import { Button } from "@usace/groundwork";
-import useExecuteScript from "./useExecuteScript";
+import { ScriptRunJob } from "../scripts-manager/ScriptJobs";
+import type { Script } from "../scripts-manager/types";
+import { useNavigate } from "@tanstack/react-router";
+import useAdminOffices from "../scripts-manager/useAdminOffices";
 
-interface ScriptExecutorProps {
-  scriptId: string;
-}
-
-const ScriptExecutor = ({ scriptId }: ScriptExecutorProps) => {
-  const { mutate, isPending, isError, error } = useExecuteScript();
-
-  const handleExecute = () => {
-    mutate({ scriptId });
-  };
-
-  return (
-    <div>
-      <Button onClick={handleExecute} disabled={isPending} className="w-24">
-        {isPending ? "Submitting..." : "Execute"}
-      </Button>
-      {isError && (
-        <div className="mt-4">
-          <span>
-            <p>Script failed. Error: {error.message}</p>
-          </span>
-        </div>
-      )}
-    </div>
-  );
+const ScriptExecutor = ({ script }: { script: Script }) => {
+  const navigate = useNavigate();
+  const admins = useAdminOffices();
+  const edit = () => { void navigate({ to: "/scripts-manager", search: { office: script.office, scriptId: script.id, edit: true } }); };
+  return <ScriptRunJob script={script} onEdit={admins.data?.includes(script.office) ? edit : undefined} />;
 };
 
 export default ScriptExecutor;

@@ -1,4 +1,4 @@
-import { useAuth } from "@usace-watermanagement/groundwork-water";
+import { useAuth } from "@usace-watermanagement/groundwork-water/auth/useAuth";
 import { Button, Card, H1, Text } from "@usace/groundwork";
 import { FiLogIn } from "react-icons/fi";
 

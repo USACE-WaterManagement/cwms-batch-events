@@ -6,14 +6,14 @@ interface ViewLabelProps {
 
 const ViewLabel = ({ children }: ViewLabelProps) => {
   return (
-    <span className="select-none text-base/6 text-zinc-950 data-disabled:opacity-50 sm:text-sm/6">
+    <span className="select-none font-semibold text-base/6 text-slate-700 data-disabled:opacity-50 sm:text-sm/6">
       {children}
     </span>
   );
 };
 
 interface ViewFieldProps {
-  label: string;
+  label: React.ReactNode;
 }
 
 export const ViewField = ({
@@ -21,9 +21,9 @@ export const ViewField = ({
   children,
 }: PropsWithChildren<ViewFieldProps>) => {
   return (
-    <div className="grid grid-cols-[120px_1fr] gap-6">
+    <div className="script-view-field min-w-0 grid gap-1 [overflow-wrap:anywhere] @min-[30rem]/script-panel:grid-cols-[120px_minmax(0,1fr)] @min-[30rem]/script-panel:gap-6">
       <ViewLabel>{label}</ViewLabel>
-      <div>{children}</div>
+      <div className="min-w-0">{children}</div>
     </div>
   );
 };
